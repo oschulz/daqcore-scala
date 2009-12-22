@@ -1,9 +1,9 @@
 import org.acplt.oncrpc.OncRpcProtocols
 import java.net.InetAddress
-import org.daqcore.vxi11rpc._
+import org.daqcore.oncrpc.vxi11core._
 
 val address = InetAddress.getByName("gpib03")
-val client = new CoreClient(address, OncRpcProtocols.ONCRPC_TCP)
+val client = new Client(address, OncRpcProtocols.ONCRPC_TCP)
 
 val defaultTimeout:Int = 10000
 
