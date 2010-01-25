@@ -20,7 +20,7 @@ class DaqcoreScala(info: ProjectInfo) extends DefaultProject(info) {
     } dependsOn(cleanSrc)
   }
 
-  lazy val rpcgen_vxi11core = jrpcgenTask("org.daqcore.oncrpc.vxi11core", "Client", "Server", "vxi11core.x") describedAs("Generate vxi11core classes and stubs.")
+  lazy val rpcgen_vxi11core = jrpcgenTask("daqcore.oncrpc.vxi11core", "Client", "Server", "vxi11core.x") describedAs("Generate vxi11core classes and stubs.")
   lazy val rpcgen = task {None} dependsOn(rpcgen_vxi11core)
   
   // override def compileOrder = CompileOrder.JavaThenScala

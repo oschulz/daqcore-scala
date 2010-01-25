@@ -1,6 +1,6 @@
 import org.acplt.oncrpc.OncRpcProtocols
 import java.net.InetAddress
-import org.daqcore.oncrpc.vxi11core._
+import daqcore.oncrpc.vxi11core._
 
 class VXI11Test {
   val address = InetAddress.getByName("gpib03")
@@ -11,7 +11,7 @@ class VXI11Test {
   val lparms = new Create_LinkParms
   lparms.lockDevice = false
   lparms.lock_timeout = defaultTimeout
-  lparms.device = "gpib0,22"
+  lparms.device = "gpib0,17"
   val lresp = client.create_link_1(lparms)
 
   println("create_link error: " + lresp.error.value)
