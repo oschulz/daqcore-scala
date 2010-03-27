@@ -1,7 +1,7 @@
 import sbt._
 import Process._
 
-class DaqcoreScala(info: ProjectInfo) extends DefaultProject(info) {
+class DaqcoreScalaProject(info: ProjectInfo) extends DefaultProject(info) {
   override def parallelExecution = true
 
   val onrpc = "org.acplt" % "remotetea" % "1.0.7"
