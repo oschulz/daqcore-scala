@@ -4,8 +4,10 @@ import Process._
 class DaqcoreScalaProject(info: ProjectInfo) extends DefaultProject(info) {
   override def parallelExecution = true
 
-  val onrpc = "org.acplt" % "remotetea" % "1.0.7"
+  val snapshots = ScalaToolsSnapshots
 
+  val onrpc = "org.acplt" % "remotetea" % "1.0.7"
+  
   def javaSrcDir = "src" / "main" / "java"
 
   def jrpcgenTask(pkgName: String, client: String, server: String, xdrName: String) = {
