@@ -28,10 +28,10 @@ object SCPIParser extends JavaTokenParsers {
       val source = in.source
       val offset = in.offset
       val start = handleWhiteSpace(source, offset)
-      def failure(msg: String) = Failure("Not arbitrary block data", in.drop(start - offset))
-      val input = in.source.asInstanceOf[ByteCSeq].contents.subSequence(offset, source.length)
-      if ( (input.length >= 0) && (input(0) == '#') && (input(1) >= '0') && (input(1) <= '9')) {
-        try {
+      def failure(msg: String) = Failure(msg, in.drop(start - offset))
+      try {
+        val input = in.source.asInstanceOf[ByteCSeq].contents.subSequence(offset, source.length)
+        if ( (input.length >= 0) && (input(0) == '#') && (input(1) >= '0') && (input(1) <= '9')) {
           val sizeLength = input(1).toChar.toString.toInt
           val dataOffset = sizeLength + 2
           if ((sizeLength <=  0) || (sizeLength > 10)) failure("Invalid block data size length: " + sizeLength)
@@ -45,10 +45,11 @@ object SCPIParser extends JavaTokenParsers {
             require(data.length == size)
             Success(data, rest)
           }
-        } catch {
-          case e:NumberFormatException => failure(e.getMessage)
-        }
-      } else failure("Not arbitrary block data")
+        } else failure("Not arbitrary block data")
+      } catch {
+        case e: ClassCastException => failure("block data can only appear in a byte-based input")
+        case e: NumberFormatException => failure(e.getMessage)
+      }
     }
   }
 
