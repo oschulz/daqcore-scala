@@ -21,6 +21,7 @@ import collection.generic._
 import collection.mutable.{Builder,ArrayBuffer}
 import collection.IndexedSeqLike
 
+
 class SubIdxSeq[+A](data: IndexedSeq[A], start: Int, end: Int)
   extends scala.collection.immutable.IndexedSeq[A]
   with GenericTraversableTemplate[A, SubIdxSeq]
@@ -48,6 +49,7 @@ class SubIdxSeq[+A](data: IndexedSeq[A], start: Int, end: Int)
   override def companion: GenericCompanion[SubIdxSeq] = SubIdxSeq
 }
 
+
 object SubIdxSeq extends SeqFactory[SubIdxSeq] {
   def apply[A](seq: IndexedSeq[A]) : SubIdxSeq[A] = seq match {
     case subSeq: SubIdxSeq[_] => subSeq
@@ -56,25 +58,4 @@ object SubIdxSeq extends SeqFactory[SubIdxSeq] {
 
   implicit def canBuildFrom[A]: CanBuildFrom[Coll, A, SubIdxSeq[A]] = new GenericCanBuildFrom[A]
   def newBuilder[A]: Builder[A, SubIdxSeq[A]] = new ArrayBuffer[A] mapResult {buf => val seq = buf.toIndexedSeq; new SubIdxSeq(seq, 0, seq.length)}
-}
-
-
-
-class ByteCSeq(val contents: IndexedSeq[Byte]) extends CharSequence {
-  def charAt(index: Int) = contents(index).toChar
-
-  def length = contents.length
-  
-  def subSequence(start: Int, end: Int) =
-    new ByteCSeq(SubIdxSeq(contents).subSequence(start, end))
-  
-  override def toString = contents.view map {_.toChar} mkString
-}
-
-
-object ByteCSeq {
-  def encoding  = "ASCII"
-  def apply(bytes: IndexedSeq[Byte]): ByteCSeq = new ByteCSeq(SubIdxSeq(bytes))
-  def apply(s: String): ByteCSeq = apply(s.getBytes(encoding))
-  def apply(seq: SubIdxSeq[Byte]) = new ByteCSeq(seq)
 }
