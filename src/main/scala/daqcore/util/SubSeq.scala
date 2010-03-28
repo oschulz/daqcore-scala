@@ -17,12 +17,22 @@
 
 package daqcore.util
 
+import collection.generic._
+import collection.mutable.{Builder,ArrayBuffer}
+import collection.IndexedSeqLike
 
-class SubIdxSeq[+T](val data: IndexedSeq[T], val start: Int, val end: Int) extends IndexedSeq[T] {
+class SubIdxSeq[+A](data: IndexedSeq[A], start: Int, end: Int)
+  extends scala.collection.immutable.IndexedSeq[A]
+  with GenericTraversableTemplate[A, SubIdxSeq]
+  with IndexedSeqLike[A, SubIdxSeq[A]]
+{
   if (start < 0) throw new IndexOutOfBoundsException(start.toString)
   if ((end < start) || (data.length < end)) throw new IndexOutOfBoundsException(end.toString)
 
   def length = end - start
+  
+  protected def buffer = data
+  def sharedWith[B >: A](that: SubIdxSeq[B]): Boolean = buffer eq that.buffer
   
   def apply(index: Int) = {
     val i = index + start
@@ -31,19 +41,21 @@ class SubIdxSeq[+T](val data: IndexedSeq[T], val start: Int, val end: Int) exten
   }
   
   def subSequence(start: Int, end: Int) =
-    new SubIdxSeq[T](data, this.start+start, this.start+end)
+    new SubIdxSeq[A](data, this.start+start, this.start+end)
 
   override def toString = "SubIdxSeq(" + data.view(start, end).mkString(", ") + ")"
+  
+  override def companion: GenericCompanion[SubIdxSeq] = SubIdxSeq
 }
 
-object SubIdxSeq {
-  def apply[T](seq: IndexedSeq[T]) : SubIdxSeq[T] = seq match {
+object SubIdxSeq extends SeqFactory[SubIdxSeq] {
+  def apply[A](seq: IndexedSeq[A]) : SubIdxSeq[A] = seq match {
     case subSeq: SubIdxSeq[_] => subSeq
     case seq: IndexedSeq[_] => new SubIdxSeq(seq, 0, seq.length)
   }
 
-  def apply[T](array: Array[T]) : SubIdxSeq[T] =
-    array.toSeq.asInstanceOf[IndexedSeq[T]]
+  implicit def canBuildFrom[A]: CanBuildFrom[Coll, A, SubIdxSeq[A]] = new GenericCanBuildFrom[A]
+  def newBuilder[A]: Builder[A, SubIdxSeq[A]] = new ArrayBuffer[A] mapResult {buf => val seq = buf.toIndexedSeq; new SubIdxSeq(seq, 0, seq.length)}
 }
 
 
