@@ -22,15 +22,15 @@ import scala.util.parsing.combinator._
 import daqcore.util._
 
 
-object SCPIParser extends JavaTokenParsers with PackratParsers {
-  def blockData: Parser[IndexedSeq[Byte]] = new Parser[IndexedSeq[Byte]] {
+object SCPIParser extends JavaTokenParsers with PackratParsers with Logging {
+  lazy val blockData: Parser[IndexedSeq[Byte]] = new Parser[IndexedSeq[Byte]] {
     def apply(in: Input) = {
       val source = in.source
       val offset = in.offset
       val start = handleWhiteSpace(source, offset)
       def failure(msg: String) = Failure(msg, in.drop(start - offset))
       try {
-        val input = in.source.asInstanceOf[ByteCSeq].contents.subSequence(offset, source.length)
+        val input = in.source.asInstanceOf[ByteCSeq].contents.subSequence(start, source.length)
         if ( (input.length >= 0) && (input(0) == '#') && (input(1) >= '0') && (input(1) <= '9')) {
           val sizeLength = input(1).toChar.toString.toInt
           val dataOffset = sizeLength + 2
@@ -41,7 +41,7 @@ object SCPIParser extends JavaTokenParsers with PackratParsers {
             val dataEnd = dataOffset + size
             if (input.size < dataEnd) failure("Block data input to short for size " + size)
             val data = input.subSequence(dataOffset, dataEnd)
-            val rest = in.drop(dataEnd)
+            val rest = in.drop(start - offset + dataEnd)
             require(data.length == size)
             Success(data, rest)
           }
