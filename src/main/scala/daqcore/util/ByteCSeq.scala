@@ -26,6 +26,10 @@ class ByteCSeq(val contents: IndexedSeq[Byte]) extends CharSequence {
   def subSequence(start: Int, end: Int) =
     new ByteCSeq(SubIdxSeq(contents).subSequence(start, end))
   
+  def ++(that: ByteCSeq): ByteCSeq = new ByteCSeq(this.contents ++ that.contents)
+  def ++(that: Seq[Byte]): ByteCSeq = new ByteCSeq(this.contents ++ that)
+  def ++(s: String): ByteCSeq = this ++ ByteCSeq(s)
+  
   override def toString = contents.view map {_.toChar} mkString
 }
 
