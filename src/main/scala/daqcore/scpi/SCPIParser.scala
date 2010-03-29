@@ -22,7 +22,7 @@ import scala.util.parsing.combinator._
 import daqcore.util._
 
 
-object SCPIParser extends JavaTokenParsers {
+object SCPIParser extends JavaTokenParsers with PackratParsers {
   def blockData: Parser[IndexedSeq[Byte]] = new Parser[IndexedSeq[Byte]] {
     def apply(in: Input) = {
       val source = in.source
@@ -53,19 +53,19 @@ object SCPIParser extends JavaTokenParsers {
     }
   }
 
-  def nr1: Parser[String] = wholeNumber
-  def nrf: Parser[String] = floatingPointNumber
-  def string: Parser[String] = stringLiteral
+  lazy val nr1: PackratParser[String] = wholeNumber
+  lazy val nrf: PackratParser[String] = floatingPointNumber
+  lazy val string: PackratParser[String] = stringLiteral
   
-  def value: Parser[Any] = 
+  lazy val value: PackratParser[Any] = 
     blockData |
     nrf | 
     nr1 |
     string
 
-  def params: Parser[List[Any]] =
+  lazy val params: PackratParser[List[Any]] =
     repsep(value, ",")
   
-  def respMsg: Parser[List[List[Any]]] =
+  lazy val respMsg: PackratParser[List[List[Any]]] =
     repsep(params, ";")
 }
