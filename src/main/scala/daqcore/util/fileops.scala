@@ -20,66 +20,125 @@ package daqcore.util
 import java.io.File
 import java.io.IOException
 
+import daqcore.util
+
 
 object fileops {
-  class FileOps(val file:File) {
-    def copyTo(to: File) : Unit = {
-      import java.io.{FileInputStream, FileOutputStream}
-      import java.nio.channels.FileChannel
-      
-      if (! to.exists) { to.createNewFile() }
+  implicit def toFileOps(file: File) = new FileOps(file)
+  implicit def toFileOps(path: String) = new FileOps(new File(path))
 
-      var src: Option[FileChannel] = None
-      var dst: Option[FileChannel] = None
-      try {
-        src = Option(new FileInputStream(file).getChannel())
-        dst = Option(new FileOutputStream(to).getChannel())
-        val count = dst.get.transferFrom(src.get, 0, src.get.size())
-        if (count != src.get.size()) throw new IOException("File size mismatch after copying")
-      }
-      finally {
-        src map (_.close())
-        dst map (_.close())
-      }
+  class FileOps(val file:File) {
+    def copyTo(that: File) : Unit = {
+      if (! that.exists) that.createNewFile()
+
+      using (
+        this.getIStream.getChannel(),
+        that.getOStream.getChannel()
+      ) { (src, dst) => {
+        val count = dst.transferFrom(src, 0, src.size())
+        if (count != src.size()) throw new IOException("File size mismatch after copying")
+      } }
     }
 
-    def moveTo(to: File) : Unit = {
-      val renameOK = file.renameTo(to)
+    def moveTo(that: File) : Unit = {
+      val renameOK = file.renameTo(that)
       if (!renameOK) {
-        copyTo(to)
+        this copyTo that
         val deleted = file.delete()
         if (!deleted) throw new IOException("Could not delete file \"!" + file.getPath + "\"")
       }
     }
 
-    def writer : java.io.Writer = {
-      import java.io.{OutputStreamWriter,FileOutputStream,File}
+    def getIStream : java.io.FileInputStream =
+      new java.io.FileInputStream(file)
 
-      val stream = new java.io.FileOutputStream(file)
-      val writer = new java.io.OutputStreamWriter(stream, "UTF-8")
+    def getOStream : java.io.FileOutputStream =
+      new java.io.FileOutputStream(file)
 
-      writer
+    def getWriter : java.io.Writer =
+      new java.io.OutputStreamWriter(this.getOStream, "UTF-8")
+    
+    def write(s: String) : Unit =
+      using (this.getWriter) { _.write(s) }
+
+    def write(nodes: xml.NodeSeq) : Unit = {
+      using (this.getWriter) { writer => {
+        writer.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
+        writer.write("\n<!-- This file is generated automatically. Do not edit! -->\n\n")
+        
+        val elem = (nodes flatMap { case elem:xml.Elem => Some(elem); case _ => None } head)
+        if (elem.namespace == "http://www.w3.org/1999/xhtml")
+          writer.write("<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n")
+        
+        val xmlString = new xml.PrettyPrinter(200, 4).formatNodes(nodes)
+        writer.write(xmlString)
+      } }
     }
     
-    def write(s: String) : Unit = {
-      val w = writer
-      w.write(s); w.close()
+    def getSource : scala.io.Source = scala.io.Source.fromFile(file)
+
+    def read : String =
+      using (this.getSource) { _.mkString }
+
+    def readLines : List[String] =
+      using (this.getSource) { _.getLines("\n").toList }
+
+    def readLineSeq : IndexedSeq[String] =
+      using (this.getSource) { _.getLines("\n").toSeq.asInstanceOf[IndexedSeq[String]] }
+    
+    def readXML: scala.xml.Elem = xml.XML.loadFile(file)
+    
+    def relativeTo(that: File) = {
+      def takeSame[T](a:Seq[T], b:Seq[T]) : Seq[T] = {
+        def takeSameImpl[T](s:Seq[(T,T)], r:List[T] = Nil) : List [T] = if (s.isEmpty || (s.head._1 != s.head._2)) r; else takeSameImpl(s.tail, s.head._1::r)
+        takeSameImpl(a zip b).reverse
+      }
+    
+      val thisAbs = file.getAbsolutePath.split(File.separator)
+      val thatAbs = that.getAbsolutePath.split(File.separator)
+      val common = takeSame(thisAbs, thatAbs)
+      if (common.isEmpty) new File(file.getAbsolutePath)
+      else {
+        val thisRest = thisAbs.drop(common.size)
+        val thatRest = thatAbs.drop(common.size)
+        val thisRestString =
+          if (thisRest.isEmpty) ""
+          else thisRest.reduceLeft(_ + File.separator + _)
+        //tools.nsc.Interpreter.breakIf(true, "thisRest"->thisRest, "thatRest" -> thatRest)
+        val newPath = thatRest.foldLeft(thisRestString)
+          { (p,r) => ".." + File.separator + p }
+        new File(if (!newPath.isEmpty) newPath else ".")
+      }
     }
     
-    def read : String = {
-      io.Source.fromFile(file).mkString
+    def dropParent(that: File) = {
+      val thisAbs = file.getAbsolutePath.split(File.separator)
+      val thatAbs = that.getAbsolutePath.split(File.separator)
+      if(!(thisAbs startsWith thatAbs))
+        throw new IllegalArgumentException("Path \"" + that.getAbsolutePath + "\" is not parent of path \"" + file.getAbsolutePath + "\"")
+      val thisRel = thisAbs.drop(thatAbs.size)
+      if (thisRel.isEmpty) new File(".")
+      else new File(thisRel.reduceLeft(_ + File.separator + _))
     }
     
-    def getLines : Iterator[String] = {
-      io.Source.fromFile(file).getLines()
+    def isWithin(that: File) = {
+      val thisAbs = file.getAbsolutePath.split(File.separator)
+      val thatAbs = that.getAbsolutePath.split(File.separator)
+      thisAbs startsWith thatAbs
+    }
+
+    def isSymlink = {
+      val cfile = Option(file.getParentFile) match {
+        case Some(parent) => new File(parent.getCanonicalFile, file.getName)
+        case None => file
+      }
+      cfile.getCanonicalFile != cfile.getAbsoluteFile
     }
     
     def /(path: String) : File = new File(file.getPath + File.separator + path)
   }
-
-
-  implicit def apply(file: File) = new FileOps(file)
-  implicit def apply(path: String) = new FileOps(new File(path))
-
+  
   def homeDir = new java.io.File(System.getProperty("user.home"))
+
+  def currDir = new java.io.File(".")
 }
