@@ -18,6 +18,48 @@
 package daqcore.scpi
 
 
+object NR1 {
+  def unapply(a: Any) : Option[Int] = a match {
+    case s:String => try { Some(s.toInt) } catch { case e: NumberFormatException => None }
+    case _ => None
+  }
+}
+
+
+object NRf {
+  def unapply(a: Any) : Option[Double] = a match {
+    case s:String => try { Some(s.toDouble) } catch { case e: NumberFormatException => None }
+    case _ => None
+  }
+}
+
+
+object SRD {
+  protected val sqString = """'([^']*)'""".r
+  protected val dqString = """"([^']*)"""".r
+
+  def unapply(a: Any) : Option[String] = a match {
+    case s:String => s match {
+      case sqString(contents) => Some(contents)
+      case dqString(contents) => Some(contents)
+      case _ => None
+    }
+
+    case _ => None
+  }
+}
+
+
+object IntSeq {
+  def unapply(seq: Seq[Any]) : Option[Seq[Int]] = try {
+    Some(seq map {_.asInstanceOf[String].toInt})
+  } catch {
+    case e: ClassCastException => None
+    case e: NumberFormatException => None
+  }
+}
+
+
 object BlockData {
   def apply(data: IndexedSeq[Byte]) : IndexedSeq[Byte] = {
     val tag = "#".getBytes
