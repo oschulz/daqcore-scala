@@ -17,20 +17,18 @@
 
 package daqcore.scpi
 
+import daqcore.util._
+
 
 object NR1 {
-  def unapply(a: Any) : Option[Int] = a match {
-    case s:String => try { Some(s.toInt) } catch { case e: NumberFormatException => None }
-    case _ => None
-  }
+  def unapply(bs: ByteCSeq) : Option[Int] =
+    try { Some(bs.toString.toInt) } catch { case e: NumberFormatException => None }
 }
 
 
 object NRf {
-  def unapply(a: Any) : Option[Double] = a match {
-    case s:String => try { Some(s.toDouble) } catch { case e: NumberFormatException => None }
-    case _ => None
-  }
+  def unapply(bs: ByteCSeq) : Option[Double] =
+    try { Some(bs.toString.toDouble) } catch { case e: NumberFormatException => None }
 }
 
 
@@ -38,21 +36,17 @@ object SRD {
   protected val sqString = """'([^']*)'""".r
   protected val dqString = """"([^']*)"""".r
 
-  def unapply(a: Any) : Option[String] = a match {
-    case s:String => s match {
-      case sqString(contents) => Some(contents)
-      case dqString(contents) => Some(contents)
-      case _ => None
-    }
-
+  def unapply(bs: ByteCSeq) : Option[String] = bs match {
+    case sqString(contents) => Some(contents)
+    case dqString(contents) => Some(contents)
     case _ => None
   }
 }
 
 
-object IntSeq {
-  def unapply(seq: Seq[Any]) : Option[Seq[Int]] = try {
-    Some(seq map {_.asInstanceOf[String].toInt})
+object NR1Seq {
+  def unapply(seq: Seq[ByteCSeq]) : Option[Seq[Int]] = try {
+    Some(seq map {arg => val NR1(value) = arg; value})
   } catch {
     case e: ClassCastException => None
     case e: NumberFormatException => None
@@ -61,11 +55,19 @@ object IntSeq {
 
 
 object BlockData {
-  def apply(data: IndexedSeq[Byte]) : IndexedSeq[Byte] = {
+  def apply(data: IndexedSeq[Byte]) : ByteCSeq = {
     val tag = "#".getBytes
     val sizeStr = data.size.toString.getBytes
     val sizeSizeStr = sizeStr.size.toString.getBytes
     
-    tag ++ sizeSizeStr ++ sizeStr ++ data
+    ByteCSeq(tag ++ sizeSizeStr ++ sizeStr ++ data)
+  }
+
+
+  def unapply(bs: ByteCSeq) : Option[IndexedSeq[Byte]] = try {
+    val bytes = SCPIParser.parseAll(SCPIParser.blockData, bs).get
+    Some(bytes)
+  } catch {
+    case _ => None
   }
 }
