@@ -21,12 +21,16 @@ import daqcore.util._
 
 
 object NR1 {
+  def apply(value: Int) = ByteCSeq(value.toString)
+
   def unapply(bs: ByteCSeq) : Option[Int] =
     try { Some(bs.toString.toInt) } catch { case e: NumberFormatException => None }
 }
 
 
 object NRf {
+  def apply(value: Double) = ByteCSeq(value.toString)
+
   def unapply(bs: ByteCSeq) : Option[Double] =
     try { Some(bs.toString.toDouble) } catch { case e: NumberFormatException => None }
 }
@@ -36,20 +40,12 @@ object SRD {
   protected val sqString = """'([^']*)'""".r
   protected val dqString = """"([^']*)"""".r
 
+  def apply(value: String) = ByteCSeq("\"") ++ ByteCSeq(value) ++ ByteCSeq("\"")
+
   def unapply(bs: ByteCSeq) : Option[String] = bs match {
     case sqString(contents) => Some(contents)
     case dqString(contents) => Some(contents)
     case _ => None
-  }
-}
-
-
-object NR1Seq {
-  def unapply(seq: Seq[ByteCSeq]) : Option[Seq[Int]] = try {
-    Some(seq map {arg => val NR1(value) = arg; value})
-  } catch {
-    case e: ClassCastException => None
-    case e: NumberFormatException => None
   }
 }
 
@@ -65,9 +61,30 @@ object BlockData {
 
 
   def unapply(bs: ByteCSeq) : Option[IndexedSeq[Byte]] = try {
-    val bytes = SCPIParser.parseAll(SCPIParser.blockData, bs).get
-    Some(bytes)
+    val parser = SCPIParser()
+    Some(parser.parseAll(parser.blockDataBytes, bs).get)
   } catch {
     case _ => None
+  }
+}
+
+
+
+case class Result(values: ByteCSeq*) {
+  def charSeq: ByteCSeq = values.toList match {
+    case Nil => ByteCSeq("")
+    case head::Nil => head
+    case head::tail => tail.foldLeft(head) { (bs, v) => bs ++ ByteCSeq(",") ++ v }
+  }
+  
+  def +(seq: Seq[ByteCSeq]): Result = Result(values ++ seq : _*)
+}
+
+
+case class Response(val results: Result*) {
+  def charSeq: ByteCSeq = results.toList match {
+    case Nil => ByteCSeq("")
+    case head::Nil => head.charSeq
+    case head::tail => tail.foldLeft(head.charSeq) { (bs, r) => bs ++ ByteCSeq(";") ++ r.charSeq }
   }
 }

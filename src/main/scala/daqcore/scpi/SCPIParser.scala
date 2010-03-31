@@ -22,7 +22,7 @@ import scala.util.parsing.combinator._
 import daqcore.util._
 
 
-object SCPIParser extends JavaTokenParsers with PackratParsers with Logging {
+class SCPIParser extends JavaTokenParsers with PackratParsers with Logging {
   def parseBlockData(in: Input): ParseResult[(IndexedSeq[Byte], ByteCSeq)] = {
     val source = in.source
     val offset = in.offset
@@ -53,7 +53,7 @@ object SCPIParser extends JavaTokenParsers with PackratParsers with Logging {
     }
   }
   
-  lazy val blockData: Parser[IndexedSeq[Byte]] = new Parser[IndexedSeq[Byte]] {
+  lazy val blockDataBytes: Parser[IndexedSeq[Byte]] = new Parser[IndexedSeq[Byte]] {
     def apply(in: Input) = parseBlockData(in) match {
       case Success((data,all), rest) =>
         Success(data,rest)
@@ -61,7 +61,7 @@ object SCPIParser extends JavaTokenParsers with PackratParsers with Logging {
     }
   }
 
-  lazy val blockDataRaw: Parser[ByteCSeq] = new Parser[ByteCSeq] {
+  lazy val blockData: Parser[ByteCSeq] = new Parser[ByteCSeq] {
     def apply(in: Input) = parseBlockData(in) match {
       case Success((data,raw), rest) =>
         Success(raw,rest)
@@ -71,19 +71,27 @@ object SCPIParser extends JavaTokenParsers with PackratParsers with Logging {
 
   //!! Change implementation of these to avoid ByteCSeq -> String -> ByteCSeq conversion
   //!! Possibly one ASCII-type-argument parser can replace all of them
-  lazy val nr1Raw: PackratParser[ByteCSeq] = wholeNumber ^^ { v => ByteCSeq(v) }
-  lazy val nrfRaw: PackratParser[ByteCSeq] = floatingPointNumber ^^ { v => ByteCSeq(v) }
-  lazy val stringRaw: PackratParser[ByteCSeq] = stringLiteral ^^ { v => ByteCSeq(v) }
+  lazy val nr1: PackratParser[ByteCSeq] = wholeNumber ^^ { v => ByteCSeq(v) }
+  lazy val nrf: PackratParser[ByteCSeq] = floatingPointNumber ^^ { v => ByteCSeq(v) }
+  lazy val string: PackratParser[ByteCSeq] = stringLiteral ^^ { v => ByteCSeq(v) }
   
-  lazy val valueRaw: PackratParser[ByteCSeq] = 
-    blockDataRaw |
-    nrfRaw | 
-    nr1Raw |
-    stringRaw
+  lazy val value: PackratParser[ByteCSeq] = 
+    blockData |
+    nrf | 
+    nr1 |
+    string
 
-  lazy val paramsRaw: PackratParser[List[ByteCSeq]] =
-    repsep(valueRaw, ",")
+  lazy val rmu: PackratParser[Result] =
+    repsep(value, ",") ^^ { values => Result(values : _*) }
   
-  lazy val respMsgRaw: PackratParser[List[List[ByteCSeq]]] =
-    repsep(paramsRaw, ";")
+  lazy val respMsg: PackratParser[Response] =
+    repsep(rmu, ";") ^^ { results => Response(results : _*) }
+  
+  def parseResponse(in: java.lang.CharSequence): Response =
+    parseAll(respMsg, in).get
+}
+
+
+object SCPIParser {
+  def apply() = new SCPIParser
 }
