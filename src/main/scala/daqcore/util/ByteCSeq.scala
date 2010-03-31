@@ -17,26 +17,39 @@
 
 package daqcore.util
 
+import collection.IndexedSeqLike
+import collection.mutable.{Builder,ArrayBuffer,ArrayBuilder}
 
-class ByteCSeq(val contents: IndexedSeq[Byte]) extends CharSequence {
+
+class ByteCSeq(val contents: IndexedSeq[Byte]) extends CharSequence
+  with scala.collection.immutable.IndexedSeq[Byte]
+  with IndexedSeqLike[Byte, ByteCSeq]
+{
+  def apply(index: Int): Byte = contents(index)
+
   def charAt(index: Int) = contents(index).toChar
 
   def length = contents.length
   
   def subSequence(start: Int, end: Int) =
-    new ByteCSeq(SubIdxSeq(contents).subSequence(start, end))
+    new ByteCSeq(contents.subSequence(start, end))
   
   def ++(that: ByteCSeq): ByteCSeq = new ByteCSeq(this.contents ++ that.contents)
   def ++(that: Seq[Byte]): ByteCSeq = new ByteCSeq(this.contents ++ that)
   def ++(s: String): ByteCSeq = this ++ ByteCSeq(s)
   
   override def toString = contents.view map {_.toChar} mkString
+  
+  override protected def newBuilder: Builder[Byte, ByteCSeq] = ByteCSeq.newBuilder
 }
 
 
 object ByteCSeq {
   def encoding  = "ASCII"
-  def apply(bytes: IndexedSeq[Byte]): ByteCSeq = new ByteCSeq(SubIdxSeq(bytes))
+  def apply(bytes: IndexedSeq[Byte]): ByteCSeq = new ByteCSeq(bytes)
   def apply(s: String): ByteCSeq = apply(s.getBytes(encoding))
-  def apply(seq: SubIdxSeq[Byte]) = new ByteCSeq(seq)
+  def apply(value: Byte*): ByteCSeq = apply(IndexedSeq(value : _*))
+
+  def newBuilder: Builder[Byte, ByteCSeq] =
+    new ArrayBuilder.ofByte() mapResult { a => apply(a.toSeq.asInstanceOf[IndexedSeq[Byte]]) }
 }

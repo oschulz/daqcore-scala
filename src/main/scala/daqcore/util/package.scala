@@ -20,6 +20,6 @@ package daqcore
 
 package object util {
 
-implicit def idxSeq2subSeq[T](seq: IndexedSeq[T]) = SubIdxSeq(seq)
+implicit def idxSeq2subSeq[T](seq: IndexedSeq[T]) = new SubIdxSeq(seq, 0, seq.length)
 
 }

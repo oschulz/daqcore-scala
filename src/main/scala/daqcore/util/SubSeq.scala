@@ -22,13 +22,22 @@ import collection.mutable.{Builder,ArrayBuffer}
 import collection.IndexedSeqLike
 
 
-class SubIdxSeq[+A](data: IndexedSeq[A], start: Int, end: Int)
+class SubIdxSeq[+A](parent: IndexedSeq[A], pstart: Int, pend: Int)
   extends scala.collection.immutable.IndexedSeq[A]
   with GenericTraversableTemplate[A, SubIdxSeq]
   with IndexedSeqLike[A, SubIdxSeq[A]]
 {
-  if (start < 0) throw new IndexOutOfBoundsException(start.toString)
-  if ((end < start) || (data.length < end)) throw new IndexOutOfBoundsException(end.toString)
+  if (pstart < 0) throw new IndexOutOfBoundsException(pstart.toString)
+  if ((pend < pstart) || (parent.length < pend)) throw new IndexOutOfBoundsException(pend.toString)
+
+  protected val data: IndexedSeq[A] = parent match
+    { case that: SubIdxSeq[_] => that.data; case that: IndexedSeq[_] => that }
+  
+  protected val start: Int = parent match
+    { case that: SubIdxSeq[_] => that.start+pstart; case that: IndexedSeq[_] => pstart }
+
+  protected val end: Int = parent match
+    { case that: SubIdxSeq[_] => that.start+pend; case that: IndexedSeq[_] => pend }
 
   def length = end - start
   
@@ -41,8 +50,10 @@ class SubIdxSeq[+A](data: IndexedSeq[A], start: Int, end: Int)
     data(i)
   }
   
-  def subSequence(start: Int, end: Int) =
-    new SubIdxSeq[A](data, this.start+start, this.start+end)
+  def subSequence(start: Int = 0, end: Int = this.length) =  {
+    if ((start == this.start) && (end == this.end)) this
+    else new SubIdxSeq[A](this, start, end)
+  }
 
   override def toString = "SubIdxSeq(" + data.view(start, end).mkString(", ") + ")"
   
@@ -51,11 +62,6 @@ class SubIdxSeq[+A](data: IndexedSeq[A], start: Int, end: Int)
 
 
 object SubIdxSeq extends SeqFactory[SubIdxSeq] {
-  def apply[A](seq: IndexedSeq[A]) : SubIdxSeq[A] = seq match {
-    case subSeq: SubIdxSeq[_] => subSeq
-    case seq: IndexedSeq[_] => new SubIdxSeq(seq, 0, seq.length)
-  }
-
   implicit def canBuildFrom[A]: CanBuildFrom[Coll, A, SubIdxSeq[A]] = new GenericCanBuildFrom[A]
   def newBuilder[A]: Builder[A, SubIdxSeq[A]] = new ArrayBuffer[A] mapResult {buf => val seq = buf.toIndexedSeq; new SubIdxSeq(seq, 0, seq.length)}
 }
