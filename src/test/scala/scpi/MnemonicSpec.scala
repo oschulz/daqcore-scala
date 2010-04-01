@@ -27,36 +27,17 @@ class MnemonicSpec extends WordSpec with MustMatchers {
   val VOLTage = Mnemonic("VOLTage")
   val IDN = Mnemonic("IDN")
 
-  "Mnemonic()" should {
-    "create the right type of Mnemonic" in {
-      assert( IDN.isInstanceOf[ShortMnem] )
-      assert( VOLTage.isInstanceOf[LongMnem] )
-    }
+  "A SpecMnemonic" should {
+    "equal an equal SpecMnemonic" in { Mnemonic("FOObar") === Mnemonic("FOObar") }
   }
 
-  "A ShortMnem" should {
-    "not equal a LongMnem" in { LongMnem("FOO","FOO") != ShortMnem("FOO") }
-    "equal an equal ShortMnem" in { Mnemonic("FOO") === Mnemonic("FOO") }
-  }
-
-  "A LongMnem" should {
-    "not equal a LongMnem" in { LongMnem("FOO","FOO") != ShortMnem("FOO") }
-    "equal an equal LongMnem" in { Mnemonic("FOObar") === Mnemonic("FOObar") }
-  }
-
-  "A RecMemonic" should {
-    "match a ShortMnem according to SCPI specs" in {
-      assert( IDN === RecMemonic(ByteCSeq("IDN")) )
-      assert( IDN === RecMemonic(ByteCSeq("idn")) )
-      expect(false)( IDN == RecMemonic(ByteCSeq("Idn")) )
-    }
-
-    "match a LongMnem according to SCPI specs" in {
-      expect(false)( VOLTage == RecMemonic(ByteCSeq("VOLTage")) )
-      assert( VOLTage === RecMemonic(ByteCSeq("VOLTAGE")) )
-      assert( VOLTage === RecMemonic(ByteCSeq("voltage")) )
-      assert( VOLTage === RecMemonic(ByteCSeq("volt")) ) 
-      assert( VOLTage === RecMemonic(ByteCSeq("VOLT")) )
+  "A RecMnemonic" should {
+    "match a SpecMnemonic according to SCPI specs" in {
+      expect(false)( VOLTage == RecMnemonic(ByteCSeq("VOLTage")) )
+      assert( VOLTage === RecMnemonic(ByteCSeq("VOLTAGE")) )
+      assert( VOLTage === RecMnemonic(ByteCSeq("voltage")) )
+      assert( VOLTage === RecMnemonic(ByteCSeq("volt")) ) 
+      assert( VOLTage === RecMnemonic(ByteCSeq("VOLT")) )
     }
   }
 }
