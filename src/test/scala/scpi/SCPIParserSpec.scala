@@ -20,6 +20,8 @@ package daqcore.scpi
 import org.scalatest.WordSpec
 import org.scalatest.matchers.MustMatchers
 
+import daqcore.util.ByteCSeq
+
 
 class SCPIParserSpec extends WordSpec with MustMatchers {
   "An SCPIParser" should {
@@ -46,6 +48,11 @@ class SCPIParserSpec extends WordSpec with MustMatchers {
       assert( bytesR  === bytes )
       assert( bytes2R === bytes2 )
       assert( lR === l )
+      
+      val input2 = ByteCSeq("  1,  \t 2,3 ,  #15Hello , 4 ")
+      val response2 = parser.parseResponse(input2)
+      println(response2)
+      assert( response2.charSeq === ByteCSeq("1,2,3,#15Hello,4") )
     }
   }
 }
