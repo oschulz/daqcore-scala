@@ -19,4 +19,9 @@ package daqcore
 
 
 package object scpi {
+
+  implicit def string2ICHeader(s: String) = ICHeader(s)
+  implicit def string2Cmd(s: String) = Command(ICHeader(s))
+  implicit def header2Cmd(header: Header) = Command(header)
+
 }

@@ -81,10 +81,98 @@ case class Result(values: ByteCSeq*) {
 }
 
 
-case class Response(val results: Result*) {
+trait SCPIFragment {
+  def charSeq: ByteCSeq
+}
+
+sealed abstract class Message extends SCPIFragment
+
+
+case class Response(val results: Result*) extends Message {
   def charSeq: ByteCSeq = results.toList match {
     case Nil => ByteCSeq("")
     case head::Nil => head.charSeq
     case head::tail => tail.foldLeft(head.charSeq) { (bs, r) => bs ++ ByteCSeq(";") ++ r.charSeq }
   }
+}
+
+
+sealed abstract class Mnemonic extends SCPIFragment {
+}
+
+
+object Mnemonic {
+  val shortMnem = """^([A-Z]+)$""".r
+  val longMnem = """^([A-Z]+)([a-z]+)$""".r
+  
+  def apply(mnem: String): Mnemonic = mnem match {
+    case shortMnem(short) => ShortMnem(short)
+    case longMnem(short, rest) => LongMnem(short, short+rest)
+    case _ => throw new IllegalArgumentException("Not a valid mnemonic: \"%s\"".format(mnem))
+  }
+}
+  
+case class RecMemonic(charSeq: ByteCSeq) extends Mnemonic {
+  override def hashCode = charSeq.toString.hashCode
+    override def canEqual(that: Any) = that.isInstanceOf[Mnemonic]
+    override def equals(that: Any) = canEqual(that) && (that match {
+    case that:RecMemonic => that.charSeq == this.charSeq
+    case that:SpecMnemonic => that == this
+    case _ => false
+  })
+}
+
+
+sealed abstract class SpecMnemonic extends Mnemonic {
+  def short: String
+  def long: String
+  
+  override def hashCode = short.hashCode
+    def canEqual(that: Any) = that.isInstanceOf[Mnemonic]
+    override def equals(that: Any) = canEqual(that) && (that match {
+    case that:RecMemonic => {
+      val thatStr = that.charSeq.toString
+      ( (thatStr == short.toLowerCase) || (thatStr == long.toLowerCase) ||
+      (thatStr == short.toUpperCase) || (thatStr == long.toUpperCase) )
+    }
+    case that:SpecMnemonic => ((that.short == this.short) && (that.long == this.long))
+    case _ => false
+  })
+}
+
+
+case class ShortMnem(short:String) extends SpecMnemonic {
+  def long = short
+  def charSeq = ByteCSeq(short)
+
+    override def canEqual(that: Any) = that.isInstanceOf[ShortMnem] || that.isInstanceOf[RecMemonic]
+}
+
+
+case class LongMnem(short:String, long:String)  extends SpecMnemonic {
+  def charSeq = ByteCSeq(long)
+
+    override def canEqual(that: Any) = that.isInstanceOf[LongMnem] || that.isInstanceOf[RecMemonic]
+}
+
+
+abstract class Header extends SCPIFragment
+
+case class ICHeader(mnemonic: String) extends Header {
+  def charSeq = ByteCSeq("*") ++ mnemonic
+}
+
+
+sealed abstract class Instruction extends SCPIFragment {
+  def params: Seq[ByteCSeq]
+}
+
+
+case class Command(header: Header, params: ByteCSeq*) extends Instruction {
+  def charSeq = header.charSeq ++ ByteCSeq(" ") ++ Result(params:_*).charSeq
+  def ? = Query(header, params:_*)
+}
+
+case class Query(header: Header, params: ByteCSeq*) extends Instruction {
+  def charSeq = header.charSeq ++ ByteCSeq("? ") ++ Result(params:_*).charSeq
 }
