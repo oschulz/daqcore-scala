@@ -114,16 +114,20 @@ class SCPIParser extends JavaTokenParsers with PackratParsers with Logging {
   lazy val icHeaderAbs: PackratParser[ICHeaderAbs] =
     ":"~>icHeaderRel ^^ { rel => ICHeaderAbs(rel.parts : _*) }
 
-  lazy val instruction = command | query
+  lazy val instruction = query | command
   
-  lazy val command: PackratParser[Command] =
-    skipWS(header ~ws~ repsep(value, ",")) ^^
-      { case header ~ws~ params => Command(header, params :_*) }
-
   lazy val query: PackratParser[Query] =
-    skipWS((header<~"?") ~ws~ repsep(value, ",")) ^^
-      { case header ~ws~ params => Query(header, params :_*) }
-  
+    skipWS((header<~"?") ~ (ws ~ repsep(value, ",")?)) ^^ {
+      case header ~ Some(ws ~ params) => Query(header, params :_*)
+      case header ~ None => Query(header)
+    }
+
+  lazy val command: PackratParser[Command] =
+    skipWS(header ~ (ws ~ repsep(value, ",")?)) ^^ {
+      case header ~ Some(ws ~ params) => Command(header, params :_*)
+      case header ~ None => Command(header)
+    }
+
   lazy val request: PackratParser[Request] =
     skipWS(repsep(instruction, ";") ^^ { instr => Request(instr : _*) })
   
