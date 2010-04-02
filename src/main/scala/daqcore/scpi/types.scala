@@ -105,6 +105,7 @@ case class Request(val instr: Instruction*) extends Message {
   }
   
   def hasResponse: Boolean = instr.find(_.isInstanceOf[Query]) != None
+  override def toString = instr.map(_.toString).mkString("; ")
 }
 
 
@@ -129,11 +130,13 @@ case class RecMnemonic(charSeq: ByteCSeq) extends Mnemonic {
     case that:SpecMnemonic => that == this
     case _ => false
   })
+  
+  override def toString = charSeq.toString
 }
 
 
 case class SpecMnemonic(short:String, long:String) extends Mnemonic {
-  def charSeq = ByteCSeq(long)
+  def charSeq = ByteCSeq(short)
 
   override def hashCode = short.hashCode
     def canEqual(that: Any) = that.isInstanceOf[Mnemonic]
@@ -151,6 +154,8 @@ case class SpecMnemonic(short:String, long:String) extends Mnemonic {
     if (part.mnem == this) Some(part.suffix)
     else None
   }
+  
+  override def toString = long
 }
 
 
@@ -165,6 +170,7 @@ sealed abstract class Header extends SCPIFragment {
 case class CCQHeader(mnemonic: String) extends Header {
   require(mnemonic == mnemonic.toUpperCase)
   def charSeq = ByteCSeq("*") ++ ByteCSeq(mnemonic)
+  override def toString = "*" + mnemonic
 }
 
 
@@ -176,12 +182,14 @@ sealed abstract class ICHeader extends Header {
 case class ICHeaderAbs(parts: ICHeaderPart*) extends ICHeader {
   def charSeq = ByteCSeq(":") ++ parts.map(_.charSeq).reduceLeft(_ ++ ByteCSeq(":") ++ _)
   def ~(part: ICHeaderPart): ICHeaderAbs = ICHeaderAbs((parts ++ Seq(part)) :_*)
+  override def toString = ":" + parts.map(_.toString).mkString(":")
 }
 
 case class ICHeaderRel(parts: ICHeaderPart*) extends ICHeader {
   def charSeq = parts.map(_.charSeq).reduceLeft(_ ++ ByteCSeq(":") ++ _)
   def unary_~ = ICHeaderAbs(parts :_*)
   def ~(part: ICHeaderPart): ICHeaderRel = ICHeaderRel((parts ++ Seq(part)) :_*)
+  override def toString = parts.map(_.toString) mkString(":")
 }
 
 
@@ -190,6 +198,7 @@ case class ICHeaderPart(mnem: Mnemonic, suffix: Int = 1) {
   def charSeq = mnem.charSeq ++ (if (suffix > 1) ByteCSeq(suffix.toString) else ByteCSeq(""))
   def unary_~ = ICHeaderAbs(this)
   def ~(that: ICHeaderPart) = ICHeaderRel(this, that)
+  override def toString = mnem.toString ++ (if (suffix > 1) suffix.toString else "")
 }
 
 
@@ -199,10 +208,25 @@ sealed abstract class Instruction extends SCPIFragment {
 
 
 case class Command(header: Header, params: ByteCSeq*) extends Instruction {
-  def charSeq = header.charSeq ++ ByteCSeq(" ") ++ Result(params:_*).charSeq
+  def charSeq = header.charSeq ++ {
+    if (!params.isEmpty) ByteCSeq(" ") ++ Result(params:_*).charSeq
+    else ByteCSeq("")
+  }
   def ? = Query(header, params:_*)
+  override def toString = header.toString + {
+    if (!params.isEmpty) " " + params.map(_.toString).mkString(", ")
+    else ""
+  }
 }
 
 case class Query(header: Header, params: ByteCSeq*) extends Instruction {
-  def charSeq = header.charSeq ++ ByteCSeq("? ") ++ Result(params:_*).charSeq
+  def charSeq = header.charSeq ++ {
+    if (!params.isEmpty) ByteCSeq("? ") ++ Result(params:_*).charSeq
+    else ByteCSeq("?")
+  }
+  def ? = Query(header, params:_*)
+  override def toString = header.toString + {
+    if (!params.isEmpty) "? " + params.map(_.toString).mkString(", ")
+    else "?"
+  }
 }
