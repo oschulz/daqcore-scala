@@ -20,6 +20,8 @@ package daqcore.scpi
 import daqcore.util._
 
 
+/** Integral number. Example: 42 */
+
 object NR1 {
   def apply(value: Int) = ByteCSeq(value.toString)
 
@@ -28,6 +30,15 @@ object NR1 {
 }
 
 
+// Fixed-point number with explicit decimal point. Example: 42.3
+// object NR2 - not implemented yet
+
+
+// Floating-point number in scientific notation. Example: 4.23E+02
+// object NR3 - not implemented yet
+
+
+/** Comprises NR1, NR2 and NR3 */
 object NRf {
   def apply(value: Double) = ByteCSeq(value.toString)
 
@@ -36,7 +47,15 @@ object NRf {
 }
 
 
-object SRD {
+// Extends NRf with MINimum, MAXimum, DEFault, UP, DOWN, NAN, INFinity, NINF
+// object NRfp - NRF+, not implemented yet
+
+
+// Boolean: 0 | 1 or OFF | ON
+// object Bool - not implemented yet
+
+
+abstract class StringData {
   protected val sqString = """'([^']*)'""".r
   protected val dqString = """"([^']*)"""".r
 
@@ -49,6 +68,40 @@ object SRD {
   }
 }
 
+/** String Program Data. String enclosed in single or double quotes */
+object SPD extends StringData
+
+/** String Response Data. String enclosed in single or double quotes */
+object SRD extends StringData
+
+
+
+abstract class CharacterData {
+  def apply(mnemonic: SpecMnemonic) = mnemonic.charSeq
+
+  def unapply(bs: ByteCSeq) : Option[RecMnemonic] =
+    try { Some(RecMnemonic(bs)) } catch { case _ => None }
+}
+
+/** Character Program Data. Unquoted mnemonics in short
+  * or long form */
+object CPD extends CharacterData
+
+
+/** Character Response Data. Unquoted mnemonics, only the short form
+  * is returned. */
+object CRD extends CharacterData
+
+
+// Arbitrary ASCII Response Data. Undelimited 7-bit ASCII data with implied
+// message terminator.
+// object AARD - not implemented yet
+
+
+/** Block Data. Binary encoded opaque block data. I. Only the definite length
+  * variant (starting with #[1-9]) is implemented so far. The indefinite length
+  * variant (starting with #0) has an implied message terminator and is not
+  * implemented yet */
 
 object BlockData {
   def apply(data: IndexedSeq[Byte]) : ByteCSeq = {
@@ -69,13 +122,6 @@ object BlockData {
 }
 
 
-
-
-
 trait SCPIFragment {
   def charSeq: ByteCSeq
 }
-
-
-
-
