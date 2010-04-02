@@ -20,8 +20,40 @@ package daqcore
 
 package object scpi {
 
-  //implicit def string2ICHeader(s: String) = ICHeader(s)
-  //implicit def string2Cmd(s: String) = Command(ICHeader(s))
-  //implicit def header2Cmd(header: Header) = Command(header)
+  implicit def Mnem2ICHeaderPart(mnem: SpecMnemonic) = mnem(1)
+  implicit def int2NR1(i:Int) = NR1(i)
+  implicit def double2NRf(x:Double) = NRf(x)
+  
+  //!! Sometimes cause SCPI parser test to fail (why?):
+  //implicit def bytes2BlockData(bytes: IndexedSeq[Byte]) = BlockData(bytes)
 
+  /** Clear Status (Command) */
+  def CLS = CCQHeader("CLS")
+
+  /** Standard Event Status Enable (Query) */
+  def ESE = CCQHeader("ESE")
+
+  /** Standard Event Status Register (Query) */
+  def ESR = CCQHeader("ESR")
+
+  /** Identification (Query) */
+  def IDN = CCQHeader("IDN")
+
+  /** Operation Complete (Command/Query) */
+  def OPC = CCQHeader("OPC")
+
+  /** Reset (Command) */
+  def RST = CCQHeader("RST")
+
+  /** Service Request Enable (Command/Query) */
+  def SRE = CCQHeader("SRE")
+
+  /** Read Status Byte (Query) */
+  def STB = CCQHeader("STB")
+
+  /** Self-Test (Query) */
+  def TST = CCQHeader("TST")
+
+  /** Wait-to-Continue (Command) */
+  def WAI = CCQHeader("WAI")
 }

@@ -103,6 +103,8 @@ case class Request(val instr: Instruction*) extends Message {
     case head::Nil => head.charSeq
     case head::tail => tail.foldLeft(head.charSeq) { (bs, r) => bs ++ ByteCSeq(";") ++ r.charSeq }
   }
+  
+  def hasResponse: Boolean = instr.find(_.isInstanceOf[Query]) != None
 }
 
 
@@ -152,11 +154,13 @@ case class SpecMnemonic(short:String, long:String) extends Mnemonic {
 }
 
 
-sealed abstract class Header extends SCPIFragment
-
-object Header {
-  // def apply(nmemonics: String*) = ICHeaderAbs(nmemonics map {Mnemonic(_)} :_*)
+sealed abstract class Header extends SCPIFragment {
+  def ! = Command(this)
+  def !(params: ByteCSeq*) = Command(this, params: _*)
+  def ? = Query(this)
+  def ?(params: ByteCSeq*) = Query(this, params: _*)
 }
+
 
 case class CCQHeader(mnemonic: String) extends Header {
   require(mnemonic == mnemonic.toUpperCase)
@@ -164,21 +168,28 @@ case class CCQHeader(mnemonic: String) extends Header {
 }
 
 
-sealed abstract class ICHeader extends Header
+sealed abstract class ICHeader extends Header {
+  def ~(part: ICHeaderPart): ICHeader
+}
 
 
 case class ICHeaderAbs(parts: ICHeaderPart*) extends ICHeader {
   def charSeq = ByteCSeq(":") ++ parts.map(_.charSeq).reduceLeft(_ ++ ByteCSeq(":") ++ _)
+  def ~(part: ICHeaderPart): ICHeaderAbs = ICHeaderAbs((parts ++ Seq(part)) :_*)
 }
 
 case class ICHeaderRel(parts: ICHeaderPart*) extends ICHeader {
   def charSeq = parts.map(_.charSeq).reduceLeft(_ ++ ByteCSeq(":") ++ _)
+  def unary_~ = ICHeaderAbs(parts :_*)
+  def ~(part: ICHeaderPart): ICHeaderRel = ICHeaderRel((parts ++ Seq(part)) :_*)
 }
 
 
 case class ICHeaderPart(mnem: Mnemonic, suffix: Int = 1) {
   require(suffix >= 1)
   def charSeq = mnem.charSeq ++ (if (suffix > 1) ByteCSeq(suffix.toString) else ByteCSeq(""))
+  def unary_~ = ICHeaderAbs(this)
+  def ~(that: ICHeaderPart) = ICHeaderRel(this, that)
 }
 
 

@@ -25,7 +25,6 @@ import daqcore.util.ByteCSeq
 
 class MnemonicSpec extends WordSpec with MustMatchers {
   val VOLTage = Mnemonic("VOLTage")
-  val IDN = Mnemonic("IDN")
 
   "A SpecMnemonic" should {
     "equal an equal SpecMnemonic" in { Mnemonic("FOObar") === Mnemonic("FOObar") }
