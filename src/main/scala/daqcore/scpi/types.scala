@@ -57,7 +57,7 @@ object NRf {
 
 abstract class StringData {
   protected val sqString = """'([^']*)'""".r
-  protected val dqString = """"([^']*)"""".r
+  protected val dqString = """"([^"]*)"""".r
 
   def apply(value: String) = ByteCSeq("\"") ++ ByteCSeq(value) ++ ByteCSeq("\"")
 
