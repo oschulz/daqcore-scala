@@ -97,6 +97,15 @@ case class Response(val results: Result*) extends Message {
 }
 
 
+case class Request(val instr: Instruction*) extends Message {
+  def charSeq: ByteCSeq = instr.toList match {
+    case Nil => ByteCSeq("")
+    case head::Nil => head.charSeq
+    case head::tail => tail.foldLeft(head.charSeq) { (bs, r) => bs ++ ByteCSeq(";") ++ r.charSeq }
+  }
+}
+
+
 sealed abstract class Mnemonic extends SCPIFragment {
 }
 
@@ -149,7 +158,7 @@ object Header {
   // def apply(nmemonics: String*) = ICHeaderAbs(nmemonics map {Mnemonic(_)} :_*)
 }
 
-case class CCHeader(mnemonic: String) extends Header {
+case class CCQHeader(mnemonic: String) extends Header {
   require(mnemonic == mnemonic.toUpperCase)
   def charSeq = ByteCSeq("*") ++ ByteCSeq(mnemonic)
 }

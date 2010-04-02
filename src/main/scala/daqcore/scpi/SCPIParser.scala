@@ -25,9 +25,9 @@ import daqcore.util._
 class SCPIParser extends JavaTokenParsers with PackratParsers with Logging {
   override def skipWhitespace = false
 
-  def ws: Parser[Option[String]] = regex(whiteSpace)?
+  def ws: Parser[String] = regex(whiteSpace)
   
-  def skipWS[T](parser: Parser[T]): Parser[T] = ws ~> parser <~ ws
+  def skipWS[T](parser: Parser[T]): Parser[T] = (ws?) ~> parser <~ (ws?)
   
   def parseBlockData(in: Input): ParseResult[(IndexedSeq[Byte], ByteCSeq)] = {
     val source = in.source
@@ -89,11 +89,52 @@ class SCPIParser extends JavaTokenParsers with PackratParsers with Logging {
   lazy val rmu: PackratParser[Result] =
     skipWS(repsep(value, ",") ^^ { values => Result(values : _*) })
   
-  lazy val respMsg: PackratParser[Response] =
+  lazy val response: PackratParser[Response] =
     skipWS(repsep(rmu, ";") ^^ { results => Response(results : _*) })
   
+  lazy val recMnemonic: PackratParser[RecMnemonic] =
+    """[A-Z]+|[a-z]+""".r ^^ { mnem => RecMnemonic(ByteCSeq(mnem)) }
+  
+  lazy val header = ccqHeader | icHeader
+
+  lazy val ccqHeader: PackratParser[CCQHeader] =
+    "*" ~> recMnemonic ^^ { mnem => CCQHeader(mnem.charSeq.toString) }
+    
+  lazy val suffix: PackratParser[Int] = """[1-9][0-9]*""".r ^^ { _.toInt }
+
+  lazy val icHeaderPart: PackratParser[ICHeaderPart] =
+    recMnemonic ~ (suffix?) ^^
+      { case mnem ~ suffix => ICHeaderPart(mnem, suffix getOrElse 1) }
+
+  lazy val icHeader = icHeaderRel | icHeaderAbs
+  
+  lazy val icHeaderRel: PackratParser[ICHeaderRel] =
+    repsep(icHeaderPart, ":") ^^ { parts => ICHeaderRel(parts : _*) }
+  
+  lazy val icHeaderAbs: PackratParser[ICHeaderAbs] =
+    ":"~>icHeaderRel ^^ { rel => ICHeaderAbs(rel.parts : _*) }
+
+  lazy val instruction = command | query
+  
+  lazy val command: PackratParser[Command] =
+    skipWS(header ~ws~ repsep(value, ",")) ^^
+      { case header ~ws~ params => Command(header, params :_*) }
+
+  lazy val query: PackratParser[Query] =
+    skipWS((header<~"?") ~ws~ repsep(value, ",")) ^^
+      { case header ~ws~ params => Query(header, params :_*) }
+  
+  lazy val request: PackratParser[Request] =
+    skipWS(repsep(instruction, ";") ^^ { instr => Request(instr : _*) })
+  
   def parseResponse(in: java.lang.CharSequence): Response =
-    parseAll(respMsg, in).get
+    parseAll(response, in).get
+
+  def parseHeader(in: java.lang.CharSequence): Header =
+    parseAll(header, in).get
+
+  def parseRequest(in: java.lang.CharSequence): Request =
+    parseAll(request, in).get
 }
 
 
