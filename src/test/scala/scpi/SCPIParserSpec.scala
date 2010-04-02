@@ -21,13 +21,14 @@ import org.scalatest.WordSpec
 import org.scalatest.matchers.MustMatchers
 
 import daqcore.util.ByteCSeq
+import daqcore.scpi.mnemonics._
 
 
 class SCPIParserSpec extends WordSpec with MustMatchers {
   "An SCPIParser" should {
     val parser = SCPIParser()
 
-    "parse input correctly" in {
+    "parse responses correctly" in {
       val i = 42
       val x = 7.3
       val s = "foo"
@@ -53,6 +54,16 @@ class SCPIParserSpec extends WordSpec with MustMatchers {
       val response2 = parser.parseResponse(input2)
       println(response2)
       assert( response2.charSeq === ByteCSeq("1,2,3,#15Hello,4") )
+    }
+    
+    "parse requests correctly" in {
+      parser.parseRequest(Request(IDN!).charSeq)
+      parser.parseRequest(Request(IDN?).charSeq)
+
+      val req = Request(IDN?, SET~VOLTage(2)~DC! (5, 5.5, BlockData(ByteCSeq("Hello").contents)))
+      val preq = parser.parseRequest(req.charSeq)
+      assert( req.charSeq === preq.charSeq )
+      assert( req.charSeq === ByteCSeq("*IDN?;SET:VOLT2:DC 5,5.5,#15Hello") )
     }
   }
 }
