@@ -71,5 +71,23 @@ class SCPIParserSpec extends WordSpec with MustMatchers {
       assert( preq2.charSeq === expected )
       assert( preq === preq2 )
     }
+    
+    "extract terminated messaged correctly" in {
+      import daqcore.util._
+
+      val in1 = ByteCSeq("*IDN?;SET:VOLT2:DC 5,5.5,#15Hello")
+      val in2 = ByteCSeq("  1,   2,3 ,  #15Hello , 4 ")
+      val input = in1 ++ ByteCSeq("\n") ++
+            in2 ++ ByteCSeq("\r\n") ++ ByteCSeq("7")
+      val res1 = parser.extractTermMsg(input)
+      val res2 = parser.extractTermMsg(res1.next)
+      val res3 = parser.extractTermMsg(res2.next)
+      
+      assert( res1.get == in1 )
+      assert( res2.get == in2 )
+      assert( res1.get.contents sharedWith input.contents )
+      assert( res2.get.contents sharedWith input.contents )
+      assert( res3.successful === false )
+    }
   }
 }

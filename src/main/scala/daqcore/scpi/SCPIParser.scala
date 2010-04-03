@@ -161,9 +161,12 @@ class SCPIParser extends RegexParsers with PackratParsers with Logging {
   lazy val request: PackratParser[Request] =
     skipWS(repsep(instruction, ";") ^^ { instr => Request(instr : _*) })
   
-  def extractMessage(in: java.lang.CharSequence) =
+  /** Extract a CR+LF or LF terminated message from a CharSequence */
+  def extractTermMsg(in: java.lang.CharSequence) =
     streamMsgRaw(new PackratReader(new CharSequenceReader(in)))
-  def extractMessage(in: Input) =  streamMsgRaw(in)
+
+  /** Extract a CR+LF or LF terminated message from a Reader */
+  def extractTermMsg(in: Input) =  streamMsgRaw(in)
   
   def parseResponse(in: java.lang.CharSequence): Response =
     parseAll(response, in).get
