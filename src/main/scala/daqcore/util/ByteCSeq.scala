@@ -48,6 +48,10 @@ object ByteCSeq {
   def encoding  = "ASCII"
   def apply(bytes: IndexedSeq[Byte]): ByteCSeq = new ByteCSeq(bytes)
   def apply(s: String): ByteCSeq = apply(s.getBytes(encoding))
+  def apply(seq: CharSequence): ByteCSeq = seq match {
+    case seq: ByteCSeq => seq
+    case seq => apply(seq.toString)
+  }
   def apply(value: Byte*): ByteCSeq = apply(IndexedSeq(value : _*))
 
   def newBuilder: Builder[Byte, ByteCSeq] =
