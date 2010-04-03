@@ -19,16 +19,27 @@ package daqcore.scpi
 
 
 import scala.util.parsing.combinator._
+import scala.util.matching.Regex
 import daqcore.util._
 
 
-class SCPIParser extends JavaTokenParsers with PackratParsers with Logging {
+class SCPIParser extends RegexParsers with PackratParsers with Logging {
   override def skipWhitespace = false
 
   def ws: Parser[String] = regex(whiteSpace)
   
   def skipWS[T](parser: Parser[T]): Parser[T] = (ws?) ~> parser <~ (ws?)
   
+  implicit def expr(ex: Regex) = new PackratParser[ByteCSeq] {
+    def apply(in: Input) = {
+      val (source, offset) = (in.source, in.offset)
+      (ex.findPrefixMatchOf(source.subSequence(offset, source.length))) match {
+        case Some(m) =>  Success(ByteCSeq(source.subSequence(offset, offset + m.end)), in.drop(m.end))
+        case None => Failure("Input \"%s\" does not match expression \"%s\"".format(in.first, ex), in)
+      }
+    }
+  }
+
   def parseBlockData(in: Input): ParseResult[(IndexedSeq[Byte], ByteCSeq)] = {
     val source = in.source
     val offset = in.offset
@@ -73,12 +84,14 @@ class SCPIParser extends JavaTokenParsers with PackratParsers with Logging {
     }
   }
 
-  //!! Change implementation of these to avoid ByteCSeq -> String -> ByteCSeq conversion
-  //!! Possibly one ASCII-type-argument parser can replace all of them
-  lazy val nr1: PackratParser[ByteCSeq] = wholeNumber ^^ { v => ByteCSeq(v) }
-  lazy val nrf: PackratParser[ByteCSeq] = floatingPointNumber ^^ { v => ByteCSeq(v) }
-  lazy val string: PackratParser[ByteCSeq] = stringLiteral ^^ { v => ByteCSeq(v) }
-  
+  lazy val nr1: PackratParser[ByteCSeq] = """-?\d+""".r
+  lazy val nr2: PackratParser[ByteCSeq] = """(\d+(\.\d*)?|\d*\.\d+)""".r
+  lazy val nr3: PackratParser[ByteCSeq] = """-?(\d+(\.\d*)?|\d*\.\d+)([eE][+-]?\d+)?[fFdD]?""".r
+  lazy val nrf: PackratParser[ByteCSeq] = nr3 | nr2 | nr1
+  lazy val dqString: PackratParser[ByteCSeq] = """"([^"]*)"""".r
+  lazy val sqString: PackratParser[ByteCSeq] = """'([^']*)'""".r
+  lazy val string: PackratParser[ByteCSeq] = dqString | sqString
+
   lazy val value: PackratParser[ByteCSeq] = skipWS (
     blockData |
     nrf | 
@@ -93,14 +106,14 @@ class SCPIParser extends JavaTokenParsers with PackratParsers with Logging {
     skipWS(repsep(rmu, ";") ^^ { results => Response(results : _*) })
   
   lazy val recMnemonic: PackratParser[RecMnemonic] =
-    """[A-Z]+|[a-z]+""".r ^^ { mnem => RecMnemonic(ByteCSeq(mnem)) }
+    """[A-Z]+|[a-z]+""".r ^^ { mnem => RecMnemonic(mnem) }
   
   lazy val header = ccqHeader | icHeader
 
   lazy val ccqHeader: PackratParser[CCQHeader] =
     "*" ~> recMnemonic ^^ { mnem => CCQHeader(mnem.charSeq.toString) }
     
-  lazy val suffix: PackratParser[Int] = """[1-9][0-9]*""".r ^^ { _.toInt }
+  lazy val suffix: PackratParser[Int] = """[1-9][0-9]*""".r ^^ { _.toString.toInt }
 
   lazy val icHeaderPart: PackratParser[ICHeaderPart] =
     recMnemonic ~ (suffix?) ^^
