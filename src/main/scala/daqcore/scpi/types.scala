@@ -51,7 +51,8 @@ object NRf {
 // object NRfp - NRF+, not implemented yet
 
 
-// Boolean: 0 | 1 or OFF | ON
+// Boolean Program Data: OFF | ON | <NRf>
+// Boolean Response Data: 0 | 1
 // object Bool - not implemented yet
 
 
