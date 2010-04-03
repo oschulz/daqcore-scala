@@ -56,14 +56,11 @@ object NRf {
 
 
 abstract class StringData {
-  protected val sqString = """'([^']*)'""".r
-  protected val dqString = """"([^"]*)"""".r
-
   def apply(value: String) = ByteCSeq("\"") ++ ByteCSeq(value) ++ ByteCSeq("\"")
 
   def unapply(bs: ByteCSeq) : Option[String] = bs match {
-    case sqString(contents) => Some(contents)
-    case dqString(contents) => Some(contents)
+    case SCPIParser.sqStringExpr(contents) => Some(contents)
+    case SCPIParser.dqStringExpr(contents) => Some(contents)
     case _ => None
   }
 }

@@ -24,6 +24,8 @@ import daqcore.util._
 
 
 class SCPIParser extends RegexParsers with PackratParsers with Logging {
+  import SCPIParser._
+  
   override def skipWhitespace = false
 
   def ws: Parser[String] = regex(whiteSpace)
@@ -84,12 +86,12 @@ class SCPIParser extends RegexParsers with PackratParsers with Logging {
     }
   }
 
-  lazy val nr1: PackratParser[ByteCSeq] = """-?\d+""".r
-  lazy val nr2: PackratParser[ByteCSeq] = """(\d+(\.\d*)?|\d*\.\d+)""".r
-  lazy val nr3: PackratParser[ByteCSeq] = """-?(\d+(\.\d*)?|\d*\.\d+)([eE][+-]?\d+)?[fFdD]?""".r
+  lazy val nr1: PackratParser[ByteCSeq] = nr1Expr
+  lazy val nr2: PackratParser[ByteCSeq] = nr2Expr
+  lazy val nr3: PackratParser[ByteCSeq] = nr3Expr
   lazy val nrf: PackratParser[ByteCSeq] = nr3 | nr2 | nr1
-  lazy val dqString: PackratParser[ByteCSeq] = """"([^"]*)"""".r
-  lazy val sqString: PackratParser[ByteCSeq] = """'([^']*)'""".r
+  lazy val dqString: PackratParser[ByteCSeq] = dqStringExpr
+  lazy val sqString: PackratParser[ByteCSeq] = sqStringExpr
   lazy val string: PackratParser[ByteCSeq] = dqString | sqString
 
   lazy val value: PackratParser[ByteCSeq] = skipWS (
@@ -106,14 +108,14 @@ class SCPIParser extends RegexParsers with PackratParsers with Logging {
     skipWS(repsep(rmu, ";") ^^ { results => Response(results : _*) })
   
   lazy val recMnemonic: PackratParser[RecMnemonic] =
-    """[A-Z]+|[a-z]+""".r ^^ { mnem => RecMnemonic(mnem) }
+    recMnemonicExpr ^^ { mnem => RecMnemonic(mnem) }
   
   lazy val header = ccqHeader | icHeader
 
   lazy val ccqHeader: PackratParser[CCQHeader] =
     "*" ~> recMnemonic ^^ { mnem => CCQHeader(mnem.charSeq.toString) }
     
-  lazy val suffix: PackratParser[Int] = """[1-9][0-9]*""".r ^^ { _.toString.toInt }
+  lazy val suffix: PackratParser[Int] = suffixExpr ^^ { _.toString.toInt }
 
   lazy val icHeaderPart: PackratParser[ICHeaderPart] =
     recMnemonic ~ (suffix?) ^^
@@ -156,5 +158,13 @@ class SCPIParser extends RegexParsers with PackratParsers with Logging {
 
 
 object SCPIParser {
+  val nr1Expr = """-?\d+""".r
+  val nr2Expr = """(\d+(\.\d*)?|\d*\.\d+)""".r
+  val nr3Expr = """-?(\d+(\.\d*)?|\d*\.\d+)([eE][+-]?\d+)?[fFdD]?""".r
+  val dqStringExpr = """"([^"]*)"""".r
+  val sqStringExpr = """'([^']*)'""".r
+  val suffixExpr = """[1-9][0-9]*""".r
+  val recMnemonicExpr = """[A-Z]+|[a-z]+""".r
+  
   def apply() = new SCPIParser
 }
