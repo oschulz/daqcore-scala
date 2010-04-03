@@ -28,10 +28,6 @@ class SCPIParser extends RegexParsers with PackratParsers with Logging {
   
   override def skipWhitespace = false
 
-  def ws: Parser[String] = regex(whiteSpace)
-  
-  def skipWS[T](parser: Parser[T]): Parser[T] = (ws?) ~> parser <~ (ws?)
-  
   implicit def expr(ex: Regex) = new PackratParser[ByteCSeq] {
     def apply(in: Input) = {
       val (source, offset) = (in.source, in.offset)
@@ -41,6 +37,12 @@ class SCPIParser extends RegexParsers with PackratParsers with Logging {
       }
     }
   }
+
+
+  def ws: Parser[ByteCSeq] = expr(whiteSpace)
+  
+  def skipWS[T](parser: Parser[T]): Parser[T] = (ws?) ~> parser <~ (ws?)
+
 
   def parseBlockData(in: Input): ParseResult[(IndexedSeq[Byte], ByteCSeq)] = {
     val source = in.source
