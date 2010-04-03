@@ -17,6 +17,8 @@
 
 package daqcore
 
+import daqcore.util._
+
 
 package object scpi {
 
@@ -28,32 +30,35 @@ package object scpi {
   //implicit def bytes2BlockData(bytes: IndexedSeq[Byte]) = BlockData(bytes)
 
   /** Clear Status (Command) */
-  def CLS = CCQHeader("CLS")
+  val CLS = CCQHeader("CLS")
 
   /** Standard Event Status Enable (Query) */
-  def ESE = CCQHeader("ESE")
+  val ESE = CCQHeader("ESE")
 
   /** Standard Event Status Register (Query) */
-  def ESR = CCQHeader("ESR")
+  val ESR = CCQHeader("ESR")
 
   /** Identification (Query) */
-  def IDN = CCQHeader("IDN")
+  val IDN = CCQHeader("IDN")
 
   /** Operation Complete (Command/Query) */
-  def OPC = CCQHeader("OPC")
+  val OPC = CCQHeader("OPC")
 
   /** Reset (Command) */
-  def RST = CCQHeader("RST")
+  val RST = CCQHeader("RST")
 
   /** Service Request Enable (Command/Query) */
-  def SRE = CCQHeader("SRE")
+  val SRE = CCQHeader("SRE")
 
   /** Read Status Byte (Query) */
-  def STB = CCQHeader("STB")
+  val STB = CCQHeader("STB")
 
   /** Self-Test (Query) */
-  def TST = CCQHeader("TST")
+  val TST = CCQHeader("TST")
 
   /** Wait-to-Continue (Command) */
-  def WAI = CCQHeader("WAI")
+  val WAI = CCQHeader("WAI")
+  
+  /** Default message terminator for stream-based connections */
+  val StreamMsgTerm = ByteCSeq("\r\n")
 }
