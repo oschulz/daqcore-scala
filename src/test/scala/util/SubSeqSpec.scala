@@ -41,16 +41,24 @@ class SubSeqSpec extends WordSpec with MustMatchers {
 
     "sub-sequenced" should {
       val seq = SubIdxSeq(1,2,3,4)
+      val sub1 = seq.subSequence(0,2)
+      val sub2 = seq.subSequence(2,4)
       
       "share memory between sub-sequences" in {
-        val sub1 = seq.subSequence(0,2)
-        val sub2 = seq.subSequence(2,4)
         assert((sub1 sharedWith sub2) === true)
       }
 
+      "share memory with the original after re-assembly" in {
+        assert( (sub1 ++ sub2) sharedWith seq )
+      }
+
+      "equal the original after re-assembly" in {
+        assert( (sub1 ++ sub2) === seq )
+      }
+      
       "equal itself when sliced" in {
-        assert(seq.subSequence(0,2) === seq.slice(0,2))
-        assert(seq.subSequence(2,4) === seq.slice(2,4))
+        assert(sub1 === seq.slice(0,2))
+        assert(sub2 === seq.slice(2,4))
       }
     }
   }
