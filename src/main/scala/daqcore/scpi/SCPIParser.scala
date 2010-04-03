@@ -116,6 +116,8 @@ class SCPIParser extends RegexParsers with PackratParsers with Logging {
     string
   )
 
+  //!! missing: Suffix Program Data: ((ws?)~multiplier?)~unit
+
   lazy val rmu: PackratParser[Result] =
     skipWS(repsep(value, ",") ^^ { values => Result(values : _*) })
   
@@ -130,10 +132,10 @@ class SCPIParser extends RegexParsers with PackratParsers with Logging {
   lazy val ccqHeader: PackratParser[CCQHeader] =
     "*" ~> recMnemonic ^^ { mnem => CCQHeader(mnem.charSeq.toString) }
     
-  lazy val suffix: PackratParser[Int] = suffixExpr ^^ { _.toString.toInt }
+  lazy val mnemSuffix: PackratParser[Int] = mnemSuffixExpr ^^ { _.toString.toInt }
 
   lazy val icHeaderPart: PackratParser[ICHeaderPart] =
-    recMnemonic ~ (suffix?) ^^
+    recMnemonic ~ (mnemSuffix?) ^^
       { case mnem ~ suffix => ICHeaderPart(mnem, suffix getOrElse 1) }
 
   lazy val icHeader = icHeaderRel | icHeaderAbs
@@ -160,7 +162,7 @@ class SCPIParser extends RegexParsers with PackratParsers with Logging {
 
   lazy val request: PackratParser[Request] =
     skipWS(repsep(instruction, ";") ^^ { instr => Request(instr : _*) })
-  
+    
   /** Extract a CR+LF or LF terminated message from a CharSequence */
   def extractTermMsg(in: java.lang.CharSequence) =
     streamMsgRaw(new PackratReader(new CharSequenceReader(in)))
@@ -187,7 +189,7 @@ object SCPIParser {
   val nr3Expr = """-?(\d+(\.\d*)?|\d*\.\d+)([eE][+-]?\d+)?[fFdD]?""".r
   val dqStringExpr = """"([^"]*)"""".r
   val sqStringExpr = """'([^']*)'""".r
-  val suffixExpr = """[1-9][0-9]*""".r
+  val mnemSuffixExpr = """[1-9][0-9]*""".r
   val recMnemonicExpr = """[A-Z]+|[a-z]+""".r
   
   def apply() = new SCPIParser
