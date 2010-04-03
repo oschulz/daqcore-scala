@@ -19,7 +19,9 @@ package daqcore.scpi
 
 
 import scala.util.parsing.combinator._
+import scala.util.parsing.input._
 import scala.util.matching.Regex
+
 import daqcore.util._
 
 
@@ -42,12 +44,23 @@ class SCPIParser extends RegexParsers with PackratParsers with Logging {
   def ws: Parser[ByteCSeq] = expr(whiteSpace)
   
   def skipWS[T](parser: Parser[T]): Parser[T] = (ws?) ~> parser <~ (ws?)
+  
+  
+  lazy val nonBlockString: PackratParser[ByteCSeq] = nonBlockStringExpr
+
+  lazy val msgContent = (nonBlockString | string | blockData)*
+  
+  lazy val streamMsgRaw: PackratParser[ByteCSeq] =
+     msgContent <~ streamMsgTerm ^^ { l => l.reduceLeft {_ ++ _}}
 
 
-  def parseBlockData(in: Input): ParseResult[(IndexedSeq[Byte], ByteCSeq)] = {
-    val source = in.source
-    val offset = in.offset
-    try {
+  lazy val streamMsgTerm: PackratParser[ByteCSeq] = streamMsgTermExpr
+
+
+  protected def parseBlockData(in: Input): ParseResult[(IndexedSeq[Byte], ByteCSeq)] = {
+    val (source, offset) = (in.source, in.offset)
+    if (offset >= source.length) Failure("Reached end of input", in)
+    else try {
       val inSeq = in.source.asInstanceOf[ByteCSeq]
       val input = inSeq.contents.subSequence(offset, source.length)
       if ( (input.length >= 0) && (input(0) == '#') && (input(1) >= '0') && (input(1) <= '9')) {
@@ -87,7 +100,7 @@ class SCPIParser extends RegexParsers with PackratParsers with Logging {
       case f: NoSuccess => f
     }
   }
-
+  
   lazy val nr1: PackratParser[ByteCSeq] = nr1Expr
   lazy val nr2: PackratParser[ByteCSeq] = nr2Expr
   lazy val nr3: PackratParser[ByteCSeq] = nr3Expr
@@ -148,6 +161,10 @@ class SCPIParser extends RegexParsers with PackratParsers with Logging {
   lazy val request: PackratParser[Request] =
     skipWS(repsep(instruction, ";") ^^ { instr => Request(instr : _*) })
   
+  def extractMessage(in: java.lang.CharSequence) =
+    streamMsgRaw(new PackratReader(new CharSequenceReader(in)))
+  def extractMessage(in: Input) =  streamMsgRaw(in)
+  
   def parseResponse(in: java.lang.CharSequence): Response =
     parseAll(response, in).get
 
@@ -160,6 +177,8 @@ class SCPIParser extends RegexParsers with PackratParsers with Logging {
 
 
 object SCPIParser {
+  val streamMsgTermExpr = """(\x0D?\x0A)""".r
+  val nonBlockStringExpr = """(([^#'"\x0D\x0A]|[#][^0-9])+)""".r
   val nr1Expr = """-?\d+""".r
   val nr2Expr = """(\d+(\.\d*)?|\d*\.\d+)""".r
   val nr3Expr = """-?(\d+(\.\d*)?|\d*\.\d+)([eE][+-]?\d+)?[fFdD]?""".r
