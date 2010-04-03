@@ -100,8 +100,9 @@ object CRD extends CharacterData
 
 /** Block Data. Binary encoded opaque block data. I. Only the definite length
   * variant (starting with #[1-9]) is implemented so far. The indefinite length
-  * variant (starting with #0) has an implied message terminator and is not
-  * implemented yet */
+  * variant (starting with #0) must end with [CR?]+LF+EOI and is not
+  * implemented yet. Only the definite length version is usable with streaming
+  * protocols like RS232 or TCP/IP. */
 
 object BlockData {
   def apply(data: IndexedSeq[Byte]) : ByteCSeq = {
