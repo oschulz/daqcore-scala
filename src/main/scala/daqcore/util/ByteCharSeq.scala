@@ -21,9 +21,9 @@ import collection.IndexedSeqLike
 import collection.mutable.{Builder,ArrayBuffer,ArrayBuilder}
 
 
-class ByteCSeq(val contents: IndexedSeq[Byte]) extends CharSequence
+class ByteCharSeq(val contents: IndexedSeq[Byte]) extends CharSequence
   with scala.collection.immutable.IndexedSeq[Byte]
-  with IndexedSeqLike[Byte, ByteCSeq]
+  with IndexedSeqLike[Byte, ByteCharSeq]
 {
   def apply(index: Int): Byte = contents(index)
 
@@ -32,33 +32,33 @@ class ByteCSeq(val contents: IndexedSeq[Byte]) extends CharSequence
   def length = contents.length
   
   def subSequence(start: Int, end: Int) =
-    new ByteCSeq(contents.subSequence(start, end))
+    new ByteCharSeq(contents.subSequence(start, end))
   
-  def ++(that: ByteCSeq): ByteCSeq = new ByteCSeq(this.contents ++ that.contents)
-  def ++(that: Seq[Byte]): ByteCSeq = new ByteCSeq(this.contents ++ that)
-  def ++(s: String): ByteCSeq = this ++ ByteCSeq(s)
+  def ++(that: ByteCharSeq): ByteCharSeq = new ByteCharSeq(this.contents ++ that.contents)
+  def ++(that: Seq[Byte]): ByteCharSeq = new ByteCharSeq(this.contents ++ that)
+  def ++(s: String): ByteCharSeq = this ++ ByteCharSeq(s)
   
   override def toString = contents.view map {_.toChar} mkString
   
-  override protected def newBuilder: Builder[Byte, ByteCSeq] = ByteCSeq.newBuilder
+  override protected def newBuilder: Builder[Byte, ByteCharSeq] = ByteCharSeq.newBuilder
 }
 
 
-object ByteCSeq {
+object ByteCharSeq {
   def encoding  = "ASCII"
-  def apply(bytes: IndexedSeq[Byte]): ByteCSeq = new ByteCSeq(bytes)
-  def apply(s: String): ByteCSeq = apply(s.getBytes(encoding))
-  def apply(seq: CharSequence): ByteCSeq = seq match {
-    case seq: ByteCSeq => seq
+  def apply(bytes: IndexedSeq[Byte]): ByteCharSeq = new ByteCharSeq(bytes)
+  def apply(s: String): ByteCharSeq = apply(s.getBytes(encoding))
+  def apply(seq: CharSequence): ByteCharSeq = seq match {
+    case seq: ByteCharSeq => seq
     case seq => apply(seq.toString)
   }
-  def apply(value: Byte*): ByteCSeq = apply(IndexedSeq(value : _*))
+  def apply(value: Byte*): ByteCharSeq = apply(IndexedSeq(value : _*))
 
-  def newBuilder: Builder[Byte, ByteCSeq] =
+  def newBuilder: Builder[Byte, ByteCharSeq] =
     new ArrayBuilder.ofByte() mapResult { a => apply(a.toSeq.asInstanceOf[IndexedSeq[Byte]]) }
 }
 
 
-trait ByteCSeqFragment {
-  def charSeq: ByteCSeq
+trait ByteCharSeqFragment {
+  def charSeq: ByteCharSeq
 }

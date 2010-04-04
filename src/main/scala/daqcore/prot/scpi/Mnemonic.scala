@@ -20,7 +20,7 @@ package daqcore.prot.scpi
 import daqcore.util._
 
 
-sealed abstract class Mnemonic extends ByteCSeqFragment {
+sealed abstract class Mnemonic extends ByteCharSeqFragment {
 }
 
 
@@ -33,7 +33,7 @@ object Mnemonic {
   }
 }
   
-case class RecMnemonic(charSeq: ByteCSeq) extends Mnemonic {
+case class RecMnemonic(charSeq: ByteCharSeq) extends Mnemonic {
   override def hashCode = charSeq.toString.hashCode
     override def canEqual(that: Any) = that.isInstanceOf[Mnemonic]
     override def equals(that: Any) = canEqual(that) && (that match {
@@ -47,7 +47,7 @@ case class RecMnemonic(charSeq: ByteCSeq) extends Mnemonic {
 
 
 case class SpecMnemonic(short:String, long:String) extends Mnemonic {
-  def charSeq = ByteCSeq(short)
+  def charSeq = ByteCharSeq(short)
 
   override def hashCode = short.hashCode
     def canEqual(that: Any) = that.isInstanceOf[Mnemonic]

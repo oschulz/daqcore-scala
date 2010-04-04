@@ -20,7 +20,7 @@ package daqcore.prot.scpi
 import org.scalatest.WordSpec
 import org.scalatest.matchers.MustMatchers
 
-import daqcore.util.ByteCSeq
+import daqcore.util.ByteCharSeq
 import daqcore.prot.scpi.mnemonics._
 
 
@@ -50,23 +50,23 @@ class SCPIParserSpec extends WordSpec with MustMatchers {
       assert( bytes2R === bytes2 )
       assert( lR === l )
       
-      val input2 = ByteCSeq("  1,  \t 2,3 ,  #15Hello , 4 ")
+      val input2 = ByteCharSeq("  1,  \t 2,3 ,  #15Hello , 4 ")
       val response2 = parser.parseResponse(input2)
       println(response2)
-      assert( response2.charSeq === ByteCSeq("1,2,3,#15Hello,4") )
+      assert( response2.charSeq === ByteCharSeq("1,2,3,#15Hello,4") )
     }
     
     "parse requests correctly" in {
       parser.parseRequest(Request(IDN!).charSeq)
       parser.parseRequest(Request(IDN?).charSeq)
-      val expected = ByteCSeq("*IDN?;SET:VOLT2:DC 5,5.5,#15Hello")
+      val expected = ByteCharSeq("*IDN?;SET:VOLT2:DC 5,5.5,#15Hello")
 
-      val req = Request(IDN?, SET~VOLTage(2)~DC! (5, 5.5, BlockData(ByteCSeq("Hello").contents)))
+      val req = Request(IDN?, SET~VOLTage(2)~DC! (5, 5.5, BlockData(ByteCharSeq("Hello").contents)))
       val preq = parser.parseRequest(req.charSeq)
       assert( req.charSeq === preq.charSeq )
       assert( req.charSeq === expected )
       
-      val req2 = ByteCSeq("  *IDN? \t;  SET:VOLT2:DC 5 , 5.5 , #15Hello  ")
+      val req2 = ByteCharSeq("  *IDN? \t;  SET:VOLT2:DC 5 , 5.5 , #15Hello  ")
       val preq2 = parser.parseRequest(req2)
       assert( preq2.charSeq === expected )
       assert( preq === preq2 )
@@ -75,10 +75,10 @@ class SCPIParserSpec extends WordSpec with MustMatchers {
     "extract terminated messaged correctly" in {
       import daqcore.util._
 
-      val in1 = ByteCSeq("*IDN?;SET:VOLT2:DC 5,5.5,#15Hello")
-      val in2 = ByteCSeq("  1,   2,3 ,  #15Hello , 4 ")
-      val input = in1 ++ ByteCSeq("\n") ++
-            in2 ++ ByteCSeq("\r\n") ++ ByteCSeq("7")
+      val in1 = ByteCharSeq("*IDN?;SET:VOLT2:DC 5,5.5,#15Hello")
+      val in2 = ByteCharSeq("  1,   2,3 ,  #15Hello , 4 ")
+      val input = in1 ++ ByteCharSeq("\n") ++
+            in2 ++ ByteCharSeq("\r\n") ++ ByteCharSeq("7")
       val res1 = parser.extractTermMsg(input)
       val res2 = parser.extractTermMsg(res1.next)
       val res3 = parser.extractTermMsg(res2.next)

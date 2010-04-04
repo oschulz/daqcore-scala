@@ -20,7 +20,7 @@ package daqcore.prot.scpi
 import org.scalatest.WordSpec
 import org.scalatest.matchers.MustMatchers
 
-import daqcore.util.ByteCSeq
+import daqcore.util.ByteCharSeq
 
 
 class MnemonicSpec extends WordSpec with MustMatchers {
@@ -32,11 +32,11 @@ class MnemonicSpec extends WordSpec with MustMatchers {
 
   "A RecMnemonic" should {
     "match a SpecMnemonic according to SCPI specs" in {
-      expect(false)( VOLTage == RecMnemonic(ByteCSeq("VOLTage")) )
-      assert( VOLTage === RecMnemonic(ByteCSeq("VOLTAGE")) )
-      assert( VOLTage === RecMnemonic(ByteCSeq("voltage")) )
-      assert( VOLTage === RecMnemonic(ByteCSeq("volt")) ) 
-      assert( VOLTage === RecMnemonic(ByteCSeq("VOLT")) )
+      expect(false)( VOLTage == RecMnemonic(ByteCharSeq("VOLTage")) )
+      assert( VOLTage === RecMnemonic(ByteCharSeq("VOLTAGE")) )
+      assert( VOLTage === RecMnemonic(ByteCharSeq("voltage")) )
+      assert( VOLTage === RecMnemonic(ByteCharSeq("volt")) ) 
+      assert( VOLTage === RecMnemonic(ByteCharSeq("VOLT")) )
     }
   }
 }

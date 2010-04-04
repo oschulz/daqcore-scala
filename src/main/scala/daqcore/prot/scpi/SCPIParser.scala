@@ -26,26 +26,26 @@ import daqcore.util._
 import daqcore.prot._
 
 
-class SCPIParser extends ByteCSeqParsers {
+class SCPIParser extends ByteCharSeqParsers {
   import SCPIParser._
   
   
-  lazy val nonBlockString: PackratParser[ByteCSeq] = nonBlockStringExpr
+  lazy val nonBlockString: PackratParser[ByteCharSeq] = nonBlockStringExpr
 
   lazy val msgContent = (nonBlockString | string | blockData)*
   
-  lazy val streamMsgRaw: PackratParser[ByteCSeq] =
+  lazy val streamMsgRaw: PackratParser[ByteCharSeq] =
      msgContent <~ streamMsgTerm ^^ { l => l.reduceLeft {_ ++ _}}
 
 
-  lazy val streamMsgTerm: PackratParser[ByteCSeq] = streamMsgTermExpr
+  lazy val streamMsgTerm: PackratParser[ByteCharSeq] = streamMsgTermExpr
 
 
-  protected def parseBlockData(in: Input): ParseResult[(IndexedSeq[Byte], ByteCSeq)] = {
+  protected def parseBlockData(in: Input): ParseResult[(IndexedSeq[Byte], ByteCharSeq)] = {
     val (source, offset) = (in.source, in.offset)
     if (offset >= source.length) Failure("Reached end of input", in)
     else try {
-      val inSeq = in.source.asInstanceOf[ByteCSeq]
+      val inSeq = in.source.asInstanceOf[ByteCharSeq]
       val input = inSeq.contents.subSequence(offset, source.length)
       if ( (input.length >= 0) && (input(0) == '#') && (input(1) >= '0') && (input(1) <= '9')) {
         val sizeLength = input(1).toChar.toString.toInt
@@ -77,7 +77,7 @@ class SCPIParser extends ByteCSeqParsers {
     }
   }
 
-  lazy val blockData: PackratParser[ByteCSeq] = new Parser[ByteCSeq] {
+  lazy val blockData: PackratParser[ByteCharSeq] = new Parser[ByteCharSeq] {
     def apply(in: Input) = parseBlockData(in) match {
       case Success((data,raw), rest) =>
         Success(raw,rest)
@@ -85,15 +85,15 @@ class SCPIParser extends ByteCSeqParsers {
     }
   }
   
-  lazy val nr1: PackratParser[ByteCSeq] = nr1Expr
-  lazy val nr2: PackratParser[ByteCSeq] = nr2Expr
-  lazy val nr3: PackratParser[ByteCSeq] = nr3Expr
-  lazy val nrf: PackratParser[ByteCSeq] = nr3 | nr2 | nr1
-  lazy val dqString: PackratParser[ByteCSeq] = dqStringExpr
-  lazy val sqString: PackratParser[ByteCSeq] = sqStringExpr
-  lazy val string: PackratParser[ByteCSeq] = dqString | sqString
+  lazy val nr1: PackratParser[ByteCharSeq] = nr1Expr
+  lazy val nr2: PackratParser[ByteCharSeq] = nr2Expr
+  lazy val nr3: PackratParser[ByteCharSeq] = nr3Expr
+  lazy val nrf: PackratParser[ByteCharSeq] = nr3 | nr2 | nr1
+  lazy val dqString: PackratParser[ByteCharSeq] = dqStringExpr
+  lazy val sqString: PackratParser[ByteCharSeq] = sqStringExpr
+  lazy val string: PackratParser[ByteCharSeq] = dqString | sqString
 
-  lazy val value: PackratParser[ByteCSeq] = skipWS (
+  lazy val value: PackratParser[ByteCharSeq] = skipWS (
     blockData |
     nrf | 
     nr1 |

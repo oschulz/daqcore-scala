@@ -23,21 +23,21 @@ import scala.util.parsing.input._
 import scala.util.matching.Regex
 
 
-class ByteCSeqParsers extends RegexParsers with PackratParsers with Logging {
+class ByteCharSeqParsers extends RegexParsers with PackratParsers with Logging {
   override def skipWhitespace = false
 
-  implicit def expr(ex: Regex) = new PackratParser[ByteCSeq] {
+  implicit def expr(ex: Regex) = new PackratParser[ByteCharSeq] {
     def apply(in: Input) = {
       val (source, offset) = (in.source, in.offset)
       (ex.findPrefixMatchOf(source.subSequence(offset, source.length))) match {
-        case Some(m) =>  Success(ByteCSeq(source.subSequence(offset, offset + m.end)), in.drop(m.end))
+        case Some(m) =>  Success(ByteCharSeq(source.subSequence(offset, offset + m.end)), in.drop(m.end))
         case None => Failure("Input \"%s\" does not match expression \"%s\"".format(in.first, ex), in)
       }
     }
   }
 
 
-  def ws: Parser[ByteCSeq] = expr(whiteSpace)
+  def ws: Parser[ByteCharSeq] = expr(whiteSpace)
   
   def skipWS[T](parser: Parser[T]): Parser[T] = (ws?) ~> parser <~ (ws?)
 }

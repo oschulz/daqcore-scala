@@ -21,11 +21,11 @@ import org.scalatest.WordSpec
 import org.scalatest.matchers.MustMatchers
 
 
-class ByteCSeqSpec extends WordSpec with MustMatchers {
-  "A ByteCSeq" should {
+class ByteCharSeqSpec extends WordSpec with MustMatchers {
+  "A ByteCharSeq" should {
     "equal a string it was created from" in {
       val s = "Hello, World!"
-      val seq = ByteCSeq(s)
+      val seq = ByteCharSeq(s)
       assert(seq.toString === s)
     }
   }

@@ -20,34 +20,34 @@ package daqcore.prot.scpi
 import daqcore.util._
 
 
-sealed abstract class Message extends ByteCSeqFragment
+sealed abstract class Message extends ByteCharSeqFragment
 
 
 case class Response(val results: Result*) extends Message {
-  def charSeq: ByteCSeq = results.toList match {
-    case Nil => ByteCSeq("")
+  def charSeq: ByteCharSeq = results.toList match {
+    case Nil => ByteCharSeq("")
     case head::Nil => head.charSeq
-    case head::tail => tail.foldLeft(head.charSeq) { (bs, r) => bs ++ ByteCSeq(";") ++ r.charSeq }
+    case head::tail => tail.foldLeft(head.charSeq) { (bs, r) => bs ++ ByteCharSeq(";") ++ r.charSeq }
   }
 }
 
 
-case class Result(values: ByteCSeq*) {
-  def charSeq: ByteCSeq = values.toList match {
-    case Nil => ByteCSeq("")
+case class Result(values: ByteCharSeq*) {
+  def charSeq: ByteCharSeq = values.toList match {
+    case Nil => ByteCharSeq("")
     case head::Nil => head
-    case head::tail => tail.foldLeft(head) { (bs, v) => bs ++ ByteCSeq(",") ++ v }
+    case head::tail => tail.foldLeft(head) { (bs, v) => bs ++ ByteCharSeq(",") ++ v }
   }
   
-  def +(seq: Seq[ByteCSeq]): Result = Result(values ++ seq : _*)
+  def +(seq: Seq[ByteCharSeq]): Result = Result(values ++ seq : _*)
 }
 
 
 case class Request(val instr: Instruction*) extends Message {
-  def charSeq: ByteCSeq = instr.toList match {
-    case Nil => ByteCSeq("")
+  def charSeq: ByteCharSeq = instr.toList match {
+    case Nil => ByteCharSeq("")
     case head::Nil => head.charSeq
-    case head::tail => tail.foldLeft(head.charSeq) { (bs, r) => bs ++ ByteCSeq(";") ++ r.charSeq }
+    case head::tail => tail.foldLeft(head.charSeq) { (bs, r) => bs ++ ByteCharSeq(";") ++ r.charSeq }
   }
   
   def hasResponse: Boolean = instr.find(_.isInstanceOf[Query]) != None
@@ -55,15 +55,15 @@ case class Request(val instr: Instruction*) extends Message {
 }
 
 
-sealed abstract class Instruction extends ByteCSeqFragment {
-  def params: Seq[ByteCSeq]
+sealed abstract class Instruction extends ByteCharSeqFragment {
+  def params: Seq[ByteCharSeq]
 }
 
 
-case class Command(header: Header, params: ByteCSeq*) extends Instruction {
+case class Command(header: Header, params: ByteCharSeq*) extends Instruction {
   def charSeq = header.charSeq ++ {
-    if (!params.isEmpty) ByteCSeq(" ") ++ Result(params:_*).charSeq
-    else ByteCSeq("")
+    if (!params.isEmpty) ByteCharSeq(" ") ++ Result(params:_*).charSeq
+    else ByteCharSeq("")
   }
   def ? = Query(header, params:_*)
   override def toString = header.toString + {
@@ -73,10 +73,10 @@ case class Command(header: Header, params: ByteCSeq*) extends Instruction {
 }
 
 
-case class Query(header: Header, params: ByteCSeq*) extends Instruction {
+case class Query(header: Header, params: ByteCharSeq*) extends Instruction {
   def charSeq = header.charSeq ++ {
-    if (!params.isEmpty) ByteCSeq("? ") ++ Result(params:_*).charSeq
-    else ByteCSeq("?")
+    if (!params.isEmpty) ByteCharSeq("? ") ++ Result(params:_*).charSeq
+    else ByteCharSeq("?")
   }
   def ? = Query(header, params:_*)
   override def toString = header.toString + {

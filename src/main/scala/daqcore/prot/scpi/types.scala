@@ -23,9 +23,9 @@ import daqcore.util._
 /** Integral number. Example: 42 */
 
 object NR1 {
-  def apply(value: Int) = ByteCSeq(value.toString)
+  def apply(value: Int) = ByteCharSeq(value.toString)
 
-  def unapply(bs: ByteCSeq) : Option[Int] =
+  def unapply(bs: ByteCharSeq) : Option[Int] =
     try { Some(bs.toString.toInt) } catch { case e: NumberFormatException => None }
 }
 
@@ -40,9 +40,9 @@ object NR1 {
 
 /** Comprises NR1, NR2 and NR3 */
 object NRf {
-  def apply(value: Double) = ByteCSeq(value.toString)
+  def apply(value: Double) = ByteCharSeq(value.toString)
 
-  def unapply(bs: ByteCSeq) : Option[Double] =
+  def unapply(bs: ByteCharSeq) : Option[Double] =
     try { Some(bs.toString.toDouble) } catch { case e: NumberFormatException => None }
 }
 
@@ -57,9 +57,9 @@ object NRf {
 
 
 abstract class StringData {
-  def apply(value: String) = ByteCSeq("\"") ++ ByteCSeq(value) ++ ByteCSeq("\"")
+  def apply(value: String) = ByteCharSeq("\"") ++ ByteCharSeq(value) ++ ByteCharSeq("\"")
 
-  def unapply(bs: ByteCSeq) : Option[String] = bs match {
+  def unapply(bs: ByteCharSeq) : Option[String] = bs match {
     case SCPIParser.sqStringExpr(contents) => Some(contents)
     case SCPIParser.dqStringExpr(contents) => Some(contents)
     case _ => None
@@ -77,7 +77,7 @@ object SRD extends StringData
 abstract class CharacterData {
   def apply(mnemonic: SpecMnemonic) = mnemonic.charSeq
 
-  def unapply(bs: ByteCSeq) : Option[RecMnemonic] =
+  def unapply(bs: ByteCharSeq) : Option[RecMnemonic] =
     try { Some(RecMnemonic(bs)) } catch { case _ => None }
 }
 
@@ -103,16 +103,16 @@ object CRD extends CharacterData
   * protocols like RS232 or TCP/IP. */
 
 object BlockData {
-  def apply(data: IndexedSeq[Byte]) : ByteCSeq = {
+  def apply(data: IndexedSeq[Byte]) : ByteCharSeq = {
     val tag = "#".getBytes
     val sizeStr = data.size.toString.getBytes
     val sizeSizeStr = sizeStr.size.toString.getBytes
     
-    ByteCSeq(tag ++ sizeSizeStr ++ sizeStr ++ data)
+    ByteCharSeq(tag ++ sizeSizeStr ++ sizeStr ++ data)
   }
 
 
-  def unapply(bs: ByteCSeq) : Option[IndexedSeq[Byte]] = try {
+  def unapply(bs: ByteCharSeq) : Option[IndexedSeq[Byte]] = try {
     val parser = SCPIParser()
     Some(parser.parseAll(parser.blockDataBytes, bs).get)
   } catch {

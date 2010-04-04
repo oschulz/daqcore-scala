@@ -60,5 +60,5 @@ package object scpi {
   val WAI = CCQHeader("WAI")
   
   /** Default message terminator for stream-based connections */
-  val StreamMsgTerm = ByteCSeq("\r\n")
+  val StreamMsgTerm = ByteCharSeq("\r\n")
 }
