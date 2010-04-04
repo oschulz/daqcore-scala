@@ -23,27 +23,11 @@ import scala.util.parsing.input._
 import scala.util.matching.Regex
 
 import daqcore.util._
+import daqcore.prot._
 
 
-class SCPIParser extends RegexParsers with PackratParsers with Logging {
+class SCPIParser extends ByteCSeqParsers {
   import SCPIParser._
-  
-  override def skipWhitespace = false
-
-  implicit def expr(ex: Regex) = new PackratParser[ByteCSeq] {
-    def apply(in: Input) = {
-      val (source, offset) = (in.source, in.offset)
-      (ex.findPrefixMatchOf(source.subSequence(offset, source.length))) match {
-        case Some(m) =>  Success(ByteCSeq(source.subSequence(offset, offset + m.end)), in.drop(m.end))
-        case None => Failure("Input \"%s\" does not match expression \"%s\"".format(in.first, ex), in)
-      }
-    }
-  }
-
-
-  def ws: Parser[ByteCSeq] = expr(whiteSpace)
-  
-  def skipWS[T](parser: Parser[T]): Parser[T] = (ws?) ~> parser <~ (ws?)
   
   
   lazy val nonBlockString: PackratParser[ByteCSeq] = nonBlockStringExpr
