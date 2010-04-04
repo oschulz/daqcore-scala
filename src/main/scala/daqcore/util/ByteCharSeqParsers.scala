@@ -26,6 +26,20 @@ import scala.util.matching.Regex
 class ByteCharSeqParsers extends RegexParsers with PackratParsers with Logging {
   override def skipWhitespace = false
 
+  
+  /** A parser that matches a literal string */
+  implicit def lit(s: String) = new PackratParser[ByteCharSeq] {
+    def apply(in: Input) = {
+      val (source, offset) = (in.source, in.offset)
+      if (s.length > (source.length-offset)) Failure("Input \"%s...\" too short to match literal \"%s\"".format(in.first, s), in)
+      else if ( (0 to s.length-1).forall { i:Int => source.charAt(i+offset) == s.charAt(i) } )
+        Success(ByteCharSeq(source.subSequence(offset, offset + s.length)), in.drop(s.length))
+      else Failure("Input \"%s...\" does not match literal \"%s\"".format(in.first, s), in)
+    }
+  }
+
+
+  /** A parser that matches a regular expression */
   implicit def expr(ex: Regex) = new PackratParser[ByteCharSeq] {
     def apply(in: Input) = {
       val (source, offset) = (in.source, in.offset)
