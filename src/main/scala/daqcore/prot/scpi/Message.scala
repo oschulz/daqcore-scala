@@ -25,16 +25,16 @@ sealed abstract class Message extends ByteCharSeqFragment
 
 case class Response(val results: Result*) extends Message {
   def charSeq: ByteCharSeq = results.toList match {
-    case Nil => ByteCharSeq("")
+    case Nil => ByteCharSeq.empty
     case head::Nil => head.charSeq
-    case head::tail => tail.foldLeft(head.charSeq) { (bs, r) => bs ++ ByteCharSeq(";") ++ r.charSeq }
+    case head::tail => tail.foldLeft(head.charSeq) { (bs, r) => bs ++ ByteCharSeq(';') ++ r.charSeq }
   }
 }
 
 
 case class Result(values: ByteCharSeq*) {
   def charSeq: ByteCharSeq = values.toList match {
-    case Nil => ByteCharSeq("")
+    case Nil => ByteCharSeq.empty
     case head::Nil => head
     case head::tail => tail.foldLeft(head) { (bs, v) => bs ++ ByteCharSeq(",") ++ v }
   }
@@ -45,7 +45,7 @@ case class Result(values: ByteCharSeq*) {
 
 case class Request(val instr: Instruction*) extends Message {
   def charSeq: ByteCharSeq = instr.toList match {
-    case Nil => ByteCharSeq("")
+    case Nil => ByteCharSeq.empty
     case head::Nil => head.charSeq
     case head::tail => tail.foldLeft(head.charSeq) { (bs, r) => bs ++ ByteCharSeq(";") ++ r.charSeq }
   }
@@ -63,7 +63,7 @@ sealed abstract class Instruction extends ByteCharSeqFragment {
 case class Command(header: Header, params: ByteCharSeq*) extends Instruction {
   def charSeq = header.charSeq ++ {
     if (!params.isEmpty) ByteCharSeq(" ") ++ Result(params:_*).charSeq
-    else ByteCharSeq("")
+    else ByteCharSeq.empty
   }
   def ? = Query(header, params:_*)
   override def toString = header.toString + {

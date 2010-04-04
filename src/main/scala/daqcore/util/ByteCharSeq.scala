@@ -52,10 +52,17 @@ object ByteCharSeq {
     case seq: ByteCharSeq => seq
     case seq => apply(seq.toString)
   }
-  def apply(value: Byte*): ByteCharSeq = apply(IndexedSeq(value : _*))
+  def apply(bytes: Byte*): ByteCharSeq = apply(IndexedSeq(bytes : _*))
+  def apply(char: Char): ByteCharSeq = apply(IndexedSeq(char.toByte))
 
   def newBuilder: Builder[Byte, ByteCharSeq] =
     new ArrayBuilder.ofByte() mapResult { a => apply(a.toSeq.asInstanceOf[IndexedSeq[Byte]]) }
+  
+  val empty = apply(IndexedSeq[Byte]())
+
+  val lf = ByteCharSeq('\n')
+  val cr = ByteCharSeq('\r')
+  val crlf = ByteCharSeq("\r\n")
 }
 
 

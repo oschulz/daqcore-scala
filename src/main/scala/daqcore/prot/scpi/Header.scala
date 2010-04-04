@@ -30,7 +30,7 @@ sealed abstract class Header extends ByteCharSeqFragment {
 
 case class CCQHeader(mnemonic: String) extends Header {
   require(mnemonic == mnemonic.toUpperCase)
-  def charSeq = ByteCharSeq("*") ++ ByteCharSeq(mnemonic)
+  def charSeq = ByteCharSeq('*') ++ ByteCharSeq(mnemonic)
   override def toString = "*" + mnemonic
 }
 
@@ -41,13 +41,13 @@ sealed abstract class ICHeader extends Header {
 
 
 case class ICHeaderAbs(parts: ICHeaderPart*) extends ICHeader {
-  def charSeq = ByteCharSeq(":") ++ parts.map(_.charSeq).reduceLeft(_ ++ ByteCharSeq(":") ++ _)
+  def charSeq = ByteCharSeq(':') ++ parts.map(_.charSeq).reduceLeft(_ ++ ByteCharSeq(':') ++ _)
   def ~(part: ICHeaderPart): ICHeaderAbs = ICHeaderAbs((parts ++ Seq(part)) :_*)
   override def toString = ":" + parts.map(_.toString).mkString(":")
 }
 
 case class ICHeaderRel(parts: ICHeaderPart*) extends ICHeader {
-  def charSeq = parts.map(_.charSeq).reduceLeft(_ ++ ByteCharSeq(":") ++ _)
+  def charSeq = parts.map(_.charSeq).reduceLeft(_ ++ ByteCharSeq(':') ++ _)
   def unary_~ = ICHeaderAbs(parts :_*)
   def ~(part: ICHeaderPart): ICHeaderRel = ICHeaderRel((parts ++ Seq(part)) :_*)
   override def toString = parts.map(_.toString) mkString(":")
@@ -56,7 +56,7 @@ case class ICHeaderRel(parts: ICHeaderPart*) extends ICHeader {
 
 case class ICHeaderPart(mnem: Mnemonic, suffix: Int = 1) {
   require(suffix >= 1)
-  def charSeq = mnem.charSeq ++ (if (suffix > 1) ByteCharSeq(suffix.toString) else ByteCharSeq(""))
+  def charSeq = mnem.charSeq ++ (if (suffix > 1) ByteCharSeq(suffix.toString) else ByteCharSeq.empty)
   def unary_~ = ICHeaderAbs(this)
   def ~(that: ICHeaderPart) = ICHeaderRel(this, that)
   override def toString = mnem.toString ++ (if (suffix > 1) suffix.toString else "")
