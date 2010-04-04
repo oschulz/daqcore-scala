@@ -15,13 +15,13 @@
 // Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 
-package daqcore.scpi
+package daqcore.prot.scpi
 
 import org.scalatest.WordSpec
 import org.scalatest.matchers.MustMatchers
 
 import daqcore.util.ByteCSeq
-import daqcore.scpi.mnemonics._
+import daqcore.prot.scpi.mnemonics._
 
 
 class SCPIParserSpec extends WordSpec with MustMatchers {
