@@ -20,7 +20,7 @@ package daqcore.prot.keithley
 import daqcore.util._
 
 
-object Int {
+object IntVal {
   def apply(value: Int) = ByteCharSeq(value.toString)
 
   def unapply(bs: ByteCharSeq) : Option[Int] =
@@ -28,7 +28,7 @@ object Int {
 }
 
 
-object Double {
+object FPVal {
   def apply(value: Double) = ByteCharSeq(value.toString)
 
   def unapply(bs: ByteCharSeq) : Option[Double] =
@@ -46,3 +46,34 @@ object Chars {
 
   def unapply(bs: ByteCharSeq) : Option[String] = Some(bs.toString)
 }
+
+/*object Normal {
+  def unapply(bs: ByteCharSeq) : Option[ByteCharSeq] =
+    if (bs.startsWith(ByteCharSeq('N'))) Some(bs.subSequence(1, bs.length))
+    else None
+}
+
+object Resistance {
+}*/
+
+/*
+Measurement result format:
+
+NDCV-l234567E+O
+
+(N | O) (OHM | ((DC|AC)(V|I))) <double>
+N: Normal Reading
+O: Overflow
+OHM: Resistance measurement
+DC: direct current/voltage
+AC: alternating current/voltage
+V: Voltage measurement
+I: Current measurement
+<double> Result in SI-Units
+
+Examples:
+OOHM+9.999999E+9
+NDCV+002.2131E+0
+NDCI+0.00003E-09
+
+*/

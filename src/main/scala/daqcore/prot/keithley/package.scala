@@ -22,8 +22,8 @@ import daqcore.util._
 
 package object keithley {
 
-  implicit def int2ByteCharSeq(i: Int) = Int(i)
-  implicit def double2ByteCharSeq(x: Double) = Double(x)
+  implicit def int2ByteCharSeq(i: Int) = IntVal(i)
+  implicit def double2ByteCharSeq(x: Double) = FPVal(x)
   implicit def string2ByteCharSeq(s: String) = Chars(s)
   
   /** Default message terminator for stream-based connections */
