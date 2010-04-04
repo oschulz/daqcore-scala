@@ -20,7 +20,7 @@ package daqcore.prot.scpi
 import daqcore.util._
 
 
-sealed abstract class Header extends SCPIFragment {
+sealed abstract class Header extends ByteCSeqFragment {
   def ! = Command(this)
   def !(params: ByteCSeq*) = Command(this, params: _*)
   def ? = Query(this)

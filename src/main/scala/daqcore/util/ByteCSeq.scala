@@ -57,3 +57,8 @@ object ByteCSeq {
   def newBuilder: Builder[Byte, ByteCSeq] =
     new ArrayBuilder.ofByte() mapResult { a => apply(a.toSeq.asInstanceOf[IndexedSeq[Byte]]) }
 }
+
+
+trait ByteCSeqFragment {
+  def charSeq: ByteCSeq
+}

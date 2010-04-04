@@ -119,8 +119,3 @@ object BlockData {
     case _ => None
   }
 }
-
-
-trait SCPIFragment {
-  def charSeq: ByteCSeq
-}

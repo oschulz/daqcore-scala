@@ -20,7 +20,7 @@ package daqcore.prot.scpi
 import daqcore.util._
 
 
-sealed abstract class Message extends SCPIFragment
+sealed abstract class Message extends ByteCSeqFragment
 
 
 case class Response(val results: Result*) extends Message {
@@ -55,7 +55,7 @@ case class Request(val instr: Instruction*) extends Message {
 }
 
 
-sealed abstract class Instruction extends SCPIFragment {
+sealed abstract class Instruction extends ByteCSeqFragment {
   def params: Seq[ByteCSeq]
 }
 

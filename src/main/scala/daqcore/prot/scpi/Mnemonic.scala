@@ -20,7 +20,7 @@ package daqcore.prot.scpi
 import daqcore.util._
 
 
-sealed abstract class Mnemonic extends SCPIFragment {
+sealed abstract class Mnemonic extends ByteCSeqFragment {
 }
 
 
