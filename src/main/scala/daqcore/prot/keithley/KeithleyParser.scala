@@ -67,5 +67,10 @@ object KeithleyParser {
   val measFuncExp = """[A-Z][A-Z][A-Z]""".r
   val fpNumberExp = """[-+]?(\d+(\.\d*)?|\d*\.\d+)([eE][+-]?\d+)?""".r
   
-  def apply() = new KeithleyParser()
+  protected lazy val tlParser =
+    { val p = new ThreadLocal[KeithleyParser];  p set (new KeithleyParser); p }
+
+  def parser = tlParser.get
+
+  def apply() = parser
 }
