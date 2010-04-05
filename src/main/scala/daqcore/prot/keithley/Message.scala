@@ -33,6 +33,9 @@ case class Request(val commands: Command*) extends Message {
 }
 
 
+case class Output(data: ByteCharSeq) extends Message
+
+
 class Command(val code: Char, val params:ByteCharSeq*) extends ByteCharSeqFragment {
   require( (code >= 'A') && (code <= 'Z') )
 
