@@ -176,5 +176,10 @@ object SCPIParser {
   val mnemSuffixExpr = """[1-9][0-9]*""".r
   val recMnemonicExpr = """[A-Z]+|[a-z]+""".r
   
-  def apply() = new SCPIParser
+  protected lazy val tlParser =
+    { val p = new ThreadLocal[SCPIParser];  p set (new SCPIParser); p }
+
+  def parser = tlParser.get
+
+  def apply() = parser
 }
