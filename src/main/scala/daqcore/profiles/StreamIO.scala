@@ -23,45 +23,34 @@ import daqcore.util._
 import daqcore.actors._
 
 
-trait StreamReader extends ServerProxy {
+trait StreamReader extends ServerProxy with Closeable {
   profile[StreamReader]
 
-  def readStream() = as[IndexedSeq[Byte]] { self !? StreamIO.Read() }
-
-  def readStreamF = as[Future[IndexedSeq[Byte]]] { self !! StreamIO.Read() }
+  def read(timeout: Long): Future[Option[IndexedSeq[Byte]]] =
+    as[Future[Option[IndexedSeq[Byte]]]] (self !! StreamIO.Read(timeout))
 }
 
 
-trait StreamWriter extends ServerProxy {
+trait StreamWriter extends ServerProxy with Closeable {
   profile[StreamWriter]
 
-  def writeStream(contents: IndexedSeq[Byte]) =
-    self ! StreamIO.Write(contents)
-}
+  def write(source: Responder[IndexedSeq[Byte]], timeout: Long) : Unit =
+    self ! StreamIO.Write(source, timeout)
+    
+  def write(source: () => IndexedSeq[Byte], timeout: Long) : Unit =
+    write(fctResponder(source), timeout)
 
-
-trait StreamTrigger extends ServerProxy {
-  profile[StreamTrigger]
-
-  def addHandler(handler: PartialFunction[StreamIO.Event, Unit]) =
-    self ! StreamIO.AddHandler(handler)
+  def write(source: IndexedSeq[Byte], timeout: Long) : Unit =
+    write(Responder.constant(source), timeout)
 }
 
 
 trait StreamIO extends StreamReader with StreamWriter
 
 object StreamIO {
-  //!! Add timeout and optional max read size specification
-  case class Read()
+  case class Read(timeout: Long = 0) // Reply: Future[IndexedSeq[Byte]]
 
-  case class Write(contents: IndexedSeq[Byte])
+  case class Write(source: Responder[IndexedSeq[Byte]], timeout: Long = 0)
 
-  abstract class Event
-  
-  case object CanRead extends Event
-  
-  //!!! Make this a global concept for all Servers/Proxies?
-  case class AddHandler(handler: PartialFunction[Event, Unit])
-  
   def apply(a: Actor) = new StreamIO { def self = a }
 }
