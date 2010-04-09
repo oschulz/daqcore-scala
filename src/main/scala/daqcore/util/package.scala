@@ -20,8 +20,24 @@ package daqcore
 
 package object util {
 
+
 implicit def idxSeq2subSeq[T](seq: IndexedSeq[T]) = new SubIdxSeq(seq, 0, seq.length)
 
+
 def fctResponder[A](x: () => A) = new Responder[A] { def respond(k: A => Unit) = k(x()) }
+
+
+def classMF(a: Any): ClassManifest[_] = a match {
+  case a:Boolean => classManifest[Boolean]
+  case a:Byte => classManifest[Byte]
+  case a:Char => classManifest[Char]
+  case a:Short => classManifest[Short]
+  case a:Int => classManifest[Int]
+  case a:Long => classManifest[Long]
+  case a:Float => classManifest[Float]
+  case a:Double => classManifest[Double]
+  case a:Unit => classManifest[Unit]
+  case a:AnyRef => scala.reflect.ClassManifest.fromClass(a.getClass)
+}
 
 }
