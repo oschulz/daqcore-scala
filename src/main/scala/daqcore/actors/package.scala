@@ -21,4 +21,7 @@ package daqcore
 package object actors {
   def profileOf[T <: ServerProxy : ClassManifest] =
     Profile.of[T]
+    
+  implicit def actorsFutureFix(actor: scala.actors.Actor) =
+    new scala.actors.fix_daqcore.ActorsFutureFix(actor)
 }
