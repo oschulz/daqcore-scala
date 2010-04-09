@@ -40,4 +40,8 @@ def classMF(a: Any): ClassManifest[_] = a match {
   case a:AnyRef => scala.reflect.ClassManifest.fromClass(a.getClass)
 }
 
+
+def as[A](x:Any) = x.asInstanceOf[A]
+
+
 }
