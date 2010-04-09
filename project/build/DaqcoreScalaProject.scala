@@ -17,8 +17,10 @@ class DaqcoreScalaProject(info: ProjectInfo) extends DefaultProject(info) with A
   val lift_common = "net.liftweb" % "lift-common" % "2.0-scala280-SNAPSHOT"
   val lift_util = "net.liftweb" % "lift-util" % "2.0-scala280-SNAPSHOT"
 
-  val remotetea_oncrpc = "org.acplt" % "remotetea-oncrpc" % "1.0.7"
+  val mina_ore = "org.apache.mina" % "mina-core" % "2.0.0-RC1"
+  val mina_serial = "org.apache.mina" % "mina-transport-serial" % "2.0.0-RC1"
   
+  val remotetea_oncrpc = "org.acplt" % "remotetea-oncrpc" % "1.0.7"
   
   def javaSrcDir = "src" / "main" / "java"
 
