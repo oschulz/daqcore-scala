@@ -24,13 +24,13 @@ import daqcore.util.classMF
 
 class ActorOps(wrapped: Actor) {
   def !!?(msg: Any): Future[Any] =
-    this !!? (msg, { case x => x })
+    this.!!& (msg) { case x => x }
 
-  def !!?[A](msg: Any, handler: PartialFunction[Any, A]): Future[A] =
+  def !!&[A](msg: Any) (handler: PartialFunction[Any, A]): Future[A] =
     wrapped !!% (msg,handler)
 
   def !!^[A: ClassManifest](msg: Any): Future[A] = {
     val mf = classManifest[A]
-    this !!? (msg, { case x if (classMF(x) <:< mf) => x.asInstanceOf[A] })
+    this.!!& (msg) { case x if (classMF(x) <:< mf) => x.asInstanceOf[A] }
   }
 }

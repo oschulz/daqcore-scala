@@ -26,31 +26,31 @@ import daqcore.actors._
 trait StreamReader extends ServerProxy with Closeable {
   profile[StreamReader]
 
-  def read(timeout: Long): Future[Option[IndexedSeq[Byte]]] =
-    as[Future[Option[IndexedSeq[Byte]]]] (self !! StreamIO.Read(timeout))
+  def read(timeout: Long): Future[ByteCharSeq] =
+    self.!!& (StreamIO.Read(timeout)) { case x: ByteCharSeq => x }
 }
 
 
 trait StreamWriter extends ServerProxy with Closeable {
   profile[StreamWriter]
 
-  def write(source: Responder[IndexedSeq[Byte]], timeout: Long) : Unit =
-    self ! StreamIO.Write(source, timeout)
+  def write(source: Responder[Seq[Byte]]) : Unit =
+    self ! StreamIO.Write(source)
     
-  def write(source: () => IndexedSeq[Byte], timeout: Long) : Unit =
-    write(fctResponder(source), timeout)
+  def write(source: () => Seq[Byte]) : Unit =
+    write(fctResponder(source))
 
-  def write(source: IndexedSeq[Byte], timeout: Long) : Unit =
-    write(Responder.constant(source), timeout)
+  def write(source: Seq[Byte]) : Unit =
+    write(Responder.constant(source))
 }
 
 
 trait StreamIO extends StreamReader with StreamWriter
 
 object StreamIO {
-  case class Read(timeout: Long = 0) // Reply: Future[IndexedSeq[Byte]]
+  case class Read(timeout: Long = 0) // Reply: Future[ByteCharSeq]
 
-  case class Write(source: Responder[IndexedSeq[Byte]], timeout: Long = 0)
+  case class Write(source: Responder[Seq[Byte]])
 
   def apply(a: Actor) = new StreamIO { def self = a }
 }
