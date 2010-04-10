@@ -28,15 +28,11 @@ trait Closeable extends ServerProxy {
 
   def close(): Unit =
     { self ! Closeable.Close }
-    
-  def onClose(handler: () => Unit): Unit = { self ! Closeable.OnClose(handler) }
 }
 
 
 object Closeable {
   case object Close
-
-  case class OnClose(handler: () => Unit)
 
   def apply(a: Actor) = new Closeable { def self = a }
 }
