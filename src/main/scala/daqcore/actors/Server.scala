@@ -26,22 +26,55 @@ import daqcore.util._
 trait Server extends DaemonActor with Logging {
   import Server._
   
+  private var active = false
+  
   /** Servers must implement this as a stable, immutable
   Set of Profiles */
   protected val profiles: Set[Profile]
 
+  /** Servers may override this */
+  protected def started(): Unit =
+    { debug("Server %s started".format(self)) }
+
+  /** Servers may override this */
+  protected def restarted(): Unit =
+    { debug("Server %s restarted".format(self)) }
+
+  /** Servers may override this */
+  protected def init(): Unit =
+    { trace("Server %s init".format(self)) }
+
   /** Servers must implement this */
   protected def serve: PartialFunction[Any, Unit]
 
+  /** Servers may override this, deinit is called once for every call of init */
+  protected def deinit(): Unit =
+    { trace("Server %s deinit".format(self)) }
+
+  /** Servers may override this */
+  protected def killed(msg: Exit): Unit =
+    { debug("Server %s killed: %s".format(self, msg)) }
+
+  /** Servers may override this */
+  protected def shutdown(): Unit =
+    { debug("Server %s shut down".format(self)) }
+  
   protected def handleGeneric: PartialFunction[Any, Unit] = {
     case GetProfiles => reply(profiles)
+    case Exit(_, 'normal) => { deinit(); shutdown(); active = false; exit() }
+    case e @ Exit(_, reason) => { deinit(); killed(e); exit(reason) }
   }
 
   protected def handleUnknown: PartialFunction[Any, Unit] = {
-    case _ => exit()
+    case _ => throw new RuntimeException("unknown message")
   }
   
   def act() = {
+    trapExit = true
+    
+    if (!active) { active = true; started() } else restarted()
+    init()
+    
     loop {
       react(
         handleGeneric orElse

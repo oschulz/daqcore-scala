@@ -58,12 +58,16 @@ class ServerSpec extends WordSpec with MustMatchers {
       class FooBarActor extends Server {
         import FooDevice._, BarDevice._
 
-        protected val profiles = Set(profileOf[FooDevice],
-          profileOf[BarDevice])
+        val profiles =
+          Set(profileOf[FooDevice], profileOf[BarDevice])
         
+        var i = 0
+      
+        override def init() = { i = 2}
+
         def serve = {
-          case Foo(v) => reply(v * 2)
-          case Bar(v) => reply(v + 2)
+          case Foo(v) => reply(v * i)
+          case Bar(v) => reply(v + i)
         }
       }
     }
