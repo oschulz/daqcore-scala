@@ -20,7 +20,7 @@ package daqcore
 
 package object profiles {
 
-  implicit object DefaultInetAcceptorBuilder extends InetAcceptorBuilder {
+  implicit object DefaultMinaInetAcceptorBuilder extends InetAcceptorBuilder {
     import daqcore.servers._
     
     def apply (port: Int) (body: StreamIO => Unit) = {
@@ -31,11 +31,13 @@ package object profiles {
   }
 
   
-  implicit lazy val DefaultInetConnector = {
+  implicit lazy val DefaultMinaInetConnector = {
     import daqcore.servers._
     val mc = new MinaConnector
     mc.start
     InetConnector(mc)
   }
 
+  def defaultInetAcceptorBuilder = DefaultMinaInetAcceptorBuilder
+  def defaultInetConnector = DefaultMinaInetConnector
 }
