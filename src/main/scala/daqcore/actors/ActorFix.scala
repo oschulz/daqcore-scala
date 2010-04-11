@@ -3,11 +3,11 @@ package fix_daqcore
 
 
 /** Temporary fix/hack for the bugs in scala-2.8-beta1 !!-operator for actors
-(respond on returned Future is broken). ActorsFutureFix.!!% contains the improved
+(respond on returned Future is broken). ActorFix.!!% contains the improved
 implementation from scala-2.8-r21389. Hopefully will no longer be needed
 once scala-2.8-beta2 (or whatever the next step will be) is released. */
 
-class ActorsFutureFix(wrapped: Actor) {
+class ActorFix(wrapped: Actor) {
   def !!%(msg: Any): Future[Any] =
     this !!% (msg, { case x => x })
 

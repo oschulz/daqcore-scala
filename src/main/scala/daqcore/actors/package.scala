@@ -43,8 +43,8 @@ package object actors {
   }
 
 
-  implicit def actorsFutureFix(actor: scala.actors.Actor) =
-    new scala.actors.fix_daqcore.ActorsFutureFix(actor)
+  implicit def actorFix(actor: scala.actors.Actor) =
+    new scala.actors.fix_daqcore.ActorFix(actor)
 
   implicit def actorOps(actor: scala.actors.Actor) =
     new ActorOps(actor)
