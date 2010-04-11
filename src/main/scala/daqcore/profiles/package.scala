@@ -15,29 +15,19 @@
 // Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 
-package daqcore.profiles
-
-import scala.actors._
-
-import daqcore.util._
-import daqcore.actors._
-
-import java.net.InetSocketAddress
+package daqcore
 
 
-trait InetAcceptor extends ServerProxy with Closeable {
-  profile[InetAcceptor]
-}
+package object profiles {
 
-
-object InetAcceptor {
-  def apply(a: Actor) = new InetAcceptor { def self = a }
-  def apply (port: Int) (body: StreamIO => Unit) (implicit builder: InetAcceptorBuilder) : InetAcceptor = {
-    builder(port) (body)
+  implicit object DefaultInetAcceptorBuilder extends InetAcceptorBuilder {
+    import daqcore.servers._
+    
+    def apply (port: Int) (body: StreamIO => Unit) = {
+      val ma = new MinaAcceptor(port,body)
+      ma.start()
+      InetAcceptor(ma)
+    }
   }
-}
 
-
-abstract class InetAcceptorBuilder {
-  def apply (port: Int) (body: StreamIO => Unit): InetAcceptor
 }
