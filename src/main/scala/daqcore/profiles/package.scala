@@ -30,4 +30,12 @@ package object profiles {
     }
   }
 
+  
+  implicit lazy val DefaultInetConnector = {
+    import daqcore.servers._
+    val mc = new MinaConnector
+    mc.start
+    InetConnector(mc)
+  }
+
 }
