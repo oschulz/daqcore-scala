@@ -19,12 +19,13 @@ package daqcore.servers
 
 import scala.actors._
 import java.io.IOException
+import java.net.InetSocketAddress
 
 import org.apache.mina.core.buffer.IoBuffer
 import org.apache.mina.core.service.{IoHandler, IoHandlerAdapter}
 import org.apache.mina.core.session.{IoSession, IdleStatus}
 import org.apache.mina.core.service.IoHandlerAdapter
-import org.apache.mina.transport.socket.nio.NioSocketConnector
+import org.apache.mina.transport.socket.nio.{NioSocketConnector, NioSocketAcceptor}
 import org.apache.mina.core.future.{IoFutureListener, ConnectFuture}
 
 import daqcore.util._
@@ -118,6 +119,8 @@ trait MinaIO {
 
 
 class MinaConnector extends Server with MinaIO {
+  protected class ClientConnectionHandler extends ConnectionHandler
+  
   protected val profiles = Set(profileOf[InetConnector], profileOf[Closeable])
   
   protected val defaultTimeout: Long = 30000
@@ -126,7 +129,7 @@ class MinaConnector extends Server with MinaIO {
   protected var connector: NioSocketConnector = null
   
   override def init() = {
-    handler = new ConnectionHandler
+    handler = new ClientConnectionHandler
     connector = new NioSocketConnector
     connector.setConnectTimeoutMillis(defaultTimeout)
     connector.setHandler(handler)
@@ -149,10 +152,10 @@ class MinaConnector extends Server with MinaIO {
             trace("ConnectFutureListener: isConnected: %s".format(isConnected))
             if (isConnected) {
               val session = future.getSession
-              val server = new MinaConnection(session)
-              server.start
-              handler.sessions += session -> server
-              replyTo ! server
+              val connServer = new MinaConnection(session)
+              connServer.start
+              handler.sessions += session -> connServer
+              replyTo ! connServer
               trace("IoFutureListener got session %s".format(session))
             } else {
               throw new IOException("MinaConnector: Can't establish connection")
@@ -174,6 +177,57 @@ class MinaConnector extends Server with MinaIO {
     // dispose should not block now
     connector.dispose()
     connector = null
+    handler = null
+  }
+}
+
+
+class MinaAcceptor(port: Int, body: StreamIO => Unit) extends Server with MinaIO {
+  accServer =>
+
+  protected case class NewConnection(connection: Actor)
+  
+  protected class ServerConnectionHandler extends ConnectionHandler {
+    override def sessionOpened(session: IoSession) = {
+      super.sessionOpened(session)
+      val connServer = new MinaConnection(session)
+      connServer.start
+      handler.sessions += session -> connServer
+      accServer ! NewConnection(connServer)
+    }
+  }
+  
+  protected val profiles = Set(profileOf[InetAcceptor], profileOf[Closeable])
+
+  protected var handler: ConnectionHandler = null
+  protected var acceptor: NioSocketAcceptor = null
+
+  override def init() = {
+    handler = new ServerConnectionHandler
+    acceptor = new NioSocketAcceptor
+    acceptor.setHandler(handler)
+    acceptor.getSessionConfig().setReadBufferSize(2048)
+    acceptor.getSessionConfig().setIdleTime(IdleStatus.BOTH_IDLE, 15)
+    acceptor.bind(new InetSocketAddress(port))
+  }
+
+  def serve = {
+    case Closeable.Close => exit()
+    case NewConnection(connServer) => {
+      val connection = StreamIO(connServer)
+      class ConnProcessor extends Actor { def act() = body(connection) }
+      val connProc = new ConnProcessor
+      connProc.start
+    }
+  }
+
+  override def deinit() = {
+    import scala.collection.JavaConversions._
+    // close all sessions immediately
+    acceptor.getManagedSessions foreach { _._2.close(true) }
+    // dispose should not block now
+    acceptor.dispose()
+    acceptor = null
     handler = null
   }
 }
