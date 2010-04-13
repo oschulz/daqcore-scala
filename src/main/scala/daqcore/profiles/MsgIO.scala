@@ -23,37 +23,22 @@ import daqcore.util._
 import daqcore.actors._
 
 
-trait MsgReader extends Profile {
-  def readMsg() = as[IndexedSeq[Byte]] { srv !? MsgIO.Read() }
-
-  def readMsgF = as[Future[IndexedSeq[Byte]]] { srv !! MsgIO.Read() }
+trait MsgReader extends Profile with Closeable {
+  def read(timeout: Long = Int.MaxValue): Future[ByteCharSeq] =
+    srv.!!& (MsgIO.Read(timeout)) { case x: ByteCharSeq => x }
 }
 
 
-trait MsgWriter extends Profile {
-  def writeMsg(contents: IndexedSeq[Byte]) =
-    srv ! MsgIO.Write(contents)
-}
-
-
-trait MsgTrigger extends Profile {
-  def addHandler(handler: PartialFunction[MsgIO.Event, Unit]) =
-    srv ! MsgIO.AddHandler(handler)
+trait MsgWriter extends Profile with Closeable {
+  def write(data: Seq[Byte]) : Unit =
+    srv ! MsgIO.Write(data)
 }
 
 
 trait MsgIO extends MsgReader with MsgWriter
 
 object MsgIO {
-  //!! Add timeout and optional max read size specification
-  case class Read()
+  case class Read(timeout: Long = Int.MaxValue) // Reply: Future[ByteCharSeq]
 
-  case class Write(contents: IndexedSeq[Byte])
-
-  abstract class Event
-  
-  case object CanRead extends Event
-  
-  //!!! Make this a global concept for all Servers/Proxies?
-  case class AddHandler(handler: PartialFunction[Event, Unit])
+  case class Write(data: Seq[Byte])
 }
