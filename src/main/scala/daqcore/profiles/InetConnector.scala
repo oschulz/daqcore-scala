@@ -42,8 +42,8 @@ trait InetConnector extends Profile with Closeable {
 
 
 object InetConnector {
-  // reply: server supporting StreamIO
-  case class Connect(to: InetSocketAddress, timeout: Long = 0)
+  // reply: InetConnection
+  case class Connect(to: InetSocketAddress, timeout: Long = -1)
 }
 
 
@@ -52,13 +52,13 @@ trait InetConnection extends StreamIO
 
 object InetConnection {
   def apply(host: String, port: Int)(implicit connector: InetConnector): StreamIO =
-    connector.connect(new InetSocketAddress(host, port), -1)()
+    connector.connect(host, port)()
 
   def apply(host: String, port: Int, timeout: Long)(implicit connector: InetConnector): StreamIO =
-    connector.connect(new InetSocketAddress(host, port), timeout)()
+    connector.connect(host, port, timeout)()
   
   def apply(to: InetSocketAddress)(implicit connector: InetConnector): StreamIO =
-    connector.connect(to, -1)()
+    connector.connect(to)()
 
   def apply(to: InetSocketAddress, timeout: Long)(implicit connector: InetConnector): StreamIO =
     connector.connect(to, timeout)()
