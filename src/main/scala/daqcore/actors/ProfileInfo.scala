@@ -18,25 +18,25 @@
 package daqcore.actors
 
 
-class Profile(val symbol: Symbol) {
+class ProfileInfo(val symbol: Symbol) {
   override def toString() = symbol.name
 
   override def hashCode = symbol.hashCode
 
-  def canEqual(that: Any) = that.isInstanceOf[Profile]
+  def canEqual(that: Any) = that.isInstanceOf[ProfileInfo]
 
   override def equals(that: Any) = canEqual(that) && (
     that match {
-      case Profile(thatSymbol) => symbol == thatSymbol
+      case ProfileInfo(thatSymbol) => symbol == thatSymbol
       case _ => false
     }
   )
 }
 
 
-object Profile {
-  def unapply(profile: Profile) = Some(profile.symbol)
+object ProfileInfo {
+  def unapply(profile: ProfileInfo) = Some(profile.symbol)
 
-  def of[T <: ServerProxy : ClassManifest]: Profile =
-    new Profile(Symbol(classManifest[T].toString))
+  def of[T <: ServerProxy : ClassManifest]: ProfileInfo =
+    new ProfileInfo(Symbol(classManifest[T].toString))
 }

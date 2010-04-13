@@ -20,7 +20,7 @@ package daqcore
 
 package object actors {
   def profileOf[T <: ServerProxy : ClassManifest] =
-    Profile.of[T]
+    ProfileInfo.of[T]
 
 
   /** execute code in an actor, then wait for it to exit.

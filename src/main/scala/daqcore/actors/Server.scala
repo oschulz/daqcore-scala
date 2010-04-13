@@ -30,7 +30,7 @@ trait Server extends DaemonActor with Logging {
   
   /** Servers must implement this as a stable, immutable
   Set of Profiles */
-  protected val profiles: Set[Profile]
+  protected val profiles: Set[ProfileInfo]
 
   /** Servers may override this */
   protected def started(): Unit =
@@ -97,12 +97,12 @@ trait ServerProxy extends Proxy with Logging {
 
   override def self: Actor
   
-  lazy val profiles = as[Set[Profile]] (self !? GetProfiles)
+  lazy val profiles = as[Set[ProfileInfo]] (self !? GetProfiles)
 
-  protected def supports(profile: Profile) = profiles.contains(profile)
+  protected def supports(profile: ProfileInfo) = profiles.contains(profile)
   
   def profile[T <: ServerProxy: ClassManifest] = {
-    val p = Profile.of[T]
+    val p = ProfileInfo.of[T]
     if (!supports(p)) throw new IllegalArgumentException("Proxy target actor does not support profile " + p)
   }
 

@@ -28,7 +28,7 @@ class ActorOpsSpec extends WordSpec with MustMatchers {
   "ActorOps.!!?" should {
   
     val a = new Server {
-      val profiles = Set.empty[Profile]
+      val profiles = Set.empty[ProfileInfo]
       def serve = {
         case i:Int => {
           val replyCh = sender
