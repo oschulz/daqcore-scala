@@ -26,7 +26,7 @@ package object profiles {
     def apply (port: Int) (body: StreamIO => Unit) = {
       val ma = new MinaAcceptor(port,body)
       ma.start()
-      InetAcceptor(ma)
+      ma
     }
   }
 
@@ -35,7 +35,7 @@ package object profiles {
     import daqcore.servers._
     val mc = new MinaConnector
     mc.start
-    InetConnector(mc)
+    mc
   }
 
   def defaultInetAcceptorBuilder = DefaultMinaInetAcceptorBuilder

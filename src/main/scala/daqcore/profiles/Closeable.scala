@@ -23,16 +23,12 @@ import daqcore.util._
 import daqcore.actors._
 
 
-trait Closeable extends ServerProxy {
-  profile[Closeable]
-
+trait Closeable extends Profile {
   def close(): Unit =
-    { self ! Closeable.Close }
+    { srv ! Closeable.Close }
 }
 
 
 object Closeable {
   case object Close
-
-  def apply(a: Actor) = new Closeable { def self = a }
 }

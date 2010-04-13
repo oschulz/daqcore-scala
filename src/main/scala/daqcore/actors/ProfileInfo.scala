@@ -37,6 +37,30 @@ class ProfileInfo(val symbol: Symbol) {
 object ProfileInfo {
   def unapply(profile: ProfileInfo) = Some(profile.symbol)
 
-  def of[T <: ServerProxy : ClassManifest]: ProfileInfo =
+  def apply[T <: Profile : ClassManifest]: ProfileInfo =
     new ProfileInfo(Symbol(classManifest[T].toString))
+  
+  def isProfile(c:Class[_]) : Boolean = {
+    val profClass = classOf[Profile]
+    profClass.isAssignableFrom(c) &&
+    c != profClass
+  }
+
+  def apply(c:Class[_]): ProfileInfo = {
+    require(isProfile(c))
+    new ProfileInfo(Symbol(c.getName))
+  }
+
+  def profilesOf(cl: Class[_]) : Set[ProfileInfo] = {
+    val profClass = classOf[Profile]
+    val interfaces = cl.getGenericInterfaces.toSet
+    
+    interfaces flatMap { interface =>
+      interface match {
+        case c:Class[_] if isProfile(c) =>
+          Set(ProfileInfo(c)) ++ profilesOf(c)
+        case _ => Set.empty[ProfileInfo]
+      }
+    }
+  }
 }

@@ -23,14 +23,34 @@ import scala.actors._, scala.actors.Actor._
 import daqcore.util._
 
 
-trait Server extends DaemonActor with Logging {
+trait ServerAccess extends Logging {
+  def srv: Actor
+
+  val profiles: Set[ProfileInfo]
+
+  protected def supports(profile: ProfileInfo) = profiles.contains(profile)
+  
+  def requireProfile(p: ProfileInfo): Unit =
+    if (!supports(p)) throw new IllegalArgumentException("Proxy target actor does not support profile " + p)
+
+  def as[T](body: => Any) = (body).asInstanceOf[T]
+}
+
+
+
+trait Profile extends ServerAccess
+
+
+
+trait Server extends ServerAccess with DaemonActor with Profile {
   import Server._
+
+  def srv: Actor = this
   
+  val profiles: Set[ProfileInfo] =
+    ProfileInfo.profilesOf(this.getClass)
+
   private var active = false
-  
-  /** Servers must implement this as a stable, immutable
-  Set of Profiles */
-  protected val profiles: Set[ProfileInfo]
 
   /** Servers may override this */
   protected def started(): Unit =
@@ -92,19 +112,10 @@ object Server {
 
 
 
-trait ServerProxy extends Proxy with Logging {
-  import Server._
+class ServerProxy(val srv: Actor) extends ServerAccess {
+  lazy val profiles = as[Set[ProfileInfo]] (srv !? Server.GetProfiles)
 
-  override def self: Actor
-  
-  lazy val profiles = as[Set[ProfileInfo]] (self !? GetProfiles)
+  requireProfile(ProfileInfo.apply[Server])
 
-  protected def supports(profile: ProfileInfo) = profiles.contains(profile)
-  
-  def profile[T <: ServerProxy: ClassManifest] = {
-    val p = ProfileInfo.of[T]
-    if (!supports(p)) throw new IllegalArgumentException("Proxy target actor does not support profile " + p)
-  }
-
-  def as[T](body: => Any) = (body).asInstanceOf[T]
+  ProfileInfo.profilesOf(this.getClass) foreach {requireProfile(_)}
 }

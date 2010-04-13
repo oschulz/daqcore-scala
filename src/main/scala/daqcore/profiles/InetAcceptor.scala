@@ -25,13 +25,10 @@ import daqcore.actors._
 import java.net.InetSocketAddress
 
 
-trait InetAcceptor extends ServerProxy with Closeable {
-  profile[InetAcceptor]
-}
+trait InetAcceptor extends Profile with Closeable
 
 
 object InetAcceptor {
-  def apply(a: Actor) = new InetAcceptor { def self = a }
   def apply (port: Int) (body: StreamIO => Unit) (implicit builder: InetAcceptorBuilder) : InetAcceptor = {
     builder(port) (body)
   }

@@ -25,9 +25,7 @@ import daqcore.actors._
 import java.net.InetSocketAddress
 
 
-trait InetConnector extends ServerProxy with Closeable {
-  profile[InetConnector]
-
+trait InetConnector extends Profile with Closeable {
   def connect(host: String, port: Int): Future[InetConnection] =
     connect(new InetSocketAddress(host, port), -1)
 
@@ -38,20 +36,18 @@ trait InetConnector extends ServerProxy with Closeable {
     connect(to, -1)
 
   def connect(to: InetSocketAddress, timeout: Long): Future[InetConnection] =
-    self.!!& (InetConnector.Connect(to, timeout))
-      { case a: Actor => new InetConnection(a) }
+    srv.!!& (InetConnector.Connect(to, timeout))
+      { case a: Server with InetConnection => a }
 }
 
 
 object InetConnector {
   // reply: server supporting StreamIO
   case class Connect(to: InetSocketAddress, timeout: Long = 0)
-
-  def apply(a: Actor) = new InetConnector { def self = a }
 }
 
 
-class InetConnection (val self: Actor) extends StreamIO {}
+trait InetConnection extends StreamIO
 
 
 object InetConnection {

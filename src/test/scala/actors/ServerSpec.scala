@@ -24,11 +24,9 @@ import org.scalatest.matchers.MustMatchers
 class ServerSpec extends WordSpec with MustMatchers {
   "A Server" should {
     object testenv {
-      trait FooDevice extends ServerProxy {
+      trait FooDevice extends Profile {
         import FooDevice._
-        profile[FooDevice]
-
-        def foo(v: Int) = as[Int] {self !? Foo(v)}
+        def foo(v: Int) = as[Int] {srv !? Foo(v)}
       }
 
       object FooDevice {
@@ -36,11 +34,9 @@ class ServerSpec extends WordSpec with MustMatchers {
       }
 
 
-      trait BarDevice extends ServerProxy {
+      trait BarDevice extends Profile {
         import BarDevice._
-        profile[BarDevice]
-        
-        def bar(v: Int) = as[Int] {self !? Bar(v)}
+        def bar(v: Int) = as[Int] {srv !? Bar(v)}
       }
 
       object BarDevice {
@@ -48,19 +44,14 @@ class ServerSpec extends WordSpec with MustMatchers {
       }
 
 
-      trait BazDevice extends ServerProxy {
-        profile[BazDevice]
-        
-        def baz(v: Int) = as[Int] {self !? None }
+      trait BazDevice extends Profile {
+        def baz(v: Int) = as[Int] {srv !? None }
       }
 
 
-      class FooBarActor extends Server {
+      class FooBarActor extends Server with FooDevice with BarDevice {
         import FooDevice._, BarDevice._
 
-        val profiles =
-          Set(profileOf[FooDevice], profileOf[BarDevice])
-        
         var i = 0
       
         override def init() = { i = 2}
@@ -78,12 +69,15 @@ class ServerSpec extends WordSpec with MustMatchers {
       val a = new FooBarActor
       a.start
       
-      val w = new FooDevice with BarDevice { def self = a }
-      assert( w.foo(4) === 8 )
-      assert( w.bar(4) === 6 )
+      assert( a.foo(4) === 8 )
+      assert( a.bar(4) === 6 )
+      
+      val p = new ServerProxy(a) with FooDevice with BarDevice
+      assert( p.foo(4) === 8 )
+      assert( p.bar(4) === 6 )
 
       intercept[IllegalArgumentException] {
-        new FooDevice with BazDevice { def self = a }
+        new ServerProxy(a) with BazDevice
       }
     }
   }

@@ -34,10 +34,8 @@ import daqcore.profiles._
 
 
 trait MinaIO {
-  class MinaConnection(val session: IoSession) extends Server {
+  class MinaConnection(val session: IoSession) extends Server with InetConnection {
     def defaultTimeout: Long = 60000
-
-    val profiles = Set(profileOf[StreamIO], profileOf[StreamReader], profileOf[StreamWriter], profileOf[Closeable])
     
     protected[MinaIO] object readQueue extends DaemonActor with Logging {
       import scala.actors.Actor._
@@ -118,10 +116,8 @@ trait MinaIO {
 
 
 
-class MinaConnector extends Server with MinaIO {
+class MinaConnector extends Server with InetConnector with MinaIO {
   protected class ClientConnectionHandler extends ConnectionHandler
-  
-  protected val profiles = Set(profileOf[InetConnector], profileOf[Closeable])
   
   protected val defaultTimeout: Long = 30000
 
@@ -182,10 +178,10 @@ class MinaConnector extends Server with MinaIO {
 }
 
 
-class MinaAcceptor(port: Int, body: StreamIO => Unit) extends Server with MinaIO {
+class MinaAcceptor(port: Int, body: StreamIO => Unit) extends Server with InetAcceptor with MinaIO {
   accServer =>
 
-  protected case class NewConnection(connection: Actor)
+  protected case class NewConnection(connection: InetConnection)
   
   protected class ServerConnectionHandler extends ConnectionHandler {
     override def sessionOpened(session: IoSession) = {
@@ -197,8 +193,6 @@ class MinaAcceptor(port: Int, body: StreamIO => Unit) extends Server with MinaIO
     }
   }
   
-  protected val profiles = Set(profileOf[InetAcceptor], profileOf[Closeable])
-
   protected var handler: ConnectionHandler = null
   protected var acceptor: NioSocketAcceptor = null
 
@@ -213,8 +207,7 @@ class MinaAcceptor(port: Int, body: StreamIO => Unit) extends Server with MinaIO
 
   def serve = {
     case Closeable.Close => exit()
-    case NewConnection(connServer) => {
-      val connection = StreamIO(connServer)
+    case NewConnection(connection) => {
       class ConnProcessor extends Actor { def act() = body(connection) }
       val connProc = new ConnProcessor
       connProc.start

@@ -23,28 +23,22 @@ import daqcore.util._
 import daqcore.actors._
 
 
-trait MsgReader extends ServerProxy {
-  profile[MsgReader]
+trait MsgReader extends Profile {
+  def readMsg() = as[IndexedSeq[Byte]] { srv !? MsgIO.Read() }
 
-  def readMsg() = as[IndexedSeq[Byte]] { self !? MsgIO.Read() }
-
-  def readMsgF = as[Future[IndexedSeq[Byte]]] { self !! MsgIO.Read() }
+  def readMsgF = as[Future[IndexedSeq[Byte]]] { srv !! MsgIO.Read() }
 }
 
 
-trait MsgWriter extends ServerProxy {
-  profile[MsgWriter]
-
+trait MsgWriter extends Profile {
   def writeMsg(contents: IndexedSeq[Byte]) =
-    self ! MsgIO.Write(contents)
+    srv ! MsgIO.Write(contents)
 }
 
 
-trait MsgTrigger extends ServerProxy {
-  profile[MsgTrigger]
-
+trait MsgTrigger extends Profile {
   def addHandler(handler: PartialFunction[MsgIO.Event, Unit]) =
-    self ! MsgIO.AddHandler(handler)
+    srv ! MsgIO.AddHandler(handler)
 }
 
 
@@ -62,6 +56,4 @@ object MsgIO {
   
   //!!! Make this a global concept for all Servers/Proxies?
   case class AddHandler(handler: PartialFunction[Event, Unit])
-  
-  def apply(a: Actor) = new MsgIO { def self = a }
 }
