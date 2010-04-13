@@ -79,13 +79,13 @@ trait Server extends ServerAccess with DaemonActor with Profile {
   protected def shutdown(): Unit =
     { debug("Server %s shut down".format(self)) }
   
-  protected def handleGeneric: PartialFunction[Any, Unit] = {
+  protected def handleGenericPre: PartialFunction[Any, Unit] = {
     case GetProfiles => reply(profiles)
-    case Exit(_, 'normal) => { deinit(); shutdown(); active = false; exit() }
-    case e @ Exit(_, reason) => { deinit(); killed(e); exit(reason) }
   }
 
-  protected def handleUnknown: PartialFunction[Any, Unit] = {
+  protected def handleGenericPost: PartialFunction[Any, Unit] = {
+    case Exit(_, 'normal) => { deinit(); shutdown(); active = false; exit() }
+    case e @ Exit(_, reason) => { deinit(); killed(e); exit(reason) }
     case _ => throw new RuntimeException("unknown message")
   }
   
@@ -97,9 +97,9 @@ trait Server extends ServerAccess with DaemonActor with Profile {
     
     loop {
       react(
-        handleGeneric orElse
+        handleGenericPre orElse
         serve orElse
-        handleUnknown
+        handleGenericPost
       )
     }
   }
