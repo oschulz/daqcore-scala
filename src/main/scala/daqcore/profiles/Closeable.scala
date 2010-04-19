@@ -24,8 +24,10 @@ import daqcore.actors._
 
 
 trait Closeable extends Profile {
-  def close(): Unit =
-    { srv ! Closeable.Close }
+  def close(): Unit = {
+    Actor.unlink(srv)
+    srv ! Closeable.Close
+  }
 }
 
 
