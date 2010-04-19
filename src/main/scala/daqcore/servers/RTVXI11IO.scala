@@ -77,7 +77,7 @@ class RTVXI11Connector extends Server with VXI11Connector {
       case Read(lnk, timeout) => reply(lnk, timeout)
       case Write(lnk, timeout, data) => write(lnk, timeout, data)
       case Exit(lnk: RTVXI11Link, 'Closed) => closeLink(lnk)
-      case connector.Connect(device, timeout) => reply(openLink(device, timeout))
+      case OpenLink(device, timeout) => reply(openLink(device, timeout))
       case Closeable.Close => exit('Closed)
 
       case Exit(lnk: RTVXI11Link, msg) => msg match {
@@ -224,11 +224,12 @@ class RTVXI11Connector extends Server with VXI11Connector {
     clients = Map.empty[InetAddress, RTVXI11Client]
   }
 
-  protected case class Connect(device:String, timeout: Long = -1)
+  protected case class OpenLink(device:String, timeout: Long = -1)
 
   def serve = {
-    case VXI11Connector.Connect(to, device, timeout) =>
-      getClient(to).forward(Connect(device, timeout))
+    case VXI11Connector.Connect(to, device, timeout) => {
+      getClient(to).forward(OpenLink(device, timeout))
+    }
 
     case Closeable.Close => exit('Closed)
 
@@ -252,10 +253,11 @@ class RTVXI11Connector extends Server with VXI11Connector {
 
   protected def getClient(address: InetAddress) = clients.get(address) match {
     case Some(client) => {
-      trace("Re-using existing VXI11 client " + address)
+      trace("Re-using existing VXI11 client to " + address)
       client
     }
     case None => {
+      trace("Creating new VXI11 client to " + address)
       val rtClient = new RTVXI11Client(address)
       clients += address -> rtClient
       link(rtClient)
