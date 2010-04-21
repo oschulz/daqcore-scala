@@ -50,14 +50,14 @@ trait Server extends ServerAccess with DaemonActor with Profile {
   val profiles: Set[ProfileInfo] =
     ProfileInfo.profilesOf(this.getClass)
 
-  private var active = false
+  private[actors] var restarted = false
 
   /** Servers may override this */
-  protected def started(): Unit =
+  protected def onStart(): Unit =
     { debug("Server %s started".format(self)) }
 
   /** Servers may override this */
-  protected def restarted(): Unit =
+  protected def onRestart(): Unit =
     { debug("Server %s restarted".format(self)) }
 
   /** Servers may override this */
@@ -72,35 +72,72 @@ trait Server extends ServerAccess with DaemonActor with Profile {
     { trace("Server %s deinit".format(self)) }
 
   /** Servers may override this */
-  protected def killed(msg: Exit): Unit =
-    { debug("Server %s killed: %s".format(self, msg)) }
+  protected def onKill(reason: AnyRef): Unit =
+    { debug("Server %s killed: %s".format(reason)) }
 
-  /** Servers may override this */
-  protected def shutdown(): Unit =
+  //** Servers may override this */
+  protected def onShutdown(): Unit =
     { debug("Server %s shut down".format(self)) }
   
-  protected def handleGenericPre: PartialFunction[Any, Unit] = {
+  protected[actors] def handleGenericPre: PartialFunction[Any, Unit] = {
     case GetProfiles => reply(profiles)
   }
 
-  protected def handleGenericPost: PartialFunction[Any, Unit] = {
-    case Exit(_, 'normal) => { deinit(); shutdown(); active = false; exit() }
-    case e @ Exit(_, reason) => { deinit(); killed(e); exit(reason) }
+  protected[actors] def handleGenericPost: PartialFunction[Any, Unit] = {
+    case Exit(_, 'normal) => 
+    case e @ Exit(_, reason) => { exit(reason) }
     case _ => throw new RuntimeException("unknown message")
   }
   
   def act() = {
+    exitMonitor.start()
+    exitMonitor !? 'ready
+    
     trapExit = true
     
-    if (!active) { active = true; started() } else restarted()
+    if (!restarted) { restarted = true; onStart() } else onRestart()
     init()
     
-    loop {
-      react(
-        handleGenericPre orElse
-        serve orElse
-        handleGenericPost
-      )
+    eventloop (
+      handleGenericPre orElse
+      serve orElse
+      handleGenericPost
+    )
+  }
+
+  lazy val exitMonitor = new ExitMonitor
+  
+  protected class ExitMonitor extends DaemonActor with Logging {
+    trapExit = true
+
+    def act = {
+      trace("Exit Monitor started")
+      link(srv)
+      ready()
+    }
+
+    protected def ready() = react {
+      case 'ready => {
+        trace("Received 'ready")
+        reply()
+        waitForExit()
+      }
+      case _ => throw new RuntimeException("ExitMonitor: unexpexted message")
+    }
+    
+    protected def waitForExit() = react {
+      case Exit(from, reason) if (from == srv) => {
+        trace("Received Exit(srv,%s)".format(reason))
+        try {
+          trace("Trying deinit()")
+          deinit()
+        } catch { case _ => }
+        reason match {
+          case 'normal => try { onShutdown() } catch { case e => error(e) }
+          case reason => try { onKill(reason) } catch { case e => error(e) }
+        }
+      }
+      case _ => throw new RuntimeException("ExitMonitor: unexpexted message")
     }
   }
 }
