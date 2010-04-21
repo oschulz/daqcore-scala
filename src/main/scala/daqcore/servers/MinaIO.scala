@@ -125,10 +125,20 @@ class MinaConnector extends Server with InetConnector with MinaIO {
   protected var connector: NioSocketConnector = null
   
   override def init() = {
-    handler = new ClientConnectionHandler
-    connector = new NioSocketConnector
-    connector.setConnectTimeoutMillis(defaultTimeout)
-    connector.setHandler(handler)
+    withCleanup { handler = new ClientConnectionHandler } { handler = null }
+
+    withCleanup {
+      connector = new NioSocketConnector
+      connector.setConnectTimeoutMillis(defaultTimeout)
+      connector.setHandler(handler)
+    } {
+      import scala.collection.JavaConversions._
+      // close all sessions immediately
+      connector.getManagedSessions foreach { _._2.close(true) }
+      // dispose should not block now
+      connector.dispose()
+      connector = null
+    }
   }
 
   def serve = {
@@ -165,16 +175,6 @@ class MinaConnector extends Server with InetConnector with MinaIO {
     }
       
   }
-
-  override def deinit() = {
-    import scala.collection.JavaConversions._
-    // close all sessions immediately
-    connector.getManagedSessions foreach { _._2.close(true) }
-    // dispose should not block now
-    connector.dispose()
-    connector = null
-    handler = null
-  }
 }
 
 
@@ -197,12 +197,22 @@ class MinaAcceptor(port: Int, body: StreamIO => Unit) extends Server with InetAc
   protected var acceptor: NioSocketAcceptor = null
 
   override def init() = {
-    handler = new ServerConnectionHandler
-    acceptor = new NioSocketAcceptor
-    acceptor.setHandler(handler)
-    acceptor.getSessionConfig().setReadBufferSize(2048)
-    acceptor.getSessionConfig().setIdleTime(IdleStatus.BOTH_IDLE, 15)
-    acceptor.bind(new InetSocketAddress(port))
+    withCleanup { handler = new ServerConnectionHandler } { handler = null }
+
+    withCleanup {
+      acceptor = new NioSocketAcceptor
+      acceptor.setHandler(handler)
+      acceptor.getSessionConfig().setReadBufferSize(2048)
+      acceptor.getSessionConfig().setIdleTime(IdleStatus.BOTH_IDLE, 15)
+      acceptor.bind(new InetSocketAddress(port))
+    } {
+      import scala.collection.JavaConversions._
+      // close all sessions immediately
+      acceptor.getManagedSessions foreach { _._2.close(true) }
+      // dispose should not block now
+      acceptor.dispose()
+      acceptor = null
+    }
   }
 
   def serve = {
@@ -212,15 +222,5 @@ class MinaAcceptor(port: Int, body: StreamIO => Unit) extends Server with InetAc
       val connProc = new ConnProcessor
       connProc.start
     }
-  }
-
-  override def deinit() = {
-    import scala.collection.JavaConversions._
-    // close all sessions immediately
-    acceptor.getManagedSessions foreach { _._2.close(true) }
-    // dispose should not block now
-    acceptor.dispose()
-    acceptor = null
-    handler = null
   }
 }

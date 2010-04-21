@@ -62,14 +62,21 @@ class RTVXI11Connector extends Server with VXI11Connector {
 
     override def init() = {
       super.init()
-      rtlinks = Map.empty[String, RTVXI11Link]
-      info("Opening VXI11 client connection to " + address)
-      try {
-        clnt = new vxi11core.Client(address, OncRpcProtocols.ONCRPC_TCP)
-      }
-      catch { case e =>
-        error("Could not open VXI11 client connection to " + address)
-        exit('OpenFailed)
+      withCleanup { rtlinks = Map.empty[String, RTVXI11Link] } { rtlinks = null }
+
+      withCleanup {
+        info("Opening VXI11 client connection to " + address)
+        try {
+          clnt = new vxi11core.Client(address, OncRpcProtocols.ONCRPC_TCP)
+        }
+        catch { case e =>
+          error("Could not open VXI11 client connection to " + address)
+          exit('OpenFailed)
+        }
+      } {
+        rtlinks foreach { e => closeLink(e._2) }
+        clnt.close(); clnt = null;
+        info("VXI11 client connection to " + address + "closed")
       }
     }
 
@@ -88,14 +95,6 @@ class RTVXI11Connector extends Server with VXI11Connector {
           lnk.start()
         }
       }
-    }
-
-    override def deinit() = {
-      rtlinks foreach { e => closeLink(e._2) }
-      rtlinks = null
-      clnt.close(); clnt = null;
-      info("VXI11 client connection to " + address + "closed")
-      super.deinit()
     }
 
     
@@ -221,7 +220,7 @@ class RTVXI11Connector extends Server with VXI11Connector {
 
   override def init() = {
     super.init()
-    clients = Map.empty[InetAddress, RTVXI11Client]
+    withCleanup { clients = Map.empty[InetAddress, RTVXI11Client] } { clients = null }
   }
 
   protected case class OpenLink(device:String, timeout: Long = -1)
@@ -242,12 +241,6 @@ class RTVXI11Connector extends Server with VXI11Connector {
         client.start()
       }
     }
-  }
-
-
-  override def deinit() = {
-    clients = null
-    super.deinit()
   }
 
 

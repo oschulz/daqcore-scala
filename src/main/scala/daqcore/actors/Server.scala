@@ -54,30 +54,29 @@ trait Server extends ServerAccess with DaemonActor with Profile {
 
   /** Servers may override this */
   protected def onStart(): Unit =
-    { debug("Server %s started".format(self)) }
+    { debug("Server %s started".format(srv)) }
 
   /** Servers may override this */
   protected def onRestart(): Unit =
-    { debug("Server %s restarted".format(self)) }
+    { debug("Server %s restarted".format(srv)) }
 
   /** Servers may override this */
-  protected def init(): Unit =
-    { trace("Server %s init".format(self)) }
+  protected def init(): Unit = {
+    withCleanup
+      { trace("Server %s initializing".format(srv)) }
+      { trace("Server %s cleaned up".format(srv)) }
+  }
 
   /** Servers must implement this */
   protected def serve: PartialFunction[Any, Unit]
 
-  /** Servers may override this, deinit is called once for every call of init */
-  protected def deinit(): Unit =
-    { trace("Server %s deinit".format(self)) }
-
   /** Servers may override this */
   protected def onKill(reason: AnyRef): Unit =
-    { debug("Server %s killed: %s".format(reason)) }
+    { debug("Server %s killed: %s".format(srv, reason)) }
 
   //** Servers may override this */
   protected def onShutdown(): Unit =
-    { debug("Server %s shut down".format(self)) }
+    { debug("Server %s shut down".format(srv)) }
   
   protected[actors] def handleGenericPre: PartialFunction[Any, Unit] = {
     case GetProfiles => reply(profiles)
@@ -88,7 +87,7 @@ trait Server extends ServerAccess with DaemonActor with Profile {
     case e @ Exit(_, reason) => { exit(reason) }
     case _ => throw new RuntimeException("unknown message")
   }
-  
+
   def act() = {
     exitMonitor.start()
     exitMonitor !? 'ready
@@ -105,20 +104,36 @@ trait Server extends ServerAccess with DaemonActor with Profile {
     )
   }
 
+
+  protected[actors] var cleanupActions: List[() => Unit] = Nil
+  
+  def withCleanup (initBody: => Unit)(cleanupBody: => Unit) {
+    cleanupActions = {() => cleanupBody} :: cleanupActions
+    initBody
+  }
+
+  protected[actors] def postExit(reason: AnyRef) {
+    for (action <- cleanupActions) try { action() } catch { case e => error(e) }
+    cleanupActions = Nil
+
+    reason match {
+      case 'normal => try { onShutdown() } catch { case e => error(e) }
+      case reason => try { onKill(reason) } catch { case e => error(e) }
+    }
+  }
+
   lazy val exitMonitor = new ExitMonitor
   
   protected class ExitMonitor extends DaemonActor with Logging {
     trapExit = true
 
     def act = {
-      trace("Exit Monitor started")
       link(srv)
       ready()
     }
 
     protected def ready() = react {
       case 'ready => {
-        trace("Received 'ready")
         reply()
         waitForExit()
       }
@@ -126,17 +141,8 @@ trait Server extends ServerAccess with DaemonActor with Profile {
     }
     
     protected def waitForExit() = react {
-      case Exit(from, reason) if (from == srv) => {
-        trace("Received Exit(srv,%s)".format(reason))
-        try {
-          trace("Trying deinit()")
-          deinit()
-        } catch { case _ => }
-        reason match {
-          case 'normal => try { onShutdown() } catch { case e => error(e) }
-          case reason => try { onKill(reason) } catch { case e => error(e) }
-        }
-      }
+      case Exit(from, reason) if (from == srv) =>
+        postExit(reason)
       case _ => throw new RuntimeException("ExitMonitor: unexpexted message")
     }
   }
