@@ -25,7 +25,7 @@ import daqcore.util._, daqcore.actors._, daqcore.profiles._, daqcore.servers._
 class MinaIOSpec extends WordSpec with MustMatchers with Logging {
   "MinaIO" should {
     // Disabled until Mina shuts down correctly
-    "behave correctly" ignore {
+    "behave correctly" in {
       // implicit def defaultInetAcceptorBuilder = MinaInetAcceptorBuilder
       // implicit def defaultInetConnector = MinaInetConnector
     
