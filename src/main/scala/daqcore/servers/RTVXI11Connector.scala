@@ -34,10 +34,10 @@ import daqcore.util._
 class RTVXI11Connector extends Server with VXI11Connector {
   connector =>
   
-  class RTVXI11Client(val address: InetAddress) extends Server {
+  class Client(val address: InetAddress) extends Server {
     client =>
 
-    class RTVXI11Link(val device: String, id: Int, maxRecvSize: Int) extends Server with VXI11Link {
+    class Link(val device: String, id: Int, maxRecvSize: Int) extends Server with VXI11Link {
       lnk =>
       
       def lid = new vxi11core.Device_Link(id)
@@ -54,15 +54,15 @@ class RTVXI11Connector extends Server with VXI11Connector {
     val defaultMaxRecvSize:Int = 4096
 
     var clnt: vxi11core.Client = null  
-    var rtlinks: Map[String, RTVXI11Link] = null
+    var rtlinks: Map[String, Link] = null
 
-    protected case class Read(lnk: RTVXI11Link, timeout: Long)
-    protected case class Write(lnk: RTVXI11Link, timeout: Long, data: Seq[Byte])
-    protected case class Close(lnk: RTVXI11Link)
+    protected case class Read(lnk: Link, timeout: Long)
+    protected case class Write(lnk: Link, timeout: Long, data: Seq[Byte])
+    protected case class Close(lnk: Link)
 
     override def init() = {
       super.init()
-      withCleanup { rtlinks = Map.empty[String, RTVXI11Link] } { rtlinks = null }
+      withCleanup { rtlinks = Map.empty[String, Link] } { rtlinks = null }
 
       withCleanup {
         info("Opening VXI11 client connection to " + address)
@@ -83,11 +83,11 @@ class RTVXI11Connector extends Server with VXI11Connector {
     def serve = {
       case Read(lnk, timeout) => reply(read(lnk, timeout))
       case Write(lnk, timeout, data) => write(lnk, timeout, data)
-      case Exit(lnk: RTVXI11Link, 'closed) => closeLink(lnk)
+      case Exit(lnk: Link, 'closed) => closeLink(lnk)
       case OpenLink(device, timeout) => reply(openLink(device, timeout))
       case Closeable.Close => exit('closed)
 
-      case Exit(lnk: RTVXI11Link, msg) => msg match {
+      case Exit(lnk: Link, msg) => msg match {
         case 'closed => rtlinks -= lnk.device
         case msg => {
           error("Restarting VXI11 link to %s, %s".format(address, lnk.device))
@@ -98,7 +98,7 @@ class RTVXI11Connector extends Server with VXI11Connector {
     }
 
     
-    protected def openLink(device: String, timeout: Long): RTVXI11Link = {
+    protected def openLink(device: String, timeout: Long): Link = {
       debug("Creating new VXI11 link to %s, device %s".format(address, device))
       require(rtlinks.get(device) == None)
       require(timeout <= Int.MaxValue)
@@ -120,19 +120,19 @@ class RTVXI11Connector extends Server with VXI11Connector {
       // we need to catch this, otherwise the program just hangs.
       val maxRecvSize = if (lresp.maxRecvSize > 0) lresp.maxRecvSize else defaultMaxRecvSize
       
-      val lnk = new RTVXI11Link(device, lresp.lid.value, maxRecvSize)
+      val lnk = new Link(device, lresp.lid.value, maxRecvSize)
       link(lnk)
       lnk.start()
       lnk
     }
 
-    protected def closeLink(lnk: RTVXI11Link) : Unit = {
+    protected def closeLink(lnk: Link) : Unit = {
       trace("destroy_link(%s)".format(lnk.lid.value))
       val unlinkResp = clnt.destroy_link_1(lnk.lid)
       trace("destroy_link error value: " + unlinkResp.error.value)
     }
 
-    protected def read(lnk: RTVXI11Link, timeout: Long,
+    protected def read(lnk: Link, timeout: Long,
       acc: IndexedSeq[IndexedSeq[Byte]] = IndexedSeq.empty[IndexedSeq[Byte]]) :
       ByteCharSeq =
     {
@@ -182,7 +182,7 @@ class RTVXI11Connector extends Server with VXI11Connector {
       }
     }
     
-    protected def write(lnk: RTVXI11Link, timeout: Long, data: Seq[Byte], lastChunk: Boolean = true) :
+    protected def write(lnk: Link, timeout: Long, data: Seq[Byte], lastChunk: Boolean = true) :
       Unit =
     {
       require(timeout <= Int.MaxValue)
@@ -217,12 +217,12 @@ class RTVXI11Connector extends Server with VXI11Connector {
   }
 
 
-  var clients: Map[InetAddress, RTVXI11Client] = null
+  var clients: Map[InetAddress, Client] = null
 
 
   override def init() = {
     super.init()
-    withCleanup { clients = Map.empty[InetAddress, RTVXI11Client] } { clients = null }
+    withCleanup { clients = Map.empty[InetAddress, Client] } { clients = null }
   }
 
   protected case class OpenLink(device:String, timeout: Long = -1)
@@ -234,7 +234,7 @@ class RTVXI11Connector extends Server with VXI11Connector {
 
     case Closeable.Close => exit('closed)
 
-    case Exit(client: RTVXI11Client, msg) => msg match {
+    case Exit(client: Client, msg) => msg match {
       case 'closed => clients -= client.address
       case 'OpenFailed => clients -= client.address
       case msg => {
@@ -253,7 +253,7 @@ class RTVXI11Connector extends Server with VXI11Connector {
     }
     case None => {
       trace("Creating new VXI11 client to " + address)
-      val rtClient = new RTVXI11Client(address)
+      val rtClient = new Client(address)
       clients += address -> rtClient
       link(rtClient)
       rtClient.start
