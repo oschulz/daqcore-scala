@@ -117,7 +117,7 @@ trait Server extends ServerAccess with DaemonActor with Profile {
     cleanupActions = Nil
 
     reason match {
-      case 'normal => try { onShutdown() } catch { case e => error(e) }
+      case 'normal | 'closed => try { onShutdown() } catch { case e => error(e) }
       case reason => try { onKill(reason) } catch { case e => error(e) }
     }
   }
