@@ -45,7 +45,7 @@ class RTVXI11Connector extends Server with VXI11Connector {
       def serve = {
         case MsgIO.Read(timeout) => client.forward(Read(lnk, timeout))
         case MsgIO.Write(data) => client.forward(Write(lnk, defaultTimeout, data))
-        case Closeable.Close => exit('Closed)
+        case Closeable.Close => exit('closed)
       }
     }
 
@@ -83,12 +83,12 @@ class RTVXI11Connector extends Server with VXI11Connector {
     def serve = {
       case Read(lnk, timeout) => reply(lnk, timeout)
       case Write(lnk, timeout, data) => write(lnk, timeout, data)
-      case Exit(lnk: RTVXI11Link, 'Closed) => closeLink(lnk)
+      case Exit(lnk: RTVXI11Link, 'closed) => closeLink(lnk)
       case OpenLink(device, timeout) => reply(openLink(device, timeout))
-      case Closeable.Close => exit('Closed)
+      case Closeable.Close => exit('closed)
 
       case Exit(lnk: RTVXI11Link, msg) => msg match {
-        case 'Closed => rtlinks -= lnk.device
+        case 'closed => rtlinks -= lnk.device
         case msg => {
           error("Restarting VXI11 link to %s, %s".format(address, lnk.device))
           link(lnk)
@@ -230,10 +230,10 @@ class RTVXI11Connector extends Server with VXI11Connector {
       getClient(to).forward(OpenLink(device, timeout))
     }
 
-    case Closeable.Close => exit('Closed)
+    case Closeable.Close => exit('closed)
 
     case Exit(client: RTVXI11Client, msg) => msg match {
-      case 'Closed => clients -= client.address
+      case 'closed => clients -= client.address
       case 'OpenFailed => clients -= client.address
       case msg => {
         error("Restarting VXI11 client connection to " + client.address)
