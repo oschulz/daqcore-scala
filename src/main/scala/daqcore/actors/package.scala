@@ -42,6 +42,8 @@ package object actors {
     self.trapExit = trapE
   }
 
+  def kill(target: scala.actors.Actor, reason: AnyRef) =
+    { new KillActor(target, reason).start() }
 
   implicit def actorFix(actor: scala.actors.Actor) =
     new scala.actors.fix_daqcore.ActorFix(actor)
