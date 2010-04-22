@@ -48,7 +48,7 @@ trait MinaIO {
         }
         case Closed => {
           trace("Closed")
-          exit('Closed)
+          exit('closed)
         }
       } }
     }
@@ -74,7 +74,7 @@ trait MinaIO {
       case w: StreamIO.Write => writeQueue.forward(w)
       case Closeable.Close => {
         session.close(true)
-        exit('Closed)
+        exit('closed)
       }
     }
   }
