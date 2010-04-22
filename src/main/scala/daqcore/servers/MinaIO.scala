@@ -164,8 +164,8 @@ class MinaConnector extends Server with InetConnector with MinaIO {
               replyTo ! connServer
               trace("IoFutureListener got session %s".format(session))
             } else {
-              throw new IOException("MinaConnector: Can't establish connection")
               debug("can't connect")
+              throw new IOException("MinaConnector: Can't establish connection")
             }
             
           }
