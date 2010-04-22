@@ -49,6 +49,8 @@ class MinaIOSpec extends WordSpec with MustMatchers with Logging {
           }
         }
       }
+      
+      Thread.sleep(100)
 
       actwait {
         val conn = InetConnection("localhost", 8002)
