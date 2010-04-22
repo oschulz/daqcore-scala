@@ -81,7 +81,7 @@ class RTVXI11Connector extends Server with VXI11Connector {
     }
 
     def serve = {
-      case Read(lnk, timeout) => reply(lnk, timeout)
+      case Read(lnk, timeout) => reply(read(lnk, timeout))
       case Write(lnk, timeout, data) => write(lnk, timeout, data)
       case Exit(lnk: RTVXI11Link, 'closed) => closeLink(lnk)
       case OpenLink(device, timeout) => reply(openLink(device, timeout))
@@ -153,6 +153,7 @@ class RTVXI11Connector extends Server with VXI11Connector {
       trace("device_read error value: " + rresp.error.value)
       
       rresp.error.value match {
+        case 0 => // OK
         case 4 => throw new TimeoutException("VXI11 read: I/O timeout")
         case 11 => throw new IOException("VXI11 read: Device locked by another link")
         case 17 => throw new IOException("VXI11 read: I/O error")
