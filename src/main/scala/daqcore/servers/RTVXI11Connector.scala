@@ -156,6 +156,7 @@ class RTVXI11Connector extends Server with VXI11Connector {
         case 0 => // OK
         case 4 => throw new TimeoutException("VXI11 read: I/O timeout")
         case 11 => throw new IOException("VXI11 read: Device locked by another link")
+        case 15 => throw new TimeoutException("VXI11 read: I/O timeout")
         case 17 => throw new IOException("VXI11 read: I/O error")
         case 23 => throw new IOException("VXI11 read: Abort")
         case _ => throw new IOException("VXI11 read: Unknown error")
