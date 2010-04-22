@@ -24,7 +24,7 @@ import daqcore.actors._
 
 
 trait MsgReader extends Profile with Closeable {
-  def read(timeout: Long = Int.MaxValue): Future[ByteCharSeq] =
+  def read(timeout: Long = -1): Future[ByteCharSeq] =
     srv.!!& (MsgIO.Read(timeout)) { case x: ByteCharSeq => x }
 }
 
@@ -38,7 +38,7 @@ trait MsgWriter extends Profile with Closeable {
 trait MsgIO extends MsgReader with MsgWriter
 
 object MsgIO {
-  case class Read(timeout: Long = Int.MaxValue) // Reply: Future[ByteCharSeq]
+  case class Read(timeout: Long = -1) // Reply: Future[ByteCharSeq]
 
   case class Write(data: Seq[Byte])
 }
