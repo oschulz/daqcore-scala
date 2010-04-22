@@ -81,10 +81,16 @@ class RTVXI11Connector extends Server with VXI11Connector {
     }
 
     def serve = {
-      case Read(lnk, timeout) => reply(read(lnk, timeout))
-      case Write(lnk, timeout, data) => write(lnk, timeout, data)
+      case Read(lnk, timeout) =>
+        tryForLink(lnk) {reply(read(lnk, timeout))}
+
+      case Write(lnk, timeout, data) =>
+        tryForLink(lnk) { write(lnk, timeout, data) }
+
       case Exit(lnk: Link, 'closed) => closeLink(lnk)
+
       case OpenLink(device, timeout) => reply(openLink(device, timeout))
+
       case Closeable.Close => exit('closed)
 
       case Exit(lnk: Link, msg) => msg match {
@@ -97,6 +103,9 @@ class RTVXI11Connector extends Server with VXI11Connector {
       }
     }
 
+    def tryForLink(lnk: Link)(body: => Unit) = {
+      try { body } catch { case e => kill(lnk,e) }
+    }
     
     protected def openLink(device: String, timeout: Long): Link = {
       debug("Creating new VXI11 link to %s, device %s".format(address, device))
