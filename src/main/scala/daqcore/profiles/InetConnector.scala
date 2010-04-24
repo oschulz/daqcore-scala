@@ -26,16 +26,16 @@ import java.net.InetSocketAddress
 
 
 trait InetConnector extends Profile with Closeable {
-  def connect(host: String, port: Int): Future[InetConnection] =
-    connect(new InetSocketAddress(host, port), -1)
+  def connectF(host: String, port: Int): Future[InetConnection] =
+    connectF(new InetSocketAddress(host, port), -1)
 
-  def connect(host: String, port: Int, timeout: Long): Future[InetConnection] =
-    connect(new InetSocketAddress(host, port), timeout)
+  def connectF(host: String, port: Int, timeout: Long): Future[InetConnection] =
+    connectF(new InetSocketAddress(host, port), timeout)
   
-  def connect(to: InetSocketAddress): Future[InetConnection] =
-    connect(to, -1)
+  def connectF(to: InetSocketAddress): Future[InetConnection] =
+    connectF(to, -1)
 
-  def connect(to: InetSocketAddress, timeout: Long): Future[InetConnection] =
+  def connectF(to: InetSocketAddress, timeout: Long): Future[InetConnection] =
     srv.!!& (InetConnector.Connect(to, timeout))
       { case a: Server with InetConnection => a }
 }
@@ -52,14 +52,14 @@ trait InetConnection extends StreamIO
 
 object InetConnection {
   def apply(host: String, port: Int)(implicit connector: InetConnector): StreamIO =
-    connector.connect(host, port)()
+    connector.connectF(host, port)()
 
   def apply(host: String, port: Int, timeout: Long)(implicit connector: InetConnector): StreamIO =
-    connector.connect(host, port, timeout)()
+    connector.connectF(host, port, timeout)()
   
   def apply(to: InetSocketAddress)(implicit connector: InetConnector): StreamIO =
-    connector.connect(to)()
+    connector.connectF(to)()
 
   def apply(to: InetSocketAddress, timeout: Long)(implicit connector: InetConnector): StreamIO =
-    connector.connect(to, timeout)()
+    connector.connectF(to, timeout)()
 }

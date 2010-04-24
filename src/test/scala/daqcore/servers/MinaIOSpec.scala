@@ -39,7 +39,7 @@ class MinaIOSpec extends WordSpec with MustMatchers with Logging {
         import scala.actors.Actor.loop
         loop {
           for (
-            bytes <- conn.read();
+            bytes <- conn.readF();
             _ <- Futures.alarm(200)
           ) {
             val msg = bytes.toString.trim
@@ -59,7 +59,7 @@ class MinaIOSpec extends WordSpec with MustMatchers with Logging {
           if (i > 0) {
             debug("pings(%s)".format(i))
             conn write ping
-            conn.read().respond { bytes =>
+            conn.readF().respond { bytes =>
               debug(bytes.toString.trim)
               pings(i - 1)
             }

@@ -37,16 +37,16 @@ trait VXI11Link extends MsgIO {
 
 object VXI11Link {
   def apply(host: String, device:String)(implicit connector: VXI11Connector): VXI11Link =
-    connector.connect(host, device)()
+    connector.connectF(host, device)()
 
   def apply(host: String, device:String, timeout: Long)(implicit connector: VXI11Connector): VXI11Link =
-    connector.connect(host, device, timeout)()
+    connector.connectF(host, device, timeout)()
   
   def apply(to: InetAddress, device:String)(implicit connector: VXI11Connector): VXI11Link =
-    connector.connect(to, device)()
+    connector.connectF(to, device)()
 
   def apply(to: InetAddress, device:String, timeout: Long)(implicit connector: VXI11Connector): VXI11Link =
-    connector.connect(to, device, timeout)()
+    connector.connectF(to, device, timeout)()
 
   // Not supported yet: case class Lock(flags: Int = 0, timeout: Long = -1) // Reply: Boolean
   // Not supported yet: case object Unlock // No Reply

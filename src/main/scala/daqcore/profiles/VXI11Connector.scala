@@ -26,16 +26,16 @@ import java.net.InetAddress
 
 
 trait VXI11Connector extends Profile with Closeable {
-  def connect(host: String, device: String): Future[VXI11Link] =
-    connect(InetAddress.getByName(host), device, -1)
+  def connectF(host: String, device: String): Future[VXI11Link] =
+    connectF(InetAddress.getByName(host), device, -1)
 
-  def connect(host: String, device: String, timeout: Long): Future[VXI11Link] =
-    connect(InetAddress.getByName(host), device, timeout)
+  def connectF(host: String, device: String, timeout: Long): Future[VXI11Link] =
+    connectF(InetAddress.getByName(host), device, timeout)
   
-  def connect(to: InetAddress, device:String): Future[VXI11Link] =
-    connect(to, device, -1)
+  def connectF(to: InetAddress, device:String): Future[VXI11Link] =
+    connectF(to, device, -1)
 
-  def connect(to: InetAddress, device:String, timeout: Long): Future[VXI11Link] =
+  def connectF(to: InetAddress, device:String, timeout: Long): Future[VXI11Link] =
     srv.!!& (VXI11Connector.Connect(to, device, timeout))
       { case a: Server with VXI11Link => a }
 }
