@@ -45,11 +45,6 @@ package object actors {
   def kill(target: scala.actors.Actor, reason: AnyRef) =
     { new KillActor(target, reason).start() }
 
-  implicit def actorFix(actor: scala.actors.Actor) =
-    new scala.actors.fix_daqcore.ActorFix(actor)
-
-  def Futures = scala.actors.fix_daqcore.FuturesFixed
-
   implicit def actorOps(actor: scala.actors.Actor) =
     new ActorOps(actor)
 }

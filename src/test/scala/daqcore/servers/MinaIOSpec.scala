@@ -35,7 +35,7 @@ class MinaIOSpec extends WordSpec with MustMatchers with Logging {
 
 
       val acc = InetAcceptor (8002) { (conn: StreamIO) =>
-        import scala.actors.Futures.alarm
+        import scala.actors.Futures
         import scala.actors.Actor.loop
         loop {
           for (

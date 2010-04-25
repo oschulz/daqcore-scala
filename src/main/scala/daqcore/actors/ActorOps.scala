@@ -27,7 +27,7 @@ class ActorOps(wrapped: Actor) {
     this.!!& (msg) { case x => x }
 
   def !!&[A](msg: Any) (handler: PartialFunction[Any, A]): Future[A] =
-    wrapped !!% (msg,handler)
+    wrapped !! (msg,handler)
 
   def !!^[A: ClassManifest](msg: Any): Future[A] = {
     val mf = classManifest[A]

@@ -55,7 +55,7 @@ class SubIdxSeq[+A](parent: IndexedSeq[A], pstart: Int, pend: Int)
     else new SubIdxSeq[A](this, start, end)
   }
 
-  override def ++[B >: A, That](that: Traversable[B])(implicit bf: CanBuildFrom[SubIdxSeq[A], B, That]): That = that match {
+  override def ++[B >: A, That](that: TraversableOnce[B])(implicit bf: CanBuildFrom[SubIdxSeq[A], B, That]): That = that match {
     case that: SubIdxSeq[_] if (this.data == that.data) => {
       if (this.end == that.start) new SubIdxSeq[B](data, this.start, that.end).asInstanceOf[That]
       else if (that.end == this.start) new SubIdxSeq[B](data, that.start, this.end).asInstanceOf[That]
