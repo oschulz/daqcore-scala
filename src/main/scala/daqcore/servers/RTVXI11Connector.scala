@@ -82,7 +82,7 @@ class RTVXI11Connector extends Server with VXI11Connector {
 
     def serve = {
       case Read(lnk, timeout) =>
-        tryForLink(lnk) {reply(read(lnk, timeout))}
+        tryForLink(lnk) { reply(read(lnk, timeout) getOrElse Timeout) }
 
       case Write(lnk, timeout, data) =>
         tryForLink(lnk) { write(lnk, timeout, data) }
@@ -143,7 +143,7 @@ class RTVXI11Connector extends Server with VXI11Connector {
 
     protected def read(lnk: Link, timeout: Long,
       acc: IndexedSeq[IndexedSeq[Byte]] = IndexedSeq.empty[IndexedSeq[Byte]]) :
-      ByteCharSeq =
+      Option[ByteCharSeq] =
     {
       require(timeout <= Int.MaxValue)
       val rparms = new vxi11core.Device_ReadParms
@@ -163,31 +163,31 @@ class RTVXI11Connector extends Server with VXI11Connector {
       
       rresp.error.value match {
         case 0 => // OK
-        case 4 => throw new TimeoutException("VXI11 read: I/O timeout")
+          val rcv_reason_end:Int = 0x04; // End indicator read
+          val rcv_reason_chr:Int = 0x02; // Termchr set in flags and matching character transferred
+          val rcv_reason_reqcnt:Int = 0x01; // requestSize bytes transferred.
+
+          trace("device_read response reason: " + rresp.reason)
+          
+          if ((rresp.reason & rcv_reason_reqcnt) != 0)
+            throw new IOException("VXI11 read: Request size to small")
+          
+          val boxedData: IndexedSeq[IndexedSeq[Byte]] = IndexedSeq(rresp.data)
+          // if end or chr bit set, read is complete, if not, more chunks to read
+          if ((rresp.reason & (rcv_reason_end | rcv_reason_chr)) != 0) {
+            trace("Finished reading")
+            Some(ByteCharSeq((acc ++ boxedData) flatten))
+          } else {
+            trace("Partial read")
+            read(lnk, timeout, (acc ++ boxedData))
+          }
+
+        case 4|17 => // Timeout
+          None
         case 11 => throw new IOException("VXI11 read: Device locked by another link")
         case 15 => throw new TimeoutException("VXI11 read: I/O timeout")
-        case 17 => throw new IOException("VXI11 read: I/O error")
         case 23 => throw new IOException("VXI11 read: Abort")
         case _ => throw new IOException("VXI11 read: Unknown error")
-      }
-      
-      val rcv_reason_end:Int = 0x04; // End indicator read
-      val rcv_reason_chr:Int = 0x02; // Termchr set in flags and matching character transferred
-      val rcv_reason_reqcnt:Int = 0x01; // requestSize bytes transferred.
-
-      trace("device_read response reason: " + rresp.reason)
-      
-      if ((rresp.reason & rcv_reason_reqcnt) != 0)
-        throw new IOException("VXI11 read: Request size to small")
-      
-      val boxedData: IndexedSeq[IndexedSeq[Byte]] = IndexedSeq(rresp.data)
-      // if end or chr bit set, read is complete, if not, more chunks to read
-      if ((rresp.reason & (rcv_reason_end | rcv_reason_chr)) != 0) {
-        trace("Finished reading")
-        ByteCharSeq((acc ++ boxedData) flatten)
-      } else {
-        trace("Partial read")
-        read(lnk, timeout, (acc ++ boxedData))
       }
     }
     

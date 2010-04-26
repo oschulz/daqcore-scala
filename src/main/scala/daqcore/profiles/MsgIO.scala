@@ -18,14 +18,29 @@
 package daqcore.profiles
 
 import scala.actors._
+import scala.util.continuations._
 
 import daqcore.util._
 import daqcore.actors._
 
 
 trait MsgReader extends Profile with Closeable {
-  def readF(timeout: Long = -1): Future[ByteCharSeq] =
-    srv.!!& (MsgIO.Read(timeout)) { case x: ByteCharSeq => x }
+  def readF(): Future[ByteCharSeq] =
+    srv.!!& (MsgIO.Read(Int.MaxValue)) {
+      case x: ByteCharSeq => x
+    }
+
+  def readF(timeout: Long): Future[Option[ByteCharSeq]] =
+    srv.!!& (MsgIO.Read(timeout)) {
+      case x: ByteCharSeq => Some(x)
+      case Timeout => None
+    }
+
+  def readC(): ByteCharSeq@cps[Unit] =
+    shift { body: (ByteCharSeq => Unit) => readF().respond(body) }
+
+  def readC(timeout: Long): Option[ByteCharSeq]@cps[Unit] =
+    shift { body: (Option[ByteCharSeq] => Unit) => readF(timeout).respond(body) }
 }
 
 
@@ -38,7 +53,7 @@ trait MsgWriter extends Profile with Closeable {
 trait MsgIO extends MsgReader with MsgWriter
 
 object MsgIO {
-  case class Read(timeout: Long = -1) // Reply: Future[ByteCharSeq]
+  case class Read(timeout: Long = -1)
 
   case class Write(data: Seq[Byte])
 }
