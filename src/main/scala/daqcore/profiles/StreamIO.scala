@@ -18,6 +18,7 @@
 package daqcore.profiles
 
 import scala.actors._
+import scala.util.continuations._
 
 import daqcore.util._
 import daqcore.actors._
@@ -38,6 +39,12 @@ trait StreamReader extends Profile with Closeable {
   def readB(): ByteCharSeq = readF()()
 
   def readB(timeout: Long): Option[ByteCharSeq] = readF(timeout)()
+
+  def readC(): ByteCharSeq @cps[Unit] =
+    shift { body: (ByteCharSeq => Unit) => readF().respond(body) }
+
+  def readC(timeout: Long): Option[ByteCharSeq] @cps[Unit] =
+    shift { body: (Option[ByteCharSeq] => Unit) => readF(timeout).respond(body) }
 }
 
 
