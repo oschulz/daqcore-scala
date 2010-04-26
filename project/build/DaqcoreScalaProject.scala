@@ -12,6 +12,8 @@ class DaqcoreScalaProject(info: ProjectInfo) extends DefaultProject(info) with A
 
   val snapshotsRepo = ScalaToolsSnapshots
 
+  val scala_continuations = compilerPlugin("org.scala-lang.plugins" % "continuations" % "2.8.0-SNAPSHOT")
+
   val scalatest = "org.scalatest" % "scalatest" % "1.0.1-for-scala-2.8.0.RC1-SNAPSHOT" % "test"
 
   val lift_common = "net.liftweb" % "lift-common" % "2.0-scala280-SNAPSHOT"
@@ -39,7 +41,10 @@ class DaqcoreScalaProject(info: ProjectInfo) extends DefaultProject(info) with A
   lazy val rpcgen_vxi11core = jrpcgenTask("daqcore.oncrpc.vxi11core", "Client", "Server", "vxi11core.x") describedAs("Generate vxi11core classes and stubs.")
   lazy val rpcgen = task {None} dependsOn(rpcgen_vxi11core)
   
-  override def compileOptions = super.compileOptions ++ Seq(Unchecked)
+  override def compileOptions = super.compileOptions ++
+    Seq(Unchecked) ++ // Enable unchecked warnings
+    compileOptions("-P:continuations:enable") // Enable continuations plugin
+  
   // override def compileOrder = CompileOrder.JavaThenScala
 
   // Scaladoc workaround for sbt + scala-2.8
