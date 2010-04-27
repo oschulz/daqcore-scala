@@ -61,6 +61,7 @@ trait MinaIO {
           val buffer = IoBuffer.wrap(data.toArray)
           session.write(buffer)
         }
+        case StreamIO.Flush => // Mina flushes automatically
         case _ => throw new RuntimeException("unknown message")
       } }
     }
@@ -73,6 +74,7 @@ trait MinaIO {
     def serve = {
       case r: StreamIO.Read => readQueue.forward(r)
       case w: StreamIO.Write => writeQueue.forward(w)
+      case f: StreamIO.Flush => writeQueue.forward(f)
       case Closeable.Close => {
         session.close(true)
         exit('closed)

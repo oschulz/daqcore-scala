@@ -44,6 +44,8 @@ trait StreamReader extends Profile with Closeable {
 trait StreamWriter extends Profile with Closeable {
   def write(data: Seq[Byte]) : Unit =
     srv ! StreamIO.Write(data)
+    
+  def flush() : Unit = srv ! StreamIO.Flush()
 }
 
 
@@ -53,4 +55,6 @@ object StreamIO {
   case class Read(timeout: Long = -1)
 
   case class Write(data: Seq[Byte])
+  
+  case class Flush()
 }
