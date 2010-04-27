@@ -35,7 +35,7 @@ import daqcore.profiles._
 
 trait MinaIO {
   class MinaConnection(val session: IoSession) extends Server with InetConnection {
-    def defaultTimeout: Long = 60000
+    def defaultTimeout: Long = 10000
     
     protected[MinaIO] object readQueue extends DaemonActor with Logging {
       import scala.actors.Actor._
@@ -44,6 +44,7 @@ trait MinaIO {
           val replyTo = sender
           reactWithin (if (timeout < 0) defaultTimeout else timeout) {
             case InputData(bytes) => replyTo ! bytes
+            case TIMEOUT => replyTo ! Timeout
           }
         }
         case Closed => {
@@ -119,7 +120,7 @@ trait MinaIO {
 class MinaConnector extends Server with InetConnector with MinaIO {
   protected class ClientConnectionHandler extends ConnectionHandler
   
-  protected val defaultTimeout: Long = 30000
+  protected val defaultTimeout: Long = 10000
 
   protected var handler: ConnectionHandler = null
   protected var connector: NioSocketConnector = null
@@ -164,7 +165,8 @@ class MinaConnector extends Server with InetConnector with MinaIO {
               replyTo ! connServer
               trace("IoFutureListener got session %s".format(session))
             } else {
-              debug("can't connect")
+              assert(future.getException != null)
+              debug("can't connect: " + future.getException)
               throw new IOException("MinaConnector: Can't establish connection")
             }
             

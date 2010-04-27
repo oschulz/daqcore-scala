@@ -24,8 +24,20 @@ import daqcore.actors._
 
 
 trait StreamReader extends Profile with Closeable {
-  def readF(timeout: Long = -1): Future[ByteCharSeq] =
-    srv.!!& (StreamIO.Read(timeout)) { case x: ByteCharSeq => x }
+  def readF(): Future[ByteCharSeq] =
+    srv.!!& (StreamIO.Read(Int.MaxValue)) {
+      case x: ByteCharSeq => x
+    }
+
+  def readF(timeout: Long): Future[Option[ByteCharSeq]] =
+    srv.!!& (StreamIO.Read(timeout)) {
+      case x: ByteCharSeq => Some(x)
+      case Timeout => None
+    }
+  
+  def readB(): ByteCharSeq = readF()()
+
+  def readB(timeout: Long): Option[ByteCharSeq] = readF(timeout)()
 }
 
 
@@ -38,7 +50,7 @@ trait StreamWriter extends Profile with Closeable {
 trait StreamIO extends StreamReader with StreamWriter
 
 object StreamIO {
-  case class Read(timeout: Long = -1) // Reply: Future[ByteCharSeq]
+  case class Read(timeout: Long = -1)
 
   case class Write(data: Seq[Byte])
 }
