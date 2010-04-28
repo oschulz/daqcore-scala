@@ -22,12 +22,12 @@ import scala.actors._
 import daqcore.util.classMF
 
 
-class ActorOps(wrapped: Actor) {
+class ActorOps(wrapped: AbstractActor) {
   def !!?(msg: Any): Future[Any] =
     this.!!& (msg) { case x => x }
 
   def !!&[A](msg: Any) (handler: PartialFunction[Any, A]): Future[A] =
-    wrapped !! (msg,handler)
+    (wrapped !! (msg,handler)).asInstanceOf[Future[A]] // Ugly hack to correct for insufficient return specification of AbstractActor.!!
 
   def !!^[A: ClassManifest](msg: Any): Future[A] = {
     val mf = classManifest[A]

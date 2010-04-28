@@ -24,7 +24,7 @@ import daqcore.util._
 
 
 trait ServerAccess extends Logging {
-  def srv: Actor
+  def srv: AbstractActor
 
   val profiles: Set[ProfileInfo]
 
@@ -45,7 +45,7 @@ trait Profile extends ServerAccess
 trait Server extends ServerAccess with DaemonActor with Profile {
   import Server._
 
-  def srv: Actor = this
+  def srv: AbstractActor = this
   
   val profiles: Set[ProfileInfo] =
     ProfileInfo.profilesOf(this.getClass)
@@ -155,16 +155,23 @@ object Server {
 
 
 
-class ServerProxy(val srv: Actor) extends ServerAccess with OutputChannel[Any] with CanReply[Any,Any] {
+class ServerProxy(val srv: AbstractActor) extends ServerAccess with OutputChannel[Any] with CanReply[Any,Any] {
+  type Future[+P] = srv.Future[P]
+
   lazy val profiles = as[Set[ProfileInfo]] (srv !? Server.GetProfiles)
   
   def !(msg: Any) = srv.!(msg)
   def !?(msec: Long, msg: Any) = srv.!?(msec, msg)
   def !?(msg: Any) = srv.!?(msg)
+  def !![A](msg: Any, handler: PartialFunction[Any, A]) = srv.!!(msg, handler)
+  def !!(msg: Any) = srv.!!(msg)
   
   def forward(msg: Any) = srv.forward(msg)
-  def receiver = srv
+  def receiver = srv.receiver
   def send(msg: Any, replyTo: OutputChannel[Any]) = srv.send(msg, replyTo)
+
+  def linkTo() = Actor.link(srv)
+  def unlinkFrom() = Actor.unlink(srv)
 
   requireProfile(ProfileInfo.apply[Server])
 

@@ -42,9 +42,9 @@ package object actors {
     self.trapExit = trapE
   }
 
-  def kill(target: scala.actors.Actor, reason: AnyRef) =
+  def kill(target: scala.actors.AbstractActor, reason: AnyRef) =
     { new KillActor(target, reason).start() }
 
-  implicit def actorOps(actor: scala.actors.Actor) =
+  implicit def actorOps(actor: scala.actors.AbstractActor) =
     new ActorOps(actor)
 }

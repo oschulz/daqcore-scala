@@ -19,5 +19,5 @@ package daqcore.actors
 
 import scala.actors._
 
-class KillActor(target: Actor, reason: AnyRef) extends Actor
+class KillActor(target: AbstractActor, reason: AnyRef) extends Actor
   { def act = { link(target); exit(reason) } }
