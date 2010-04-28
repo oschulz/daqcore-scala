@@ -35,7 +35,10 @@ class SCPIParser extends ByteCharSeqParsers {
   lazy val msgContent = (nonBlockString | string | blockData)*
   
   lazy val streamMsgRaw: PackratParser[ByteCharSeq] =
-     msgContent <~ streamMsgTerm ^^ { l => l.reduceLeft {_ ++ _}}
+     msgContent <~ streamMsgTerm ^^ { _ match {
+      case Nil => ByteCharSeq()
+      case nonEmpty => nonEmpty.reduceLeft {_ ++ _}
+     } }
 
 
   lazy val streamMsgTerm: PackratParser[ByteCharSeq] = streamMsgTermExpr
