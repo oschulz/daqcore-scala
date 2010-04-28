@@ -17,8 +17,8 @@
 
 package daqcore
 
-
-package object profiles {
+package object servers {
+  import daqcore.profiles._
 
   implicit object DefaultMinaInetAcceptorBuilder extends InetAcceptorBuilder {
     import daqcore.servers._
@@ -40,4 +40,10 @@ package object profiles {
 
   def defaultInetAcceptorBuilder = DefaultMinaInetAcceptorBuilder
   def defaultInetConnector = DefaultMinaInetConnector
+
+  implicit val defaultVXI11Connector : VXI11Connector = {
+    val connector = new RTVXI11Connector
+    connector.start
+    connector
+  }
 }
