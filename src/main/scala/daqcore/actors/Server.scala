@@ -155,8 +155,16 @@ object Server {
 
 
 
-class ServerProxy(val srv: Actor) extends ServerAccess {
+class ServerProxy(val srv: Actor) extends ServerAccess with OutputChannel[Any] with CanReply[Any,Any] {
   lazy val profiles = as[Set[ProfileInfo]] (srv !? Server.GetProfiles)
+  
+  def !(msg: Any) = srv.!(msg)
+  def !?(msec: Long, msg: Any) = srv.!?(msec, msg)
+  def !?(msg: Any) = srv.!?(msg)
+  
+  def forward(msg: Any) = srv.forward(msg)
+  def receiver = srv
+  def send(msg: Any, replyTo: OutputChannel[Any]) = srv.send(msg, replyTo)
 
   requireProfile(ProfileInfo.apply[Server])
 
