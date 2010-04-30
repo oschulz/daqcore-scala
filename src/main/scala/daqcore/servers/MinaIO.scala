@@ -105,7 +105,7 @@ trait MinaIO {
       val buffer = message.asInstanceOf[IoBuffer]
       // while (buf.hasRemaining()) { ... buf.get ... }
       assert(buffer.hasArray)
-      server.readQueue ! InputData(ByteCharSeq(buffer.array))
+      server.readQueue ! InputData(ByteCharSeq(buffer.array.take(buffer.limit)))
     }
   }
 
