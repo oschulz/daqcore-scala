@@ -83,7 +83,7 @@ trait Server extends ServerAccess with DaemonActor with Profile {
   }
 
   protected[actors] def handleGenericPost: PartialFunction[Any, Unit] = {
-    case _ => throw new RuntimeException("unknown message")
+    case x => throw new RuntimeException("unknown message: " + x.asInstanceOf[AnyRef].getClass.toString)
   }
 
   def act() = {
