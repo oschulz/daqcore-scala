@@ -42,8 +42,14 @@ package object actors {
     self.trapExit = trapE
   }
 
-  def kill(target: scala.actors.AbstractActor, reason: AnyRef) =
-    { new KillActor(target, reason).start() }
+  def start[A <: scala.actors.Actor](a: A) : A =
+    { a.start(); a }
+  
+  def startLinked[A <: scala.actors.Actor](a: A) : A =
+    { scala.actors.Actor.link(a); a.start(); a }
+  
+  def kill(a: scala.actors.AbstractActor, reason: AnyRef) : Unit =
+    start(new KillActor(a, reason))
 
   implicit def actorOps(actor: scala.actors.AbstractActor) =
     new ActorOps(actor)
