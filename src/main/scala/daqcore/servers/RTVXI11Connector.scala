@@ -62,6 +62,8 @@ class RTVXI11Connector extends Server with VXI11Connector {
 
     override def init() = {
       super.init()
+      trapExit = true
+      
       withCleanup { rtlinks = Map.empty[String, Link] } { rtlinks = null }
 
       withCleanup {
@@ -87,20 +89,21 @@ class RTVXI11Connector extends Server with VXI11Connector {
       case Write(lnk, timeout, data) =>
         tryForLink(lnk) { write(lnk, timeout, data) }
 
-      case Exit(lnk: Link, 'closed) => closeLink(lnk)
-
       case OpenLink(device, timeout) => reply(openLink(device, timeout))
 
       case Closeable.Close => exit('closed)
 
-      case Exit(lnk: Link, msg) => msg match {
-        case 'closed => rtlinks -= lnk.device
-        case msg => {
+      case Exit(lnk: Link, reason) => reason match {
+        case 'closed => closeLink(lnk)
+        case _ => {
           error("Restarting VXI11 link to %s, %s".format(address, lnk.device))
           link(lnk)
           lnk.start()
         }
       }
+      
+      case Exit(_, 'normal) => 
+      case Exit(_, reason) => exit(reason)
     }
 
     def tryForLink(lnk: Link)(body: => Unit) = {
@@ -132,10 +135,12 @@ class RTVXI11Connector extends Server with VXI11Connector {
       val lnk = new Link(device, lresp.lid.value, maxRecvSize)
       link(lnk)
       lnk.start()
+      rtlinks += lnk.device -> lnk
       lnk
     }
 
     protected def closeLink(lnk: Link) : Unit = {
+      rtlinks -= lnk.device
       trace("destroy_link(%s)".format(lnk.lid.value))
       val unlinkResp = clnt.destroy_link_1(lnk.lid)
       trace("destroy_link error value: " + unlinkResp.error.value)
@@ -231,6 +236,8 @@ class RTVXI11Connector extends Server with VXI11Connector {
 
   override def init() = {
     super.init()
+    trapExit = true
+    
     withCleanup { clients = Map.empty[InetAddress, Client] } { clients = null }
   }
 
@@ -252,6 +259,9 @@ class RTVXI11Connector extends Server with VXI11Connector {
         client.start()
       }
     }
+
+    case Exit(_, 'normal) => 
+    case Exit(_, reason) => exit(reason)
   }
 
 

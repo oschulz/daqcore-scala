@@ -83,16 +83,12 @@ trait Server extends ServerAccess with DaemonActor with Profile {
   }
 
   protected[actors] def handleGenericPost: PartialFunction[Any, Unit] = {
-    case Exit(_, 'normal) => 
-    case e @ Exit(_, reason) => { exit(reason) }
     case _ => throw new RuntimeException("unknown message")
   }
 
   def act() = {
     exitMonitor.start()
     exitMonitor !? 'ready
-    
-    trapExit = true
     
     if (!restarted) { restarted = true; onStart() } else onRestart()
     init()
