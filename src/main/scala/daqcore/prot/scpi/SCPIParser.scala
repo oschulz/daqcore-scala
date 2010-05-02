@@ -95,22 +95,38 @@ class SCPIParser extends ByteCharSeqParsers {
   lazy val dqString: PackratParser[ByteCharSeq] = dqStringExpr
   lazy val sqString: PackratParser[ByteCharSeq] = sqStringExpr
   lazy val string: PackratParser[ByteCharSeq] = dqString | sqString
+  lazy val chars: PackratParser[ByteCharSeq] = recMnemonicExpr
 
   lazy val value: PackratParser[ByteCharSeq] = skipWS (
     blockData |
     nrf | 
     nr1 |
-    string
+    string |
+    chars
   )
 
   //!! missing: Suffix Program Data: ((ws?)~multiplier?)~unit
 
-  lazy val rmu: PackratParser[Result] =
-    skipWS(repsep(value, ",") ^^ { values => Result(values : _*) })
+  // Parses a Response Message Unit
+  lazy val rmu: PackratParser[Result] = regularRMU | aardRMU
+
+  // Parses a regular (non-AARD) RMU
+  lazy val regularRMU: PackratParser[Result] =
+    skipWS(rep1sep(value, ",")) <~ skipWS(";" | EOI) ^^ { values => Result(values : _*) }
+
+  // Parses an RMU with Arbitrary ASCII Response Data (e.g. *IDN? responses)
+  lazy val aardRMU: PackratParser[Result] =
+    aardExpr <~ EOI ^^ { bytes => Result(bytes) }
   
   lazy val response: PackratParser[Response] =
-    skipWS(repsep(rmu, ";") ^^ { results => Response(results : _*) })
-  
+    nonEmptyResponse | emptyResponse
+
+  lazy val emptyResponse: PackratParser[Response] =
+    skipWS(EOI) ^^ { _ => Response(Result()) }
+
+  lazy val nonEmptyResponse: PackratParser[Response] =
+    skipWS(rep1(rmu) <~ EOI ^^ { results => Response(results : _*) })
+
   lazy val recMnemonic: PackratParser[RecMnemonic] =
     recMnemonicExpr ^^ { mnem => RecMnemonic(mnem) }
   
@@ -174,10 +190,12 @@ object SCPIParser {
   val nr1Expr = """-?\d+""".r
   val nr2Expr = """(\d+(\.\d*)?|\d*\.\d+)""".r
   val nr3Expr = """-?(\d+(\.\d*)?|\d*\.\d+)([eE][+-]?\d+)?[fFdD]?""".r
+  val aardExpr = """(\p{ASCII}+)""".r
   val dqStringExpr = """"([^"]*)"""".r
   val sqStringExpr = """'([^']*)'""".r
   val mnemSuffixExpr = """[1-9][0-9]*""".r
   val recMnemonicExpr = """[A-Z]+|[a-z]+""".r
+  val EOI = """\z""".r
   
   protected lazy val tlParser =
     { val p = new ThreadLocal[SCPIParser];  p set (new SCPIParser); p }
