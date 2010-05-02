@@ -25,27 +25,27 @@ import daqcore.util._
 import daqcore.actors._
 
 
-trait VXI11Link extends MsgIO {
+trait VXI11ClientLink extends MsgIO {
   // def lock(flags: Long = 0, timeout: Long = -1) =
-  //  srv.!!& (VXI11Link.Lock(flags, timeout)) { case x: Boolean => x }
+  //  srv.!!& (VXI11ClientLink.Lock(flags, timeout)) { case x: Boolean => x }
 
-  // def unlock() = srv ! VXI11Link.Unlock
+  // def unlock() = srv ! VXI11ClientLink.Unlock
 
-  // def clear() = srv !!? VXI11Link.Clear
+  // def clear() = srv !!? VXI11ClientLink.Clear
 }
 
 
-object VXI11Link {
-  def apply(host: String, device:String)(implicit connector: VXI11Connector): VXI11Link =
+object VXI11ClientLink {
+  def apply(host: String, device:String)(implicit connector: VXI11Connector): VXI11ClientLink =
     connector.connectF(host, device)()
 
-  def apply(host: String, device:String, timeout: Long)(implicit connector: VXI11Connector): VXI11Link =
+  def apply(host: String, device:String, timeout: Long)(implicit connector: VXI11Connector): VXI11ClientLink =
     connector.connectF(host, device, timeout)()
   
-  def apply(to: InetAddress, device:String)(implicit connector: VXI11Connector): VXI11Link =
+  def apply(to: InetAddress, device:String)(implicit connector: VXI11Connector): VXI11ClientLink =
     connector.connectF(to, device)()
 
-  def apply(to: InetAddress, device:String, timeout: Long)(implicit connector: VXI11Connector): VXI11Link =
+  def apply(to: InetAddress, device:String, timeout: Long)(implicit connector: VXI11Connector): VXI11ClientLink =
     connector.connectF(to, device, timeout)()
 
   // Not supported yet: case class Lock(flags: Int = 0, timeout: Long = -1) // Reply: Boolean

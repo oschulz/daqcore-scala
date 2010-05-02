@@ -37,7 +37,7 @@ class RTVXI11Connector extends Server with VXI11Connector {
   class Client(val address: InetAddress) extends Server {
     client =>
 
-    class Link(val device: String, id: Int, maxRecvSize: Int) extends Server with VXI11Link {
+    class Link(val device: String, id: Int, maxRecvSize: Int) extends Server with VXI11ClientLink {
       lnk =>
       
       def lid = new vxi11core.Device_Link(id)
