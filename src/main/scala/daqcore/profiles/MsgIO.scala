@@ -41,6 +41,13 @@ trait MsgReader extends Profile with Closeable {
 
   def readC(timeout: Long): Option[ByteCharSeq]@cps[Unit] =
     shift { body: (Option[ByteCharSeq] => Unit) => readF(timeout).respond(body) }
+
+  def clearInput(timeout: Long): Unit = {
+    if (readF(timeout)() != None) {
+      trace("Clearing input")
+      clearInput(timeout)
+    }
+  }
 }
 
 
