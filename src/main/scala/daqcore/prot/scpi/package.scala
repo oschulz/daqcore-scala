@@ -25,6 +25,7 @@ package object scpi {
   implicit def Mnem2ICHeaderPart(mnem: SpecMnemonic) = mnem(1)
   implicit def int2NR1(i:Int) = NR1(i)
   implicit def double2NRf(x:Double) = NRf(x)
+  implicit def mnem2CPD(m:SpecMnemonic) = CPD(m)
   
   //!! Sometimes cause SCPI parser test to fail (why?):
   //implicit def bytes2BlockData(bytes: IndexedSeq[Byte]) = BlockData(bytes)
