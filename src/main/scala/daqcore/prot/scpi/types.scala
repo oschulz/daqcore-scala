@@ -93,7 +93,10 @@ object CRD extends CharacterData
 
 // Arbitrary ASCII Response Data. Undelimited 7-bit ASCII data with implied
 // message terminator.
-// object AARD - not implemented yet
+object AARD {
+  def apply(s:String) : ByteCharSeq = ByteCharSeq(s)
+  def unapply(bs: ByteCharSeq) : Option[String] = Some(bs.toString.trim)
+}
 
 
 /** Block Data. Binary encoded opaque block data. I. Only the definite length
