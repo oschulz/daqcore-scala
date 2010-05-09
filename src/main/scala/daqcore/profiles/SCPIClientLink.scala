@@ -58,5 +58,9 @@ object SCPIClientLink {
 
   def apply(lnk: MsgIO) = SCPIMsgClient(lnk)
 
+  def apply(host: String, device: String) = SCPIMsgClient(VXI11ClientLink(host, device))
+
   def apply(lnk: StreamIO) = SCPIMsgClient(lnk)
+
+  def apply(host: String, port: Int) = SCPIMsgClient(GPIBOverStream(InetConnection(host, port)))
 }
