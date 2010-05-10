@@ -111,11 +111,10 @@ object BlockData {
     ByteCharSeq(tag ++ sizeSizeStr ++ sizeStr ++ data)
   }
 
-
-  def unapply(bs: ByteCharSeq) : Option[IndexedSeq[Byte]] = try {
+  def unapply(bs: ByteCharSeq) : Option[IndexedSeq[Byte]] = {
     val parser = SCPIParser()
-    Some(parser.parseAll(parser.blockDataBytes, bs).get)
-  } catch {
-    case _ => None
+    val result = parser.parseAll(parser.blockDataBytes, bs)
+    if (result.successful) Some(result.get)
+    else None
   }
 }
