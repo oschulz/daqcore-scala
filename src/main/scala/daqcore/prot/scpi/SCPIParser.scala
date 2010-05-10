@@ -197,10 +197,12 @@ object SCPIParser {
   val recMnemonicExpr = """[A-Z]+|[a-z]+""".r
   val EOI = """\z""".r
   
-  protected lazy val tlParser =
-    { val p = new ThreadLocal[SCPIParser];  p set (new SCPIParser); p }
+  protected val tlParser = new ThreadLocal[SCPIParser]
 
-  def parser = tlParser.get
+  def parser = {
+    if (tlParser.get == null) tlParser.set(new SCPIParser)
+    tlParser.get
+  }
 
   def apply() = parser
 }
