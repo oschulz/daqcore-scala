@@ -35,7 +35,7 @@ import daqcore.prot.scpi._, daqcore.prot.scpi.mnemonics._
 
 class VMESCPIClient(dev: SCPIClientLink) extends Server with VMEBus {
   val VME = Mnemonic("VME")
-  val defaultTimeout = 1000
+  val defaultTimeout = 60000
   
   protected case class Fwd[T](target: OutputChannel[Any], op: T)
   
