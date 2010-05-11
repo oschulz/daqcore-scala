@@ -44,6 +44,20 @@ def classMF(a: Any): ClassManifest[_] = a match {
 def as[A](x:Any) = x.asInstanceOf[A]
 
 
+def sizeOf[A <: AnyVal : ClassManifest]: Int = {
+  val mf = classManifest[A]
+
+  if (mf == classManifest[Byte])         1
+  else if (mf == classManifest[Char])    2
+  else if (mf == classManifest[Short])   2
+  else if (mf == classManifest[Int])     4
+  else if (mf == classManifest[Long])    8
+  else if (mf == classManifest[Float])   4
+  else if (mf == classManifest[Double])  8
+  else throw new IllegalArgumentException("sizeOf() does not support %s".format(mf))
+}
+
+
 def hex(v: AnyVal) : String = {
   def byteMF = classManifest[Byte]
 
