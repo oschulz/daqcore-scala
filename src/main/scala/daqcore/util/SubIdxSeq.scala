@@ -89,5 +89,5 @@ class SubIdxSeq[+A](parent: IndexedSeq[A], pstart: Int, pend: Int)
 
 object SubIdxSeq extends SeqFactory[SubIdxSeq] {
   implicit def canBuildFrom[A]: CanBuildFrom[Coll, A, SubIdxSeq[A]] = new GenericCanBuildFrom[A]
-  def newBuilder[A]: Builder[A, SubIdxSeq[A]] = new ArrayBuffer[A] mapResult {buf => val seq = buf.toIndexedSeq; new SubIdxSeq(seq, 0, seq.length)}
+  def newBuilder[A]: Builder[A, SubIdxSeq[A]] = new ArrayBuffer[A] mapResult {buf => val seq = buf.toSeq.asInstanceOf[IndexedSeq[A]]; new SubIdxSeq(seq, 0, seq.length)}
 }
