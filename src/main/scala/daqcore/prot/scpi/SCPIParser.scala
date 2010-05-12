@@ -29,19 +29,18 @@ import daqcore.prot._
 class SCPIParser extends ByteCharSeqParsers {
   import SCPIParser._
   
-  
-  lazy val nonBlockString: PackratParser[ByteCharSeq] = nonBlockStringExpr
+  def nonBlockString: Parser[ByteCharSeq] = nonBlockStringExpr
 
-  lazy val msgContent = (nonBlockString | string | blockData)*
+  def msgContent = (nonBlockString | string | blockData)*
   
-  lazy val streamMsgRaw: PackratParser[ByteCharSeq] =
+  def streamMsgRaw: Parser[ByteCharSeq] =
      msgContent <~ streamMsgTerm ^^ { _ match {
       case Nil => ByteCharSeq()
       case nonEmpty => nonEmpty.reduceLeft {_ ++ _}
      } }
 
 
-  lazy val streamMsgTerm: PackratParser[ByteCharSeq] = streamMsgTermExpr
+  def streamMsgTerm: Parser[ByteCharSeq] = streamMsgTermExpr
 
 
   protected def parseBlockData(in: Input): ParseResult[(IndexedSeq[Byte], ByteCharSeq)] = {
@@ -74,7 +73,7 @@ class SCPIParser extends ByteCharSeqParsers {
     }
   }
   
-  lazy val blockDataBytes: PackratParser[IndexedSeq[Byte]] = new Parser[IndexedSeq[Byte]] {
+  def blockDataBytes: Parser[IndexedSeq[Byte]] = new Parser[IndexedSeq[Byte]] {
     def apply(in: Input) = parseBlockData(in) match {
       case Success((data,all), rest) =>
         Success(data,rest)
@@ -82,7 +81,7 @@ class SCPIParser extends ByteCharSeqParsers {
     }
   }
 
-  lazy val blockData: PackratParser[ByteCharSeq] = new Parser[ByteCharSeq] {
+  def blockData: Parser[ByteCharSeq] = new Parser[ByteCharSeq] {
     def apply(in: Input) = parseBlockData(in) match {
       case Success((data,raw), rest) =>
         Success(raw,rest)
@@ -90,16 +89,16 @@ class SCPIParser extends ByteCharSeqParsers {
     }
   }
   
-  lazy val nr1: PackratParser[ByteCharSeq] = nr1Expr
-  lazy val nr2: PackratParser[ByteCharSeq] = nr2Expr
-  lazy val nr3: PackratParser[ByteCharSeq] = nr3Expr
-  lazy val nrf: PackratParser[ByteCharSeq] = nr3 | nr2 | nr1
-  lazy val dqString: PackratParser[ByteCharSeq] = dqStringExpr
-  lazy val sqString: PackratParser[ByteCharSeq] = sqStringExpr
-  lazy val string: PackratParser[ByteCharSeq] = dqString | sqString
-  lazy val chars: PackratParser[ByteCharSeq] = recMnemonicExpr
+  def nr1: Parser[ByteCharSeq] = nr1Expr
+  def nr2: Parser[ByteCharSeq] = nr2Expr
+  def nr3: Parser[ByteCharSeq] = nr3Expr
+  def nrf: Parser[ByteCharSeq] = nr3 | nr2 | nr1
+  def dqString: Parser[ByteCharSeq] = dqStringExpr
+  def sqString: Parser[ByteCharSeq] = sqStringExpr
+  def string: Parser[ByteCharSeq] = dqString | sqString
+  def chars: Parser[ByteCharSeq] = recMnemonicExpr
 
-  lazy val value: PackratParser[ByteCharSeq] = skipWS (
+  def value: Parser[ByteCharSeq] = skipWS (
     blockData |
     nrf | 
     nr1 |
@@ -110,67 +109,67 @@ class SCPIParser extends ByteCharSeqParsers {
   //!! missing: Suffix Program Data: ((ws?)~multiplier?)~unit
 
   // Parses a Response Message Unit
-  lazy val rmu: PackratParser[Result] = regularRMU | aardRMU
+  def rmu: Parser[Result] = regularRMU | aardRMU
 
   // Parses a regular (non-AARD) RMU
-  lazy val regularRMU: PackratParser[Result] =
+  def regularRMU: Parser[Result] =
     skipWS(rep1sep(value, ",")) <~ skipWS(";" | EOI) ^^ { values => Result(values : _*) }
 
   // Parses an RMU with Arbitrary ASCII Response Data (e.g. *IDN? responses)
-  lazy val aardRMU: PackratParser[Result] =
+  def aardRMU: Parser[Result] =
     aardExpr <~ EOI ^^ { bytes => Result(bytes) }
   
-  lazy val response: PackratParser[Response] =
+  def response: Parser[Response] =
     nonEmptyResponse | emptyResponse
 
-  lazy val emptyResponse: PackratParser[Response] =
+  def emptyResponse: Parser[Response] =
     skipWS(EOI) ^^ { _ => Response(Result()) }
 
-  lazy val nonEmptyResponse: PackratParser[Response] =
+  def nonEmptyResponse: Parser[Response] =
     skipWS(rep1(rmu) <~ EOI ^^ { results => Response(results : _*) })
 
-  lazy val recMnemonic: PackratParser[RecMnemonic] =
+  def recMnemonic: Parser[RecMnemonic] =
     recMnemonicExpr ^^ { mnem => RecMnemonic(mnem) }
   
-  lazy val header = ccqHeader | icHeader
+  def header = ccqHeader | icHeader
 
-  lazy val ccqHeader: PackratParser[CCQHeader] =
+  def ccqHeader: Parser[CCQHeader] =
     "*" ~> recMnemonic ^^ { mnem => CCQHeader(mnem.charSeq.toString) }
     
-  lazy val mnemSuffix: PackratParser[Int] = mnemSuffixExpr ^^ { _.toString.toInt }
+  def mnemSuffix: Parser[Int] = mnemSuffixExpr ^^ { _.toString.toInt }
 
-  lazy val icHeaderPart: PackratParser[ICHeaderPart] =
+  def icHeaderPart: Parser[ICHeaderPart] =
     recMnemonic ~ (mnemSuffix?) ^^
       { case mnem ~ suffix => ICHeaderPart(mnem, suffix getOrElse 1) }
 
-  lazy val icHeader = icHeaderRel | icHeaderAbs
+  def icHeader = icHeaderRel | icHeaderAbs
   
-  lazy val icHeaderRel: PackratParser[ICHeaderRel] =
+  def icHeaderRel: Parser[ICHeaderRel] =
     repsep(icHeaderPart, ":") ^^ { parts => ICHeaderRel(parts : _*) }
   
-  lazy val icHeaderAbs: PackratParser[ICHeaderAbs] =
+  def icHeaderAbs: Parser[ICHeaderAbs] =
     ":"~>icHeaderRel ^^ { rel => ICHeaderAbs(rel.parts : _*) }
 
-  lazy val instruction = query | command
+  def instruction = query | command
   
-  lazy val query: PackratParser[Query] =
+  def query: Parser[Query] =
     skipWS((header<~"?") ~ (ws ~ repsep(value, ",")?)) ^^ {
       case header ~ Some(ws ~ params) => Query(header, params :_*)
       case header ~ None => Query(header)
     }
 
-  lazy val command: PackratParser[Command] =
+  def command: Parser[Command] =
     skipWS(header ~ (ws ~ repsep(value, ",")?)) ^^ {
       case header ~ Some(ws ~ params) => Command(header, params :_*)
       case header ~ None => Command(header)
     }
 
-  lazy val request: PackratParser[Request] =
+  def request: Parser[Request] =
     skipWS(repsep(instruction, ";") ^^ { instr => Request(instr : _*) })
     
   /** Extract a CR+LF or LF terminated message from a CharSequence */
   def extractTermMsg(in: ByteCharSeq) =
-    streamMsgRaw(new PackratReader(new CharSequenceReader(in.subSequence())))
+    streamMsgRaw(new CharSequenceReader(in.subSequence()))
 
   /** Extract a CR+LF or LF terminated message from a Reader */
   def extractTermMsg(in: Input) =  streamMsgRaw(in)

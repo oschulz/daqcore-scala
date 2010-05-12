@@ -23,12 +23,12 @@ import scala.util.parsing.input._
 import scala.util.matching.Regex
 
 
-class ByteCharSeqParsers extends RegexParsers with PackratParsers with Logging {
+class ByteCharSeqParsers extends RegexParsers with Logging {
   override def skipWhitespace = false
 
   
   /** A parser that matches a literal string */
-  implicit def lit(s: String) = new PackratParser[ByteCharSeq] {
+  implicit def lit(s: String) = new Parser[ByteCharSeq] {
     def apply(in: Input) = {
       val (source, offset) = (in.source, in.offset)
       if (s.length > (source.length-offset)) Failure("Input \"%s...\" too short to match literal \"%s\"".format(in.first, s), in)
@@ -40,7 +40,7 @@ class ByteCharSeqParsers extends RegexParsers with PackratParsers with Logging {
 
 
   /** A parser that matches a regular expression */
-  implicit def expr(ex: Regex) = new PackratParser[ByteCharSeq] {
+  implicit def expr(ex: Regex) = new Parser[ByteCharSeq] {
     def apply(in: Input) = {
       val (source, offset) = (in.source, in.offset)
       (ex.findPrefixMatchOf(source.subSequence(offset, source.length))) match {

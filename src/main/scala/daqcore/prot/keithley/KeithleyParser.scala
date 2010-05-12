@@ -29,33 +29,33 @@ import daqcore.units._
 class KeithleyParser extends ByteCharSeqParsers {
   import KeithleyParser._
   
-  lazy val fpNumber: PackratParser[Double] = fpNumberExp ^^
+  def fpNumber: Parser[Double] = fpNumberExp ^^
     { bs => val FPVal(x) = bs; x}
 
-  lazy val dcv: PackratParser[(WithUnit,MeasFunc)] =
+  def dcv: Parser[(WithUnit,MeasFunc)] =
     lit("DCV") ~> fpNumber ^^ { v => (WithUnit(v, Volt), DC) }
 
-  lazy val acv: PackratParser[(WithUnit,MeasFunc)] =
+  def acv: Parser[(WithUnit,MeasFunc)] =
     lit("ACV") ~> fpNumber ^^ { v => (WithUnit(v, Volt), AC) }
 
-  lazy val dci: PackratParser[(WithUnit,MeasFunc)] =
+  def dci: Parser[(WithUnit,MeasFunc)] =
     lit("DCI") ~> fpNumber ^^ { v => (WithUnit(v, Ampere), DC) }
 
-  lazy val aci: PackratParser[(WithUnit,MeasFunc)] =
+  def aci: Parser[(WithUnit,MeasFunc)] =
     lit("ACI") ~> fpNumber ^^ { v => (WithUnit(v, Ampere), AC) }
 
-  lazy val ohm: PackratParser[(WithUnit,MeasFunc)] =
+  def ohm: Parser[(WithUnit,MeasFunc)] =
     lit("OHM") ~> fpNumber ^^ { v => (WithUnit(v, Ohm), VAL) }
   
-  lazy val funcWithValue = dcv | acv | dci | aci | ohm
+  def funcWithValue = dcv | acv | dci | aci | ohm
   
-  lazy val normal: PackratParser[Result] =
+  def normal: Parser[Result] =
     lit("N") ~> funcWithValue ^^ { fv => Normal(fv._1, fv._2)}
 
-  lazy val overflow: PackratParser[Result] =
+  def overflow: Parser[Result] =
     lit("O") ~> funcWithValue ^^ { fv => Overflow(fv._1, fv._2)}
   
-  lazy val result: PackratParser[Result] = normal | overflow
+  def result: Parser[Result] = normal | overflow
 
 
   def parseResult(in: java.lang.CharSequence): Result =
