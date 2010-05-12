@@ -19,7 +19,7 @@ package daqcore.util
 
 import java.lang.{System => JSystem}
 
- 
+
 case class Timer(initNSec: Long = 0, initCount: Long = 0) {
   protected var totalTime: Long = initNSec
   protected var totalCount: Long = initCount
@@ -46,4 +46,22 @@ case class Timer(initNSec: Long = 0, initCount: Long = 0) {
   def +(that: Timer) : Timer = Timer(this.nsec + that.nsec, this.count + that.count)
   
   override def toString = "Timer(sec = %s, count = %s)".format(sec, count)
+}
+
+
+case object Timers extends collection.mutable.HashMap[String, Timer] {
+  override def apply(key: String) = this.get(key) match {
+    case Some(timer) => timer
+    case None => {
+      val timer = Timer()
+      this += (key -> timer)
+      timer
+    }
+  }
+}
+
+
+trait Profiling {
+  protected val timerBaseName = this.getClass.getName
+  def prof[T](name: => String)(body : => T) : T = Timers(timerBaseName + "." + name)(body)
 }
