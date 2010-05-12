@@ -31,7 +31,7 @@ class ByteCharSeq(val contents: IndexedSeq[Byte]) extends CharSequence
 
   def length = contents.length
   
-  def subSequence(start: Int, end: Int) =
+  def subSequence(start: Int = 0, end: Int = size) =
     new ByteCharSeq(contents.subSequence(start, end))
   
   def ++(that: ByteCharSeq): ByteCharSeq = new ByteCharSeq(this.contents ++ that.contents)
