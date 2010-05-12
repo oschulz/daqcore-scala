@@ -50,10 +50,27 @@ class SubIdxSeq[+A](parent: IndexedSeq[A], pstart: Int, pend: Int)
     data(i)
   }
   
-  def subSequence(start: Int = 0, end: Int = this.length) =  {
+  def subSequence(start: Int = 0, end: Int = size) =  {
     if ((start == this.start) && (end == this.end)) this
     else new SubIdxSeq[A](this, start, end)
   }
+
+
+  //override def filter(p: A => Boolean)
+  //override def partition(p: A => Boolean) = (filter(p), filter(!p(_)))
+  override def init = {
+    if (isEmpty) throw new UnsupportedOperationException("empty.init")
+    subSequence(0, size -1)
+  }
+
+  override def drop(n: Int) = subSequence(n max 0)
+  override def take(n: Int) = subSequence(0, n)
+  override def slice(from: Int, until: Int) = subSequence(from max 0, until)
+  ///override def dropWhile(p: A => Boolean)
+  ///override def takeWhile(p: A => Boolean)
+  ///override def span(p: A => Boolean): (This, This) = (takeWhile(p), dropWhile(p))
+  override def splitAt(n: Int) = (take(n), drop(n))
+
 
   override def ++[B >: A, That](that: TraversableOnce[B])(implicit bf: CanBuildFrom[SubIdxSeq[A], B, That]): That = that match {
     case that: SubIdxSeq[_] if (this.data == that.data) => {
