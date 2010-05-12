@@ -169,20 +169,20 @@ class SCPIParser extends ByteCharSeqParsers {
     skipWS(repsep(instruction, ";") ^^ { instr => Request(instr : _*) })
     
   /** Extract a CR+LF or LF terminated message from a CharSequence */
-  def extractTermMsg(in: java.lang.CharSequence) =
-    streamMsgRaw(new PackratReader(new CharSequenceReader(in)))
+  def extractTermMsg(in: ByteCharSeq) =
+    streamMsgRaw(new PackratReader(new CharSequenceReader(in.subSequence())))
 
   /** Extract a CR+LF or LF terminated message from a Reader */
   def extractTermMsg(in: Input) =  streamMsgRaw(in)
   
-  def parseResponse(in: java.lang.CharSequence): Response =
-    parseAll(response, in).get
+  def parseResponse(in: ByteCharSeq): Response =
+    parseAll(response, in.subSequence()).get
 
-  def parseHeader(in: java.lang.CharSequence): Header =
-    parseAll(header, in).get
+  def parseHeader(in: ByteCharSeq): Header =
+    parseAll(header, in.subSequence()).get
 
-  def parseRequest(in: java.lang.CharSequence): Request =
-    parseAll(request, in).get
+  def parseRequest(in: ByteCharSeq): Request =
+    parseAll(request, in.subSequence()).get
 }
 
 
