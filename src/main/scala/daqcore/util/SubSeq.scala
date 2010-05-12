@@ -46,7 +46,7 @@ class SubIdxSeq[+A](parent: IndexedSeq[A], pstart: Int, pend: Int)
   
   def apply(index: Int) = {
     val i = index + start
-    if (index >= end) throw new IndexOutOfBoundsException(index.toString)
+    if ((i < start) || (index >= end)) throw new IndexOutOfBoundsException(index.toString)
     data(i)
   }
   
