@@ -169,19 +169,19 @@ class SCPIParser extends ByteCharSeqParsers {
     
   /** Extract a CR+LF or LF terminated message from a CharSequence */
   def extractTermMsg(in: ByteCharSeq) =
-    streamMsgRaw(new CharSequenceReader(in.subSequence()))
+    streamMsgRaw(ByteCharSeqReader(in))
 
   /** Extract a CR+LF or LF terminated message from a Reader */
   def extractTermMsg(in: Input) =  streamMsgRaw(in)
-  
+
   def parseResponse(in: ByteCharSeq): Response =
-    parseAll(response, in.subSequence()).get
+    parseAll(response, ByteCharSeqReader(in)).get
 
   def parseHeader(in: ByteCharSeq): Header =
-    parseAll(header, in.subSequence()).get
+    parseAll(header, ByteCharSeqReader(in)).get
 
   def parseRequest(in: ByteCharSeq): Request =
-    parseAll(request, in.subSequence()).get
+    parseAll(request, ByteCharSeqReader(in)).get
 }
 
 
