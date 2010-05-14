@@ -47,7 +47,7 @@ class DaqcoreScalaProject(info: ProjectInfo) extends DefaultProject(info) with A
   
   // override def compileOrder = CompileOrder.JavaThenScala
 
-  // Scaladoc workaround for sbt + scala-2.8
-  private val prjDocTitle = projectName + " " + projectVersion + " API Docs"
-  override def documentOptions = Seq(CompoundDocOption("-doc-title", prjDocTitle))
+  //// Scaladoc workaround for sbt + scala-2.8
+  //private val prjDocTitle = projectName + " " + projectVersion + " API Docs"
+  //override def documentOptions = Seq(CompoundDocOption("-doc-title", prjDocTitle))
 }
