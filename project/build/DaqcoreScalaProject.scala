@@ -21,9 +21,12 @@ class DaqcoreScalaProject(info: ProjectInfo) extends DefaultProject(info) with A
 
   val mina_ore = "org.apache.mina" % "mina-core" % "2.0.0-RC1"
   val mina_serial = "org.apache.mina" % "mina-transport-serial" % "2.0.0-RC1"
-  
+
+  val jfreechart = "jfree" % "jfreechart" % "1.0.13"
+  val jcommon = "jfree" % "jcommon" % "1.0.15"
+
   val remotetea_oncrpc = "org.acplt" % "remotetea-oncrpc" % "1.0.7"
-  
+
   def javaSrcDir = "src" / "main" / "java"
 
   def jrpcgenTask(pkgName: String, client: String, server: String, xdrName: String) = {
