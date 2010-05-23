@@ -57,16 +57,9 @@ package object actors {
   implicit def actorOps(actor: scala.actors.Actor) =
     new ActorOps(actor)
 
-    
-  def unlinkedF[T](body: => T): scala.actors.Future[T] =
-    scala.actors.contrib.daqcore.Futures.unlinkedF(body)
+  def tfuture[T](body: => T): scala.actors.Future[T] =
+    scala.actors.contrib.daqcore.TFutures.tfuture(body)
 
-  def unlinkedF[T](resp: Responder[T]): scala.actors.Future[T] =
-    scala.actors.contrib.daqcore.Futures.unlinkedF(resp)
-
-  def linkedF[T](body: => T): scala.actors.Future[T] =
-    scala.actors.contrib.daqcore.Futures.linkedF(body)
-
-  def linkedF[T](resp: Responder[T]): scala.actors.Future[T] =
-    scala.actors.contrib.daqcore.Futures.linkedF(resp)
+  def tfuture[T](resp: Responder[T]): scala.actors.Future[T] =
+    scala.actors.contrib.daqcore.TFutures.tfuture(resp)
 }
