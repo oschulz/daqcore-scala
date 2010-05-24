@@ -1,8 +1,11 @@
 import sbt._
 import Process._
 
-class DaqcoreScalaProject(info: ProjectInfo) extends DefaultProject(info) {
+class DaqcoreScalaProject(info: ProjectInfo) extends DefaultProject(info) with AutoCompilerPlugins {
   override def parallelExecution = true
+
+  val publishTo = Resolver.file("maven-local", Path.userHome / ".m2" / "repository" asFile)
+  val mavenLocal = "Local Maven Repository" at "file://"+Path.userHome+"/.m2/repository"
 
   val snapshots = ScalaToolsSnapshots
 
