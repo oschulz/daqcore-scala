@@ -14,8 +14,9 @@ class DaqcoreScalaProject(info: ProjectInfo) extends DefaultProject(info) with A
 
   val scalatest = "org.scalatest" % "scalatest" % "1.0.1-for-scala-2.8.0.Beta1-with-test-interfaces-0.3-SNAPSHOT" % "test"
 
+  val log4j = "log4j" % "log4j" % "1.2.14"
   val remotetea_oncrpc = "org.acplt" % "remotetea-oncrpc" % "1.0.7"
-
+  
   def javaSrcDir = "src" / "main" / "java"
 
   def jrpcgenTask(pkgName: String, client: String, server: String, xdrName: String) = {
