@@ -12,6 +12,8 @@ class DaqcoreScalaProject(info: ProjectInfo) extends DefaultProject(info) with A
 
   val snapshotsRepo = ScalaToolsSnapshots
 
+  val scalatest = "org.scalatest" % "scalatest" % "1.0.1-for-scala-2.8.0.Beta1-with-test-interfaces-0.3-SNAPSHOT" % "test"
+
   val remotetea_oncrpc = "org.acplt" % "remotetea-oncrpc" % "1.0.7"
 
   def javaSrcDir = "src" / "main" / "java"
