@@ -12,8 +12,8 @@ class DaqcoreScalaProject(info: ProjectInfo) extends DefaultProject(info) with A
 
   val snapshotsRepo = ScalaToolsSnapshots
 
-  val onrpc = "org.acplt" % "remotetea" % "1.0.7"
-  
+  val remotetea_oncrpc = "org.acplt" % "remotetea-oncrpc" % "1.0.7"
+
   def javaSrcDir = "src" / "main" / "java"
 
   def jrpcgenTask(pkgName: String, client: String, server: String, xdrName: String) = {
