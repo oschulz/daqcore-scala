@@ -24,6 +24,9 @@ import daqcore.actors._
 
 
 trait MemoryReader extends Profile with Closeable {
+  def read(address: Long, count: Long): Seq[Byte] =
+    readF(address, count)()
+
   def readF(address: Long, count: Long): Future[IndexedSeq[Byte]] =
     srv.!!& (MemoryLink.Read(address, count)) {
       case x: IndexedSeq[_] => x.asInstanceOf[IndexedSeq[Byte]]
