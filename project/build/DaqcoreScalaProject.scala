@@ -7,7 +7,10 @@ class DaqcoreScalaProject(info: ProjectInfo) extends DefaultProject(info) with A
   val publishTo = Resolver.file("maven-local", Path.userHome / ".m2" / "repository" asFile)
   val mavenLocal = "Local Maven Repository" at "file://"+Path.userHome+"/.m2/repository"
 
-  val snapshots = ScalaToolsSnapshots
+  val tuDoE4Releases = "TU-Do Physik E4 Releases" at "http://maven.e4.physik.uni-dortmund.de/maven2/releases/"
+  val tuDoE4Snapshots = "TU-Do Physik E4 Releases" at "http://maven.e4.physik.uni-dortmund.de/maven2/snapshots/"
+
+  val snapshotsRepo = ScalaToolsSnapshots
 
   val onrpc = "org.acplt" % "remotetea" % "1.0.7"
   
