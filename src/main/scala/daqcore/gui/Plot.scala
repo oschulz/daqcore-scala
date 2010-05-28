@@ -60,14 +60,8 @@ abstract class DataSeries extends Proxy {
 case class XYSeries(title: String = "") extends DataSeries {
   val self = new jfcXY.XYSeries(title)
 
-  def addPoints(points: Iterator[(Float, Float)]) : Unit =
+  def addPoints(points: TraversableOnce[(Double, Double)]) : Unit =
     for (p <- points) self.add(p._1, p._2)
-
-  def addPoints(x: Iterator[Float], y: Iterator[Float]) : Unit =
-    addPoints(x zip y)
-
-  def addPoints(x: Iterable[Float], y: Iterable[Float]) : Unit =
-    addPoints(x.iterator, y.iterator)
 }
 
 
@@ -107,23 +101,11 @@ object XYPlot {
 
   def apply(series: XYSeries) : XYPlot = XYPlot(series, XYPlotOptions())
 
-  def apply(points: Iterator[(Float, Float)], options: XYPlotOptions = XYPlotOptions()) : XYPlot = {
+  def apply(points: TraversableOnce[(Double, Double)], options: XYPlotOptions = XYPlotOptions()) : XYPlot = {
     val series = XYSeries()
     series.addPoints(points)
     XYPlot(series, options)
   }
-
-  def apply(x: Iterator[Float], y: Iterator[Float], options: XYPlotOptions) : XYPlot =
-    XYPlot(x zip y, options)
-
-  def apply(x: Iterator[Float], y: Iterator[Float]) : XYPlot =
-    XYPlot(x zip y)
-
-  def apply(x: Iterable[Float], y: Iterable[Float], options: XYPlotOptions) : XYPlot =
-    XYPlot(x.iterator, y.iterator, options)
-
-  def apply(x: Iterable[Float], y: Iterable[Float]) : XYPlot =
-    XYPlot(x.iterator, y.iterator)
 }
 
 
