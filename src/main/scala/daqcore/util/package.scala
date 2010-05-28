@@ -21,6 +21,11 @@ package daqcore
 package object util {
 
 
+implicit def iteratorOps[A](it: Iterator[A])  = new IteratorOps(it)
+implicit def iterableOps[A](coll: Iterable[A]) = new IterableOps(coll)
+implicit def traversableOnceOps[A](coll: TraversableOnce[A]) = new TraversableOnceOps(coll)
+
+
 implicit def idxSeq2subSeq[T](seq: IndexedSeq[T]) = new SubIdxSeq(seq, 0, seq.length)
 
 
