@@ -12,11 +12,11 @@ class DaqcoreScalaProject(info: ProjectInfo) extends DefaultProject(info) with A
 
   val snapshotsRepo = ScalaToolsSnapshots
 
-  val scala_continuations = compilerPlugin("org.scala-lang.plugins" % "continuations" % "2.8.0.RC2")
+  val scala_continuations = compilerPlugin("org.scala-lang.plugins" % "continuations" % "2.8.0.RC3")
 
-  val scala_swing = "org.scala-lang" % "scala-swing" % "2.8.0.RC2"
+  val scala_swing = "org.scala-lang" % "scala-swing" % "2.8.0.RC3"
 
-  val scalatest = "org.scalatest" % "scalatest" % "1.2-for-scala-2.8.0.RC2-SNAPSHOT" % "test"
+  val scalatest = "org.scalatest" % "scalatest" % "1.2-for-scala-2.8.0.RC3-SNAPSHOT" % "test"
 
   val lift_common = "net.liftweb" % "lift-common" % "2.0-scala280-SNAPSHOT"
   val lift_util = "net.liftweb" % "lift-util" % "2.0-scala280-SNAPSHOT"
