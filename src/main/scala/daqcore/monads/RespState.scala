@@ -22,7 +22,7 @@ sealed trait RespState[S, +A] {
   def apply(s: S): Responder[(S, A)]
 
   import RespStates._
-  
+
   def map[B](f: A => B): RespState[S, B] = state { prev =>
     new Responder[(S, B)] { def respond(k: ((S, B)) => Unit): Unit =
       apply(prev).respond { _ match { case (next, a) =>
@@ -46,9 +46,12 @@ object RespStates {
     def apply(s: S) = f(s)
   }
 
+  def transform[S, A](f: S => (S, A)): RespState[S, A] =
+    state { s => Responder.constant( f(s) ) }
+
   def init[S]: RespState[S, S] =
-    state { s => Responder.constant( (s, s) ) }
+    transform { s => (s, s) }
 
   def modify[S](f: S => S): RespState[S, Unit] =
-    state { s => Responder.constant( (f(s), ()) ) }
+    transform { s => (f(s), ()) }
 }
