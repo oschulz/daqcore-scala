@@ -24,28 +24,35 @@ import java.util.concurrent.TimeoutException
 case object DelayedTimeout extends TimeoutException("Delayed value timed out.")
 
 
-abstract trait Delayed[+A] {
+trait DelayedVal[+A] {
   def apply(): A = get
   val get: A
 
   def avail: Boolean
   
-  def map[B](f: A => B): Delayed[B] =
-    new DelayedView[A, B](this) { lazy val get = f(orig.get) }
+  def map[B](f: A => B): DelayedVal[B] =
+    new DelayedValView[A, B](this) { lazy val get = f(orig.get) }
 
-  def flatMap[B](f: A => Delayed[B]): Delayed[B] =
-    new DelayedView[A, B](this) { lazy val get = f(orig.get).get }
+  def flatMap[B](f: A => DelayedVal[B]): DelayedVal[B] =
+    new DelayedValView[A, B](this) { lazy val get = f(orig.get).get }
   
   def foreach[U](body: A => Unit): Unit = { body(this.get) }
 }
 
 
-abstract class DelayedView[+A, +B](protected val orig: Delayed[A]) extends Delayed[B] {
+abstract class DelayedValView[+A, +B](protected val orig: DelayedVal[A]) extends DelayedVal[B] {
   def avail = orig.avail
 }
 
 
-class DelayedVal[A](timeout: Option[Long]) extends Delayed[A] {
+trait DelayedOutput[A] {
+  def isSet: Boolean
+  def set(value: MaybeFail[A]): Unit  
+  def !(msg: Any): Unit
+}
+
+
+class DelayedResult[A](timeout: Option[Long]) extends DelayedVal[A] with DelayedOutput[A] {
   def this() = this(None)
   def this(timeout: Int) = this(Some(timeout.toLong))
 
@@ -75,7 +82,8 @@ class DelayedVal[A](timeout: Option[Long]) extends Delayed[A] {
   }
   
   def avail: Boolean = synchronized { optValue != None }
-
+  def isSet = avail
+  
   def set(value: MaybeFail[A]): Unit = synchronized {
     optValue match {
       case None => optValue = Some(value); notifyAll()
@@ -92,43 +100,32 @@ class DelayedVal[A](timeout: Option[Long]) extends Delayed[A] {
 
 
 object Delayed {
-  def run[A](resp: Responder[A]): Delayed[A] =
-    buildFrom[A](None) { res => resp.respond { v => res.set(Ok(v)) } }
+  def const[A](v: A): DelayedVal[A] = new DelayedVal[A] { val avail = true; val get = v }
 
-  def forked[A](timeout: Option[Long])(v: =>A): Delayed[A] =
-    buildFromForked[A] (timeout) { res => res.set(Ok(v)) }
+  def fork[A](timeout: Option[Long])(v: =>A): DelayedVal[A] =
+    buildForked[A] (timeout) { out => out.set(Ok(v)) }
 
-  
-  def buildFrom[A](timeout: Option[Long])(body: DelayedVal[A] => Unit): Delayed[A] = {
-    val res = new DelayedVal[A]
-    actors.Actor.actor {
-      try { body(res) }
-      catch { case e => if (!res.avail) res.set(Fail(e)) }
-    }
-    res
-  }
-
-  def buildFromForked[A](timeout: Option[Long])(body: DelayedVal[A] => Unit): Delayed[A] = {
+  def buildForked[A](timeout: Option[Long])(body: DelayedOutput[A] => Unit): DelayedVal[A] = {
     import scala.actors._
     import scala.actors.Actor._
     
-    val res = new DelayedVal[A](timeout)
+    val out = new DelayedResult[A](timeout)
 
     actor {
       val supervisor = self
       self.trapExit = true
       val worker = actor {
         link(supervisor)
-        body(res)
+        body(out)
       }
       react { case Exit(`worker`, reason) =>
-        if (!res.avail) reason match {
-          case UncaughtException(_, _, _, _, e) => res.set(Fail(e))
-          case r => res.set(Fail(new RuntimeException(r.toString)))
+        if (!out.isSet) reason match {
+          case UncaughtException(_, _, _, _, e) => out.set(Fail(e))
+          case r => out.set(Fail(new RuntimeException(r.toString)))
         }
       }
     }
     
-    res
+    out
   }
 }
