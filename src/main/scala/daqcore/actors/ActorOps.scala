@@ -22,7 +22,7 @@ import scala.actors._
 import daqcore.util.classMF
 
 
-class ActorOps(wrapped: AbstractActor) {
+class AbstractActorOps(wrapped: AbstractActor) {
   def !!?(msg: Any): Future[Any] =
     this.!!& (msg) { case x => x }
 
@@ -32,5 +32,13 @@ class ActorOps(wrapped: AbstractActor) {
   def !!^[A: ClassManifest](msg: Any): Future[A] = {
     val mf = classManifest[A]
     this.!!& (msg) { case x if (classMF(x) <:< mf) => x.asInstanceOf[A] }
+  }
+}
+
+
+class ActorOps(wrapped: Actor) {
+  def startOrRestart() = {
+    try { wrapped.restart() }
+    catch { case e: IllegalStateException => wrapped.start() }
   }
 }

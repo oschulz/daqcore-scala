@@ -73,8 +73,8 @@ class GPIBOverStream(val stream: StreamIO) extends Server with MsgIO {
   
   override def init() = {
     link(stream.srv)
-    link(reader); reader.start()
-    link(readQueue); readQueue.start()
+    link(reader); reader.startOrRestart()
+    link(readQueue); readQueue.startOrRestart()
   }
 
   def serve = {
@@ -96,8 +96,6 @@ class GPIBOverStream(val stream: StreamIO) extends Server with MsgIO {
 
 object GPIBOverStream {
   def apply(stream: StreamIO): GPIBOverStream = {
-    val server = new GPIBOverStream(stream)
-    server.start
-    server
+    start(new GPIBOverStream(stream))
   }
 }

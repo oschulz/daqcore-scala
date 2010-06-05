@@ -51,7 +51,10 @@ package object actors {
   def kill(a: scala.actors.AbstractActor, reason: AnyRef) : Unit =
     start(new KillActor(a, reason))
 
-  implicit def actorOps(actor: scala.actors.AbstractActor) =
+  implicit def abstractActorOps(actor: scala.actors.AbstractActor) =
+    new AbstractActorOps(actor)
+
+  implicit def actorOps(actor: scala.actors.Actor) =
     new ActorOps(actor)
 
     

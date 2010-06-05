@@ -67,8 +67,8 @@ trait MinaIO {
     }
     
     override def init() = {
-      link(readQueue); readQueue.start()
-      link(writeQueue); writeQueue.start()
+      link(readQueue); readQueue.startOrRestart()
+      link(writeQueue); writeQueue.startOrRestart()
     }
     
     def serve = {

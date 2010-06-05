@@ -87,7 +87,7 @@ trait Server extends ServerAccess with DaemonActor with Profile {
   }
 
   def act() = {
-    exitMonitor.start()
+    exitMonitor.startOrRestart()
     exitMonitor !? 'ready
     
     if (!restarted) { restarted = true; onStart() } else onRestart()

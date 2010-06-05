@@ -99,7 +99,7 @@ class VMESCPIClient(dev: SCPIClientLink) extends Server with VMEBus {
   override def init() = {
     link(dev.srv)
     link(readQueue)
-    readQueue.start()
+    readQueue.startOrRestart()
   }
 
 

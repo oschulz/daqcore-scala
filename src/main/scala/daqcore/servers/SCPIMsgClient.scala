@@ -70,7 +70,7 @@ class SCPIMsgClient(msgLnk: MsgIO) extends Server with SCPIClientLink {
     link(msgLnk.srv)
     msgLnk.clearInput(100)
     link(readQueue)
-    readQueue.start()
+    readQueue.startOrRestart()
   }
 
   def serve = {

@@ -98,7 +98,7 @@ class RTVXI11Connector extends Server with VXI11Connector {
         case _ => {
           error("Restarting VXI11 link to %s, %s".format(address, lnk.device))
           link(lnk)
-          lnk.start()
+          lnk.restart()
         }
       }
       
@@ -255,7 +255,7 @@ class RTVXI11Connector extends Server with VXI11Connector {
       case msg => {
         error("Restarting VXI11 client connection to " + client.address)
         link(client)
-        client.start()
+        client.restart()
       }
     }
 
@@ -274,7 +274,7 @@ class RTVXI11Connector extends Server with VXI11Connector {
       val rtClient = new Client(address)
       clients += address -> rtClient
       link(rtClient)
-      rtClient.start
+      rtClient.start()
     }
   }
 }
