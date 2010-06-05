@@ -1,0 +1,72 @@
+#!/bin/sh
+
+SOURCE=$0;
+SCRIPT=`basename "$SOURCE"`;
+while [ -h "$SOURCE" ]; do
+    SCRIPT=`basename "$SOURCE"`;
+    LOOKUP=`ls -ld "$SOURCE"`;
+    TARGET=`expr "$LOOKUP" : '.*-> \(.*\)$'`;
+    if expr "${TARGET:-.}/" : '/.*/$' > /dev/null; then
+        SOURCE=${TARGET:-.};
+    else
+        SOURCE=`dirname "$SOURCE"`/${TARGET:-.};
+    fi;
+done;
+
+PROJECT_DIR=`dirname "$SOURCE"`
+PROJECT_DIR=`cd "$PROJECT_DIR"; pwd -P`
+
+
+if [ ! -f "${PROJECT_DIR}/project/build.properties" ] ; then
+	echo "ERROR: Missing file 'project/build.properties' - invalid sbt project dir or build not run yet?" 1>&2
+	exit 1
+fi
+
+export SBT_VERSION=`cat "${PROJECT_DIR}/project/build.properties" | grep 'sbt.version' | sed 's/^.*=\([^[:space:]]\+\).*/\1/'`
+export SCALA_VERSION=`cat "${PROJECT_DIR}/project/build.properties" | grep 'build.scala.versions' | sed 's/^.*=\([^[:space:]]\+\).*/\1/'`
+
+if [ "${SCALA_VERSION}" = "" ] ; then
+	echo "ERROR: Could not determine target Scala version." 1>&2
+	exit 1
+fi
+
+if [ "${SBT_VERSION}" = "" ] ; then
+	echo "ERROR: Could not determine SBT version." 1>&2
+	exit 1
+fi
+
+
+SBT_JAR="${PROJECT_DIR}/project/boot/sbt-launch-${SBT_VERSION}.jar"
+
+
+if [ ! -d "${PROJECT_DIR}/target" ] ; then
+	echo "ERROR: Missing target directory - invalid sbt project dir or build not run yet?" 1>&2
+	exit 1
+fi
+
+SBT_TARGET="${PROJECT_DIR}/target/scala_${SCALA_VERSION}"
+SBT_LIB="${PROJECT_DIR}/lib/*"
+SBT_LIB_MANAGED="${PROJECT_DIR}/lib_managed/scala_${SCALA_VERSION}/compile/*:${PROJECT_DIR}/lib_managed/scala_${SCALA_VERSION}/plugin/*"
+SBT_LIB_SCALA="${PROJECT_DIR}/project/boot/scala-${SCALA_VERSION}/lib/*"
+if [ ! -d "${SBT_TARGET}" ] ; then
+	echo "ERROR: Missing target directory \"${SBT_TARGET}\"." 1>&2
+else
+	# Need sbt-launcher JAR in the classpath to get jline
+	export CLASSPATH=".:${SBT_TARGET}/*:${SBT_LIB}:${SBT_LIB_MANAGED}:${SBT_LIB_SCALA}:${SBT_JAR}"
+fi
+
+
+[ -n "$JAVA_OPTIONS" ] || JAVA_OPTIONS="-Xmx512M -Xms32M"
+
+for i; do
+  case "$i" in
+    -D*) JAVA_OPTIONS="$JAVA_OPTIONS $i" ;;
+    *) ;;
+  esac
+done 
+
+if [ -z "$JAVACMD" -a -n "$JAVA_HOME" -a -x "$JAVA_HOME/bin/java" ]; then
+    JAVACMD="$JAVA_HOME/bin/java"
+fi
+
+exec "${JAVACMD:=java}" $JAVA_OPTS -cp "$CLASSPATH" -Denv.emacs="$EMACS"  scala.tools.nsc.MainGenericRunner  "$@"
