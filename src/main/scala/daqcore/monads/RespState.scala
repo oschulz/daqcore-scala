@@ -24,19 +24,11 @@ sealed trait RespState[S, +A] {
   import RespStates._
 
   def map[B](f: A => B): RespState[S, B] = state { prev =>
-    new Responder[(S, B)] { def respond(k: ((S, B)) => Unit): Unit =
-      apply(prev).respond { _ match { case (next, a) =>
-        k((next, f(a)))
-      } }
-    }
+    apply(prev) map { _ match { case (next, a) => (next, f(a)) } }
   }
 
   def flatMap[B](f: A => RespState[S, B]): RespState[S, B] = state { prev =>
-    new Responder[(S, B)] { def respond(k: ((S, B)) => Unit): Unit =
-      apply(prev).respond { _ match { case (next, a) => 
-        f(a).apply(next).respond(k)
-      } }
-    }
+    apply(prev) flatMap { _ match { case (next, a) => f(a).apply(next) } }
   }
 }
 
