@@ -25,6 +25,11 @@ import daqcore.actors._
 
 
 trait StreamReader extends Profile with Closeable {
+  def read(): Seq[Byte] = readF()()
+  
+  def read(timeout: Long): Seq[Byte] =
+    readF(timeout)() match { case Some(bytes) => bytes; case None => Seq.empty[Byte] }
+
   def readF(): Future[ByteCharSeq] =
     srv.!!& (StreamIO.Read(Int.MaxValue)) {
       case x: ByteCharSeq => x
