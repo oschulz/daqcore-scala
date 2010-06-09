@@ -29,6 +29,7 @@ import daqcore.oncrpc.vxi11core
 import daqcore.actors._
 import daqcore.profiles._
 import daqcore.util._
+import daqcore.monads._
 
 import daqcore.prot.scpi._, daqcore.prot.scpi.mnemonics._
 
@@ -79,6 +80,21 @@ class VMESCPIClient(dev: SCPIClientLink) extends Server with VMEBus {
             }
           }
         }
+        case op @ MemoryLink.Pause() => {
+          dev.cmd(WAI!)
+          reply()
+        }
+        case op @ MemoryLink.Sync() => {
+          val repl = sender
+          query(WAI!, ESR?) {
+            case Response(Result(NR1(esr))) =>
+              val esrErrorMask = 0x3c;
+              val result =
+                if ((esr & esrErrorMask) == 0) Ok(1)
+                else Fail(new RuntimeException("SCPI ESR returned " + esr))
+              repl ! result
+          }
+        }
         case _ => exit('unknownMessage)
       } }
     }
@@ -100,6 +116,20 @@ class VMESCPIClient(dev: SCPIClientLink) extends Server with VMEBus {
     case op @ MemoryLink.Write(address, bytes) => {
       trace(op)
       dev.cmd(~VME~WRITe!(NR1(address.toInt), BlockData(bytes.toIndexedSeq)))  //!! toIndexedSeq not optimal
+    }
+    case op @ MemoryLink.Pause() => {
+      trace(op)
+      readQueue.!?>(op) { case _ =>
+        trace("%s executed" format op)
+      }
+    }
+    case op @ MemoryLink.Sync() => {
+      trace(op)
+      val repl = sender
+      val a = readQueue.!?>(op) { case a =>
+        trace("%s returning %s".format(op, a))
+        repl ! a 
+      }
     }
     case Closeable.Close => {
       dev.close()

@@ -21,6 +21,7 @@ import scala.actors._
 
 import daqcore.util._
 import daqcore.actors._
+import daqcore.monads._
 
 
 trait MemoryReader extends Profile with Closeable {
@@ -37,6 +38,9 @@ trait MemoryReader extends Profile with Closeable {
 trait MemoryWriter extends Profile with Closeable {
   def write(address: Long, data: Seq[Byte]) : Unit =
     srv ! MemoryLink.Write(address: Long, data)
+  
+  def pause(): Unit = srv ! MemoryLink.Pause()
+  def sync(): Unit = srv.!!^[MaybeFail[Boolean]](MemoryLink.Sync()).apply().get
 }
 
 
@@ -46,4 +50,8 @@ object MemoryLink {
   case class Read(address: Long, count: Long)
 
   case class Write(address: Long, data: Seq[Byte])
+
+  case class Pause()
+
+  case class Sync()
 }
