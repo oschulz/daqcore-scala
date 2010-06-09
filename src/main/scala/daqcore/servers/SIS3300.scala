@@ -17,7 +17,7 @@
 
 package daqcore.servers
 
-import scala.collection.immutable.IntMap
+import scala.collection.immutable.{IntMap, SortedMap}
 import scala.collection.MapLike
 import scala.actors._
 
@@ -42,7 +42,17 @@ class SIS3300(val vmeBus: VMEBus, val baseAddress: Int) extends Server {
   val memory = new SIS3300.SISMemory(vmeBus, baseAddress)
   import memory._
 
+  case class Settings (
+    daq: DAQSettings = DAQSettings(),
+    trigger: TriggerSettings = TriggerSettings (
+      thresholds = SortedMap.empty[Int, TriggerThreshold],
+      mode = MNPTriggerMode()
+    )
+  )
   
+  var settingsVar: Settings = Settings()
+  def settings = settingsVar
+
   def get(reg: ReadableRegister): Int = {
     run { for {
       contents <- reg get()
@@ -60,7 +70,8 @@ class SIS3300(val vmeBus: VMEBus, val baseAddress: Int) extends Server {
   
   def channels = (1 to 9)
 
-  var currentBank = 1
+  protected var currentBankVar = 1
+  def currentBank = currentBankVar
 
   def resetModule(): Unit = {
     run { for {
@@ -68,7 +79,7 @@ class SIS3300(val vmeBus: VMEBus, val baseAddress: Int) extends Server {
       _ <- sync()
     } yield {} }
     
-    currentBank = 1
+    currentBankVar = 1
   }
 
   def initModule(): Unit = {
@@ -149,60 +160,73 @@ class SIS3300(val vmeBus: VMEBus, val baseAddress: Int) extends Server {
     } yield { isSet() == 1; } }
   }
 
-
-  def setupDAQ(
-    sampleRate: Long = 100E6.toLong,
-    nSamples: Int = 4096,
-    trigDelay: Int = 2048,
-    nAverage: Int = 0,
-    tsBase: Long = 10E3.toLong // in ns
-  ): Unit = {
-    require( (0 to 0x10000) contains trigDelay*nAverage )
-    require( (0 to 0x8) contains nAverage )
-
-    val samClk = findNearest(clkSrc.keys, sampleRate)
-    debug("samClk = " + samClk)
+  
+  def set(toSet: DAQSettings): Unit = {
+    val clock = 1E9.toLong
     
-    debug("nSamples = " + nSamples)
-    val pgSize = findNearestInt(pgConfig.keys, nSamples)
-    debug("pgSize = " + pgSize)
-    val nEvents = pgConfig(pgSize).nEvents
-    debug("nEvents = " + nEvents)
+    val modNSampes = findNearestInt(pageConfigTable.keys, toSet.nSamples)
+    val modStopDelay = findNearestInt((0 to 0x10000), toSet.stopDelay)
+    val modNAverage = findNearestInt(avgConfigTable.keys, toSet.nAverage)
+    val modSampleRate = findNearest(clockSourceTable.keys, toSet.sampleRate)
+    val tsPreDiv = findNearest((0x1 to 0x10000), toSet.tsBase * clock)
+    val maxNPages = pageConfigTable(modNSampes).nEvents
+    val modNPages = findNearestInt((1 to maxNPages), toSet.nPages)
 
-	val tsPreDiv = findNearestInt((0x2 to 0x10000), (tsBase * samClk.toLong / 1E9.toLong).toInt)
-    val timestampBase = tsPreDiv.toLong * 1E9.toLong / samClk
-    debug("timestampBase = " + timestampBase + " ns")
-    
-    val avg = findNearestInt(avgConfig.keys, nAverage)
-    debug("avg = " + avg)
-   
+    val clampedSettings = DAQSettings (
+      nSamples = modNSampes,
+      stopDelay = modStopDelay,
+      nAverage = modNAverage,
+      sampleRate = modSampleRate,
+      tsBase = clock / tsPreDiv,
+      nPages = modNPages
+    )
+
+    debug("Setting: " + clampedSettings)
+
     run { for {
-      _ <- ACQUISITION_CONTROL.CLOCKSRC set clkSrc(samClk)
+      _ <- ACQUISITION_CONTROL.CLOCKSRC set clockSourceTable(modSampleRate)
       _ <- ACQUISITION_CONTROL.STOPDELAY_EN set 1
-      _ <- STOP_DELAY.STOPDEL set trigDelay * avg
+      _ <- STOP_DELAY.STOPDEL set modStopDelay
       _ <- TIMESTAMP_PREDIVIDER.TSPREDEV set tsPreDiv
       _ <- sync()
     } yield {} }
     
     for (reg <- Seq(EVENT_CONFIG_ADC12, EVENT_CONFIG_ADC34, EVENT_CONFIG_ADC56, EVENT_CONFIG_ADC78)) {
       run { for {
-        _ <- reg.PGSIZE set pgConfig(pgSize).pgs
-        _ <- reg.PGSIZEMAPSEL set pgConfig(pgSize).psm
-        _ <- reg.AVERAGE set avgConfig(avg)
+        _ <- reg.PGSIZE set pageConfigTable(modNSampes).pgs
+        _ <- reg.PGSIZEMAPSEL set pageConfigTable(modNSampes).psm
+        _ <- reg.AVERAGE set avgConfigTable(modNAverage)
         _ <- reg.WRAP set 1
         _ <- sync()
       } yield {} }
     }
+    
+    for (reg <- Seq(MAX_NO_OF_EVENTS_ADC12, MAX_NO_OF_EVENTS_ADC34, MAX_NO_OF_EVENTS_ADC56, MAX_NO_OF_EVENTS_ADC78)) {
+      run { for {
+        _ <- reg.MAXNEV set modNPages
+        _ <- sync()
+      } yield {} }
+    }
+    
+    settingsVar = settingsVar.copy(daq = clampedSettings)
   }
   
   
-  def setupTrig(trigCfg: (Int, TriggerCfg)*)(m: Int = 0x8, n: Int = 0x8, p: Int = 0x8) {
-    require( (0 to 16) contains m)
-    require( (0 to 16) contains n)
-    require( (0 to 16) contains p)
-
-    val cfgMap = Map[Int, TriggerCfg](trigCfg: _*)
-    def cfg(channel: Int) = cfgMap.getOrElse(channel, TrigOff)
+  def set(thresholds: (Int, TriggerThreshold)*) {
+    val threshMap =
+      SortedMap(channels map {ch => ch -> TrigOff}: _*) ++
+        (settings.trigger.thresholds) ++
+        SortedMap(thresholds: _*)
+    
+    val cfg = threshMap map { e =>
+      val (ch, TriggerThreshold(threshold, pol)) = e
+      ch -> TriggerThreshold(
+        findNearestInt(sampleRange, threshold),
+        pol
+      )
+    }
+    
+    debug("Setting: " + cfg)
 
     run { for {
       _ <- TRIGGER_THRESHOLD_ADC12.THRESHODD set cfg(1).threshold
@@ -226,8 +250,29 @@ class SIS3300(val vmeBus: VMEBus, val baseAddress: Int) extends Server {
       _ <- TRIGGER_THRESHOLD_ADC78.GTLEEVEN set (if (cfg(8).polarity) 0 else 1)
       _ <- sync()
     } yield {} }
+    
+    settingsVar = settingsVar.copy (
+      trigger = settingsVar.trigger.copy (
+        thresholds = cfg
+      )
+    )
+  }
 
+
+  def set(toSet: MNPTriggerMode) {
+    val clampedSettings = {
+      import toSet._
+      MNPTriggerMode (
+        m = findNearestInt((0 to 16), m),
+        n = findNearestInt((0 to 16), n),
+        p = findNearestInt((0 to 16), p)
+      )
+    }
+
+    debug("Setting: " + clampedSettings)
+  
     for (reg <- Seq(TRIGGER_SETUP_ADC12, TRIGGER_SETUP_ADC34, TRIGGER_SETUP_ADC56, TRIGGER_SETUP_ADC78)) {
+      import clampedSettings._
       run { for {
         _ <- reg.M set m
         _ <- reg.N set n
@@ -237,6 +282,12 @@ class SIS3300(val vmeBus: VMEBus, val baseAddress: Int) extends Server {
         _ <- sync()
       } yield {} }
     }
+
+    settingsVar = settingsVar.copy (
+      trigger = settingsVar.trigger.copy (
+        mode = clampedSettings
+      )
+    )
   }
 
 
@@ -296,12 +347,12 @@ class SIS3300(val vmeBus: VMEBus, val baseAddress: Int) extends Server {
 
 
   def clearBankFull(): Unit = {
-      val reg = if (currentBank == 1) KEY_BANK1_FULL_FLAG else KEY_BANK2_FULL_FLAG
+      val reg = if (currentBankVar == 1) KEY_BANK1_FULL_FLAG else KEY_BANK2_FULL_FLAG
       run { for {
         _ <- reg set()
         _ <- sync()
       } yield {} }
-      currentBank = if (currentBank ==1) 2 else 1
+      currentBankVar = if (currentBankVar ==1) 2 else 1
   }
 
 }
@@ -311,15 +362,28 @@ class SIS3300(val vmeBus: VMEBus, val baseAddress: Int) extends Server {
 object SIS3300 extends Logging {
   case class ModuleInfo(modID: String, revision: String)
 
-  case class TriggerCfg (
-    threshold: Int = 0xfff,
+  case class DAQSettings (
+    nSamples: Int = 4096,
+    stopDelay: Int = 2048,
+    nAverage: Int = 1,
+    sampleRate: Double = 100E6,
+    tsBase: Double = 10E-9.toLong, // in ns
+    nPages: Int = Int.MaxValue
+  )
+
+  case class TriggerSettings (
+    thresholds: SortedMap[Int, TriggerThreshold],
+    mode: TriggerMode
+  )
+  
+  case class TriggerThreshold (
+    threshold: Int = 0,
     polarity: Boolean = true
-  ) {
-    require( (0 to 0x1000) contains threshold)
-  }
-
-  val TrigOff = TriggerCfg()
-
+  )
+  
+  abstract class TriggerMode
+  case class MNPTriggerMode (m: Int = 0x8, n: Int = 0x8, p: Int = 0x8) extends TriggerMode
+  
 
   import math.{max,min,abs,log}
 
@@ -337,10 +401,13 @@ object SIS3300 extends Logging {
   def findNearest(set: Iterable[Int], v: Double): Int =
     set.foldLeft(set.head) { (r, e) => if (abs(v-e.toDouble) < abs(v-r.toDouble)) e else r }
 
+  def findNearest(set: Iterable[Long], v: Double): Long =
+    set.foldLeft(set.head) { (r, e) => if (abs(v-e.toDouble) < abs(v-r.toDouble)) e else r }
+
   def findNearestInt(set: Iterable[Int], v: Int): Int =
     set.foldLeft(set.head) { (r, e) => if (abs(v-e) < abs(v-r)) e else r }
 
-  def findNearest(set: Iterable[Long], v: Long): Long =
+  def findNearestLong(set: Iterable[Long], v: Long): Long =
     set.foldLeft(set.head) { (r, e) => if (abs(v-e) < abs(v-r)) e else r }
 
 
@@ -1169,14 +1236,18 @@ object SIS3300 extends Logging {
     val MEM_BANK2_ADC78 = RegisterRange(0x780000, 0x800000)
 
 
-    val clkSrc = Map (
+    val TrigOff = TriggerThreshold(threshold = 0xfff, polarity = true)
+
+    val sampleRange = (0 to 0x1000)
+
+    val clockSourceTable = Map (
       100000000L -> 0x0, 50000000L -> 0x1, 25000000L -> 0x2,
       12500000L -> 0x3, 6250000L -> 0x4, 3125000L -> 0x5,
       0L -> 0x6 // External clock
     )
 
     case class PGConfig(psm: Int, pgs: Int, nEvents: Int)
-    val pgConfig = Map(
+    val pageConfigTable = Map(
       (1<<17) -> PGConfig(0x0, 0x0,    1),
       // (1<<15) -> PGConfig(0x1, 0x1,    4), // not available in all fw versions
       (1<<14) -> PGConfig(0x0, 0x1,    8),
@@ -1189,7 +1260,7 @@ object SIS3300 extends Logging {
       (1<< 7) -> PGConfig(0x0, 0x7, 1024)
     )
     
-    val avgConfig = Map((0 to 7) map (1 << _) zipWithIndex : _*)
+    val avgConfigTable = Map((0 to 7) map (1 << _) zipWithIndex : _*)
   }
 
 }
