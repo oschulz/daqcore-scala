@@ -23,6 +23,10 @@ import daqcore.util.classMF
 
 
 class AbstractActorOps(wrapped: AbstractActor) {
+  def !?>[A](msg: Any) (f: PartialFunction[Any, A]): A = {
+    f(wrapped !? msg)
+  }
+
   def !!?(msg: Any): Future[Any] =
     this.!!& (msg) { case x => x }
 
