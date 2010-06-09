@@ -79,17 +79,6 @@ class VMESCPIClient(dev: SCPIClientLink) extends Server with VMEBus {
             }
           }
         }
-        case op @ Fwd(repl, VMEBus.GetBaseAddress()) => {
-          trace(op)
-          query(~VME~OFFSet?()) {
-            case Response(Result(NR1(address))) => {
-              trace("Base address: " + address)
-              trace("Replying to: " + repl.getClass)
-              repl ! address.toLong
-              trace("Replied base address to sender")
-            }
-          }
-        }
         case _ => exit('unknownMessage)
       } }
     }
@@ -111,14 +100,6 @@ class VMESCPIClient(dev: SCPIClientLink) extends Server with VMEBus {
     case op @ MemoryLink.Write(address, bytes) => {
       trace(op)
       dev.cmd(~VME~WRITe!(NR1(address.toInt), BlockData(bytes.toIndexedSeq)))  //!! toIndexedSeq not optimal
-    }
-    case op @ VMEBus.SetBaseAddress(address) => {
-      trace(op)
-      dev.cmd(~VME~OFFSet!(NR1(address.toInt)))
-    }
-    case op @ VMEBus.GetBaseAddress() => {
-      trace(op)
-      readQueue.forward(Fwd(sender, op))
     }
     case Closeable.Close => {
       dev.close()

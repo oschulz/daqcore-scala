@@ -27,15 +27,9 @@ case class VMEInterrupt(vector: Int, missed: Int = 0)
 
 
 trait VMEBus extends MemoryLink {
-  def setBaseAddress(address: Long): Unit =
-    srv ! VMEBus.SetBaseAddress(address)
-  def getBaseAddress() : Future[Long] =
-    srv.!!& (VMEBus.GetBaseAddress()) { case x: Long => x }
 
 }
 
 
 object VMEBus {
-  case class SetBaseAddress(address: Long)
-  case class GetBaseAddress()
 }
