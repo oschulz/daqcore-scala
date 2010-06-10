@@ -487,6 +487,21 @@ object SIS3300 extends Logging {
 
   case class BitRange(from: Int, to: Int) extends BitRangeLike
 
+
+  trait Register { register =>
+    def fields = for {
+      method <- register.getClass.getDeclaredMethods.toList
+      if method.getParameterTypes.isEmpty
+      if classOf[BitSelection].isAssignableFrom(method.getReturnType)
+    } yield {
+      method.getName -> method.invoke(register).asInstanceOf[BitSelection]
+    }
+    
+    def apply(value: Word) =
+      fields map { _ match { case (name, bits) => name -> bits(value) } }
+  }
+
+  
   abstract class Memory
     extends Iterable[(Address,Word)] with Function[Address, Word]
   {
@@ -655,7 +670,20 @@ object SIS3300 extends Logging {
     protected val jkSet = BitRange(0, 15)
     protected val jkClear = BitRange(16, 31)
     
-    trait ReadableRegister { register =>
+    trait ReadableRegister extends Register { register =>
+      def r = new {
+        def fields = for {
+          method <- register.getClass.getDeclaredMethods.toList
+          if method.getParameterTypes.isEmpty
+          if classOf[ReadableBits].isAssignableFrom(method.getReturnType)
+        } yield {
+          method.getName -> method.invoke(register).asInstanceOf[ReadableBits]
+        }
+        
+        def apply(value: Word) =
+          fields map { _ match { case (name, bits) => name -> bits(value) } }
+      }
+
       def addr: Address
       def get() = region.read(addr)
       def get(bitSel: BitSelection) = region.read(addr, bitSel)
@@ -667,7 +695,20 @@ object SIS3300 extends Logging {
       case class ROBitRange(from: Int, to: Int) extends BitRangeLike with ReadableBits
     }
 
-    trait WriteableRegister { register =>
+    trait WriteableRegister extends Register { register =>
+      def w = new {
+        def fields = for {
+          method <- register.getClass.getDeclaredMethods.toList
+          if method.getParameterTypes.isEmpty
+          if classOf[WriteableBits].isAssignableFrom(method.getReturnType)
+        } yield {
+          method.getName -> method.invoke(register).asInstanceOf[WriteableBits]
+        }
+        
+        def apply(value: Word) =
+          fields map { _ match { case (name, bits) => name -> bits(value) } }
+      }
+
       def addr: Address
       def set(value: Word) = region.write(addr, value)
       def set(bitSel: BitSelection, value: Word) = region.write(addr, bitSel, value)
