@@ -20,11 +20,11 @@ package daqcore.gui
 import scala.swing._
 
 import org.jfree.chart.{ChartPanel => JFCPanel, JFreeChart => JFCChart, ChartFactory => JFCChartFactory }
-import org.jfree.chart.plot.{PlotOrientation => JFCPlotOrientation, XYPlot => JFCXYPlot}
+import org.jfree.chart.plot.{PlotOrientation => JFCPlotOrientation, XYPlot => JFCXYPlot, FastScatterPlot => JFCFastScatter}
 import org.jfree.data.{xy => jfcXY}
 import org.jfree.data.xy.{XYDataset => JFCXYDataset}
 import org.jfree.data.general.{Series => JFCSeries}
-
+import org.jfree.chart.axis.{NumberAxis => JFCNumberAxis}
 
 abstract class Plot extends Proxy {
   def self: JFCChart
@@ -117,6 +117,17 @@ object XYPlot {
     plotPoints(values.view.zipWithIndex map {_ swap})
 }
 
+
+class ScatterPlot(points: Array[Array[Float]], val options: XYPlotOptions = XYPlotOptions()) extends Plot {
+  val jfcPlot = new JFCFastScatter(points,
+    new JFCNumberAxis(options.xLabel), new JFCNumberAxis(options.yLabel))
+
+  val self = new JFCChart(options.title,
+    JFCChart.DEFAULT_TITLE_FONT, jfcPlot, true)
+
+  def setPoints(points: Array[Array[Float]]) =
+    jfcPlot.setData(points)
+}
 
 
 class PlotPanel(plot: Plot) extends Panel {
