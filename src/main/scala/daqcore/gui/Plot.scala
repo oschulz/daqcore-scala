@@ -60,7 +60,7 @@ abstract class DataSeries extends Proxy {
 case class XYSeries(title: String = "") extends DataSeries {
   val self = new jfcXY.XYSeries(title)
 
-  def addPoints(points: TraversableOnce[(Double, Double)]) : Unit =
+  def addPoints(points: Seq[(Double, Double)]) : Unit =
     for (p <- points) self.add(p._1, p._2)
 }
 
@@ -101,7 +101,7 @@ object XYPlot {
 
   def apply(series: XYSeries) : XYPlot = XYPlot(series, XYPlotOptions())
 
-  def apply(points: TraversableOnce[(Double, Double)], options: XYPlotOptions = XYPlotOptions()) : XYPlot = {
+  def apply(points: Seq[(Double, Double)], options: XYPlotOptions = XYPlotOptions()) : XYPlot = {
     val series = XYSeries()
     series.addPoints(points)
     XYPlot(series, options)
