@@ -60,8 +60,10 @@ abstract class DataSeries extends Proxy {
 case class XYSeries(title: String = "") extends DataSeries {
   val self = new jfcXY.XYSeries(title)
 
-  def addPoints(points: Seq[(Double, Double)]) : Unit =
-    for (p <- points) self.add(p._1, p._2)
+  def addPoints[TX, TY]
+    (points: Seq[(TX, TY)])
+    (implicit numX: Numeric[TX], numY: Numeric[TY])
+    : Unit = for (p <- points) self.add(numX.toDouble(p._1), numY.toDouble(p._2))
 }
 
 
@@ -101,11 +103,18 @@ object XYPlot {
 
   def apply(series: XYSeries) : XYPlot = XYPlot(series, XYPlotOptions())
 
-  def apply(points: Seq[(Double, Double)], options: XYPlotOptions = XYPlotOptions()) : XYPlot = {
+  def plotPoints[TX,TY]
+    (points: Seq[(TX, TY)], options: XYPlotOptions = XYPlotOptions())
+    (implicit numX: Numeric[TX], numY: Numeric[TY])
+    : XYPlot =
+  {
     val series = XYSeries()
     series.addPoints(points)
     XYPlot(series, options)
   }
+
+  def plotValues[A](values: Seq[A], options: XYPlotOptions = XYPlotOptions())(implicit num: Numeric[A]) : XYPlot =
+    plotPoints(values.view.zipWithIndex map {_ swap})
 }
 
 
