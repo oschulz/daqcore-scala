@@ -68,7 +68,7 @@ class SIS3300(val vmeBus: VMEBus, val baseAddress: Int) extends Server {
   }
   
   
-  def channels = (1 to 9)
+  def channels = (1 to 8)
 
   protected var currentBankVar = 1
   def currentBank = currentBankVar
@@ -127,7 +127,7 @@ class SIS3300(val vmeBus: VMEBus, val baseAddress: Int) extends Server {
 
 
   def setupIRQ(level: Int, vector: Int): Unit = {
-    require (((0 to 0x8) contains level) && ((0 to 0x100) contains vector))
+    require (((0 to 0x7) contains level) && ((0 to 0xff) contains vector))
     //!! setup IRQ on vme link ...
 
     run { for {
@@ -165,10 +165,10 @@ class SIS3300(val vmeBus: VMEBus, val baseAddress: Int) extends Server {
     val clock = 1E9.toLong
     
     val modNSampes = findNearestInt(pageConfigTable.keys, toSet.nSamples)
-    val modStopDelay = findNearestInt((0 to 0x10000), toSet.stopDelay)
+    val modStopDelay = findNearestInt((0 to 0xffff), toSet.stopDelay)
     val modNAverage = findNearestInt(avgConfigTable.keys, toSet.nAverage)
     val modSampleRate = findNearest(clockSourceTable.keys, toSet.sampleRate)
-    val tsPreDiv = findNearest((0x1 to 0x10000), toSet.tsBase * clock)
+    val tsPreDiv = findNearest((0x1 to 0xffff), toSet.tsBase * clock)
     val maxNPages = pageConfigTable(modNSampes).nEvents
     val modNPages = findNearestInt((1 to maxNPages), toSet.nPages)
 
@@ -263,9 +263,9 @@ class SIS3300(val vmeBus: VMEBus, val baseAddress: Int) extends Server {
     val clampedSettings = {
       import toSet._
       MNPTriggerMode (
-        m = findNearestInt((0 to 16), m),
-        n = findNearestInt((0 to 16), n),
-        p = findNearestInt((0 to 16), p)
+        m = findNearestInt((0 to 0xf), m),
+        n = findNearestInt((0 to 0xf), n),
+        p = findNearestInt((0 to 0xf), p)
       )
     }
 
@@ -1292,7 +1292,7 @@ object SIS3300 extends Logging {
 
     val TrigOff = TriggerThreshold(threshold = 0xfff, polarity = true)
 
-    val sampleRange = (0 to 0x1000)
+    val sampleRange = 0 to 0xfff
 
     val clockSourceTable = Map (
       100000000L -> 0x0, 50000000L -> 0x1, 25000000L -> 0x2,
