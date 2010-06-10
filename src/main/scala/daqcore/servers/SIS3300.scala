@@ -929,17 +929,17 @@ object SIS3300 extends Logging {
 
     /** Start Delay register (0x14, read/write) */
     val START_DELAY = new RWRegister(0x14) {
-      val STARTDEL = RWBitRange(0, 15)
+      def STARTDEL = RWBitRange(0, 15)
     }
 
     /** Stop Delay register (0x18, read/write) */
     val STOP_DELAY = new RWRegister(0x18) {
-      val STOPDEL = RWBitRange(0, 15)
+      def STOPDEL = RWBitRange(0, 15)
     }
     
     /** Time stamp predivider register (0x1C, read/write) */
     val TIMESTAMP_PREDIVIDER = new RWRegister(0x1C) {
-      val TSPREDEV = RWBitRange(0, 15)
+      def TSPREDEV = RWBitRange(0, 15)
     }
     
     /** Key address general reset (0x20, write-only) */
@@ -1174,7 +1174,7 @@ object SIS3300 extends Logging {
     val MAX_NO_OF_EVENTS_ADC78 = new MaxNoOfEventsRegister(0x38002C)
 
     /** Trigger event directory entry */
-    val TriggerEventDirEntry = new {
+    val TriggerEventDirEntry = new Register {
       /** End Address + 1 of Event*/
       def EVEND = BitRange(0, 16)
       /** Event Data Wrapped */
@@ -1237,7 +1237,7 @@ object SIS3300 extends Logging {
 
 
     /** Sample Memory Bank Entry (read/write)*/
-    val BankMemoryEntry = new {
+    val BankMemoryEntry = new Register {
       /** Sample value, even-numbered ADCs (2/4/6/8) */
       def SAMEVEN = BitRange(0, 11)
       /** OR bit, even-numbered ADCs (0: GT, 1: LE) */
@@ -1288,6 +1288,7 @@ object SIS3300 extends Logging {
     )
 
     case class PGConfig(psm: Int, pgs: Int, nEvents: Int)
+    
     val pageConfigTable = Map(
       (1<<17) -> PGConfig(0x0, 0x0,    1),
       // (1<<15) -> PGConfig(0x1, 0x1,    4), // not available in all fw versions
