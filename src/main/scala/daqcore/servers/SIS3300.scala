@@ -963,6 +963,19 @@ object SIS3300 extends Logging {
     /** Key address clear BANK2 FULL Flag (0x4C, write-only) */
     val KEY_BANK2_FULL_FLAG = new KeyRegister(0x4C)
 
+
+    /** Trigger event directory entry */
+    val TimestampDirEntry = new Register {
+      /** Timestamp counter value, starting with 0 at first stop */
+      def TIMESTAMP = BitRange(0, 23)
+    }
+    
+    /** Trigger event directory bank 1 (0x1000 - 0x1ffc, read-only) */
+    val EVENT_TIMESTAMP_DIR_BANK1 = RegisterRange(0x1000, 0x2000)
+    /** Trigger event directory bank 2 (0x2000 - 0x2ffc, read-only) */
+    val EVENT_TIMESTAMP_DIR_BANK2 = RegisterRange(0x2000, 0x3000)
+
+
     
     // /** Event configuration register, all ADCs (0x100000, write-only) */
     // val EVENT_CONFIG_ALL_ADC = new WORegister(0x100000) {
