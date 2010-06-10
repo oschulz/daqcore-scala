@@ -355,6 +355,40 @@ class SIS3300(val vmeBus: VMEBus, val baseAddress: Int) extends Server {
       currentBankVar = if (currentBankVar ==1) 2 else 1
   }
 
+
+  def getEvents() = {
+    val (evDirRegs, tsDirRegs, bankRegs) = {
+      if (currentBank == 1) (EVENT_DIRECTORY_BANK1, EVENT_TIMESTAMP_DIR_BANK1, MEM_BANK1_ADC12)
+      else (EVENT_DIRECTORY_BANK2, EVENT_TIMESTAMP_DIR_BANK2, MEM_BANK2_ADC12)
+    }
+    
+    val nSamples = settings.daq.nSamples
+    val nEvents = getNEvents
+
+    val evDir = read(evDirRegs take nEvents)
+    val tsDir = read(tsDirRegs take nEvents)
+    val bankRaw = read(bankRegs take nEvents * nSamples)
+
+    val raw = bankRaw.grouped(nSamples).toArray.toSeq
+
+    for (i <- 0 to nEvents - 1) yield {
+      val timestamp = TimestampDirEntry.TIMESTAMP(tsDir(i))
+      val end = TriggerEventDirEntry.EVEND(evDir(i)) - i * nSamples
+      val wrapped = TriggerEventDirEntry.WRAPPED(evDir(i))
+      val trigged = TriggerEventDirEntry.TRIGGED(evDir(i))
+
+      val fixedRaw =
+        if (wrapped == 1) { val(a,b) = raw(i).splitAt(end); b++a }
+        else raw(i) take end
+
+      val samples = Map(
+        1 -> ( fixedRaw map {w => BankMemoryEntry.SAMODD(w)} ),
+        2 -> ( fixedRaw map {w => BankMemoryEntry.SAMEVEN(w)} )
+      )
+      Event(timestamp, wrapped, trigged, samples)
+    }
+  }
+
 }
 
 
@@ -383,6 +417,14 @@ object SIS3300 extends Logging {
   
   abstract class TriggerMode
   case class MNPTriggerMode (m: Int = 0x8, n: Int = 0x8, p: Int = 0x8) extends TriggerMode
+
+
+  case class Event(
+    timestamp: Int,
+    wrapped: Int,
+    trigged: Int,
+    samples: Map[Int, Seq[Int]]
+  )
   
 
   import math.{max,min,abs,log}
