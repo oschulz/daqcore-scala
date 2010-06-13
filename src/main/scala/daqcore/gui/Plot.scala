@@ -57,15 +57,32 @@ abstract class DataSeries extends Proxy {
 }
 
 
-case class XYSeries(title: String = "") extends DataSeries {
+class XYSeries(title: String = "") extends DataSeries {
   val self = new jfcXY.XYSeries(title)
 
-  def addPoints[TX, TY]
+  def clear(): Unit = self.clear()
+  
+  def append[TX, TY]
     (points: Seq[(TX, TY)])
     (implicit numX: Numeric[TX], numY: Numeric[TY])
-    : Unit = for (p <- points) self.add(numX.toDouble(p._1), numY.toDouble(p._2))
+    : Unit = synchronized {
+      for (p <- points) self.add(numX.toDouble(p._1), numY.toDouble(p._2))
+    }
 }
 
+object XYSeries {
+  def apply(title: String = ""): XYSeries = new XYSeries(title)
+
+  def apply[TX, TY]
+    (title: String, points: (TX, TY)*)
+    (implicit numX: Numeric[TX], numY: Numeric[TY])
+    : XYSeries =
+  {
+    val series = new XYSeries(title)
+    if (! points.isEmpty) series.append(points)
+    series
+  }
+}
 
 
 abstract class XYPlot extends Plot {
@@ -94,6 +111,12 @@ class XYLinePlot(val options: XYPlotOptions) extends XYPlot {
 }
 
 
+object XYLinePlot {
+  def apply(options: XYPlotOptions = XYPlotOptions()): XYLinePlot =
+    new XYLinePlot(options)
+}
+
+
 object XYPlot {
   def apply(series: XYSeries, options: XYPlotOptions) : XYPlot = {
     val plot = new XYLinePlot(options)
@@ -109,7 +132,7 @@ object XYPlot {
     : XYPlot =
   {
     val series = XYSeries()
-    series.addPoints(points)
+    series.append(points)
     XYPlot(series, options)
   }
 
