@@ -100,6 +100,7 @@ abstract class SIS3300(val vmeBus: VMEBus, val baseAddress: Int) extends Server 
     
     val info = getInfo()
     debug("Module initialized, module info: " + info)
+    require(info.fwRevMajor == majorFirmwareRevision)
   }
   
   
@@ -131,7 +132,7 @@ abstract class SIS3300(val vmeBus: VMEBus, val baseAddress: Int) extends Server 
       modID <- MODID.MODID get()
       _ <- sync()
     } yield {
-      ModuleInfo(hex(modID()), hex(majRev())+hex(minRev()))
+      ModuleInfo(hex(modID()), majRev(), minRev())
     } }
   }
 
@@ -800,7 +801,7 @@ abstract class SIS3300(val vmeBus: VMEBus, val baseAddress: Int) extends Server 
 
 
 object SIS3300 extends Logging {
-  case class ModuleInfo(modID: String, revision: String)
+  case class ModuleInfo(modID: String, fwRevMajor: Int, fwRevMinor: Int)
 
   case class DAQSettings (
     nSamples: Int = 4096,
