@@ -39,7 +39,7 @@ class SIS3300(val vmeBus: VMEBus, val baseAddress: Int) extends Server {
   }
 
   
-  val memory = new SIS3300.SISMemory(vmeBus, baseAddress)
+  val memory = new SIS3300.SISMemory03(vmeBus, baseAddress)
   import memory._
 
   case class Settings (
@@ -813,7 +813,8 @@ object SIS3300 extends Logging {
   
   
   
-  class SISMemory(mem: MemoryLink, base: Address) extends MemRegion(MemOperator(mem), base) {
+  abstract class SISMemoryCommon(mem: MemoryLink, base: Address) extends MemRegion(MemOperator(mem), base) {
+    def majorFirmwareRevision: Int
 
     def read(range: Range): Seq[Word] = {
       val bytes = mem.read(range.head + base, range.last - range.head + sizeOf[Word])
@@ -1069,40 +1070,6 @@ object SIS3300 extends Logging {
     val EVENT_CONFIG_ADC78 = new EventConfigRegister(0x380000)
     
 
-    // /** Trigger Threshold Register, all ADCs (0x100004, write-only) */
-    // val THRESHOLD_ALL_ADC = new WORegister(0x100004) {
-    //   /** Threshold value, even-numbered ADCs (2/4/6/8) */
-    //   def THRESHEVEN = WOBitRange(0, 13)
-    //   /** GT or LE, even-numbered ADCs (0: GT, 1: LE) */
-    //   def GTLEEVEN = WOBit(15)
-    //   /** Threshold value, odd-numbered ADCs (1/3/5/7) */
-    //   def THRESHODD = WOBitRange(16, 29)
-    //   /** GT or LE, odd-numbered ADCs (0: GT, 1: LE) */
-    //   def GTLEODD = WOBit(31)
-    // }
-
-    /** Trigger Threshold Register, ADC group specific (read/write) */
-    class TriggerThresholdRegister(addr: Address) extends RWRegister(addr) {
-      /** Threshold value, even-numbered ADCs (2/4/6/8) */
-      def THRESHEVEN = RWBitRange(0, 11)
-      /** GT or LE, even-numbered ADCs (0: GT, 1: LE) */
-      def GTLEEVEN = RWBit(15)
-      /** Threshold value, odd-numbered ADCs (1/3/5/7) */
-      def THRESHODD = RWBitRange(16, 27)
-      /** GT or LE, odd-numbered ADCs (0: GT, 1: LE) */
-      def GTLEODD = RWBit(31)
-    }
-
-    /** Trigger Threshold Register, ADC group 1/2 (0x200004, read/write) */
-    val TRIGGER_THRESHOLD_ADC12 = new TriggerThresholdRegister(0x200004)
-    /** Trigger Threshold Register, ADC group 3/4 (0x280004, read/write) */
-    val TRIGGER_THRESHOLD_ADC34 = new TriggerThresholdRegister(0x280004)
-    /** Trigger Threshold Register, ADC group 5/6 (0x300004, read/write) */
-    val TRIGGER_THRESHOLD_ADC56 = new TriggerThresholdRegister(0x300004)
-    /** Trigger Threshold Register, ADC group 7/8 (0x380004, read/write) */
-    val TRIGGER_THRESHOLD_ADC78 = new TriggerThresholdRegister(0x380004)
-
-
     /** Trigger Flag Clear Counter register, all ADCs (0x10001C, write-only) */
     val TRIGGER_FLAG_CLR_CNT_ALL_ADC = new WORegister(0x10001C) {
       /** Trigger Flag Clear counter register */
@@ -1167,44 +1134,6 @@ object SIS3300 extends Logging {
     val NO_OF_SAMPLE_ADC56 = new NoOfSampleRegister(0x300024)
     /** No_Of_Sample register, ADC group 7/8 (0x380024, read/write) */
     val NO_OF_SAMPLE_ADC78 = new NoOfSampleRegister(0x380024)
-
-
-    // /** Trigger setup register, all ADCs (0x100028, write-only) */
-    // val TRIGGER_SETUP_ALL_ADC = new WORegister(0x100028) {
-    //  /** M */
-    //   def M = WOBitRange(0, 3)
-    //   /** P */
-    //   def N = WOBitRange(8, 11)
-    //   /** P */
-    //   def P = WOBitRange(16, 19)
-    //   /** enable N M mode */
-    //   def NM = WOBit(24)
-    //   /** enable pulse mode */
-    //   def PULSE = WOBit(28)
-    // }
-
-    /** Trigger setup register, ADC group specific (read/write) */
-    class TriggerSetupRegister(addr: Address) extends RWRegister(addr) {
-     /** M */
-      def M = RWBitRange(0, 3)
-      /** P */
-      def N = RWBitRange(8, 11)
-      /** P */
-      def P = RWBitRange(16, 19)
-      /** enable N M mode */
-      def NM = RWBit(24)
-      /** enable pulse mode */
-      def PULSE = RWBit(28)
-    }
-
-    /** Trigger setup register, ADC group 1/2 (0x200028, read/write) */
-    val TRIGGER_SETUP_ADC12 = new TriggerSetupRegister(0x200028)
-    /** Trigger setup register, ADC group 3/4 (0x280028, read/write) */
-    val TRIGGER_SETUP_ADC34 = new TriggerSetupRegister(0x280028)
-    /** Trigger setup register, ADC group 5/6 (0x300028, read/write) */
-    val TRIGGER_SETUP_ADC56 = new TriggerSetupRegister(0x300028)
-    /** Trigger setup register, ADC group 7/8 (0x380028, read/write) */
-    val TRIGGER_SETUP_ADC78 = new TriggerSetupRegister(0x380028)
 
 
     /** MAX No of Events register, all ADCs (0x10002C, write-only) */
@@ -1358,6 +1287,63 @@ object SIS3300 extends Logging {
     )
     
     val avgConfigTable = Map((0 to 7) map (1 << _) zipWithIndex : _*)
+  }
+
+  
+  // Default Firmware, major version 03
+  class SISMemory03(mem: MemoryLink, base: Address) extends SISMemoryCommon(mem, base) {
+    val majorFirmwareRevision = 0x03
+  
+    // /** Trigger Threshold Register, all ADCs (0x100004, write-only) */
+    // val THRESHOLD_ALL_ADC = new WORegister(0x100004) ...
+
+    /** Trigger Threshold Register, ADC group specific (read/write) */
+    class TriggerThresholdRegister(addr: Address) extends RWRegister(addr) {
+      /** Threshold value, even-numbered ADCs (2/4/6/8) */
+      def THRESHEVEN = RWBitRange(0, 11)
+      /** GT or LE, even-numbered ADCs (0: GT, 1: LE) */
+      def GTLEEVEN = RWBit(15)
+      /** Threshold value, odd-numbered ADCs (1/3/5/7) */
+      def THRESHODD = RWBitRange(16, 27)
+      /** GT or LE, odd-numbered ADCs (0: GT, 1: LE) */
+      def GTLEODD = RWBit(31)
+    }
+
+    /** Trigger Threshold Register, ADC group 1/2 (0x200004, read/write) */
+    val TRIGGER_THRESHOLD_ADC12 = new TriggerThresholdRegister(0x200004)
+    /** Trigger Threshold Register, ADC group 3/4 (0x280004, read/write) */
+    val TRIGGER_THRESHOLD_ADC34 = new TriggerThresholdRegister(0x280004)
+    /** Trigger Threshold Register, ADC group 5/6 (0x300004, read/write) */
+    val TRIGGER_THRESHOLD_ADC56 = new TriggerThresholdRegister(0x300004)
+    /** Trigger Threshold Register, ADC group 7/8 (0x380004, read/write) */
+    val TRIGGER_THRESHOLD_ADC78 = new TriggerThresholdRegister(0x380004)
+
+  
+    // /** Trigger setup register, all ADCs (0x100028, write-only) */
+    // val TRIGGER_SETUP_ALL_ADC = new WORegister(0x100028) ...
+
+    /** Trigger setup register, ADC group specific (read/write) */
+    class TriggerSetupRegister(addr: Address) extends RWRegister(addr) {
+     /** M */
+      def M = RWBitRange(0, 3)
+      /** P */
+      def N = RWBitRange(8, 11)
+      /** P */
+      def P = RWBitRange(16, 19)
+      /** enable N M mode */
+      def NM = RWBit(24)
+      /** enable pulse mode */
+      def PULSE = RWBit(28)
+    }
+
+    /** Trigger setup register, ADC group 1/2 (0x200028, read/write) */
+    val TRIGGER_SETUP_ADC12 = new TriggerSetupRegister(0x200028)
+    /** Trigger setup register, ADC group 3/4 (0x280028, read/write) */
+    val TRIGGER_SETUP_ADC34 = new TriggerSetupRegister(0x280028)
+    /** Trigger setup register, ADC group 5/6 (0x300028, read/write) */
+    val TRIGGER_SETUP_ADC56 = new TriggerSetupRegister(0x300028)
+    /** Trigger setup register, ADC group 7/8 (0x380028, read/write) */
+    val TRIGGER_SETUP_ADC78 = new TriggerSetupRegister(0x380028)
   }
 
 }
