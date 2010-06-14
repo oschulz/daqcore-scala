@@ -824,7 +824,7 @@ object SIS3300 extends Logging {
   
   abstract class TriggerMode
   case class MNPTriggerMode (m: Int = 0x8, n: Int = 0x8, p: Int = 0x8) extends TriggerMode
-  case class FIRTriggerMode (nGap: Int = 0x8, nPeak: Int = 0x8, nPulse: Int = 0x8) extends TriggerMode
+  case class FIRTriggerMode (nGap: Int = 0x20, nPeak: Int = 0x20, p: Int = 0x8, test: Int = 0) extends TriggerMode
 
 
   case class Event(
