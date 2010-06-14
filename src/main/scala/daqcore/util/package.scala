@@ -77,4 +77,7 @@ def hex(v: AnyVal) : String = {
 }
 
 
+def floorLog2(x: Int) = 8 * sizeOf[Int] - 1 - java.lang.Integer.numberOfLeadingZeros(x)
+def ceilLog2(x: Int) = 8 * sizeOf[Int] - java.lang.Integer.numberOfLeadingZeros(x-1)
+
 }
