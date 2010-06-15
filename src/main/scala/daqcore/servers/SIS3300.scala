@@ -179,7 +179,7 @@ abstract class SIS3300(val vmeBus: VMEBus, val baseAddress: Int) extends Server 
   def set(toSet: DAQSettings): Unit = {
     import memory._
 
-    val clock = 1E9.toLong
+    val clock = 100E6
     
     val modNSampes = findNearestInt(pageConfigTable.keys, toSet.nSamples)
     val modStopDelay = findNearestInt((0 to 0xffff), toSet.stopDelay)
@@ -194,7 +194,7 @@ abstract class SIS3300(val vmeBus: VMEBus, val baseAddress: Int) extends Server 
       stopDelay = modStopDelay,
       nAverage = modNAverage,
       sampleRate = modSampleRate,
-      tsBase = clock / tsPreDiv,
+      tsBase = tsPreDiv.toDouble / clock,
       nPages = modNPages
     )
 
@@ -204,7 +204,7 @@ abstract class SIS3300(val vmeBus: VMEBus, val baseAddress: Int) extends Server 
       _ <- ACQUISITION_CONTROL.CLOCKSRC set clockSourceTable(modSampleRate)
       _ <- ACQUISITION_CONTROL.STOPDELAY_EN set 1
       _ <- STOP_DELAY.STOPDEL set modStopDelay
-      _ <- TIMESTAMP_PREDIVIDER.TSPREDEV set tsPreDiv
+      _ <- TIMESTAMP_PREDIVIDER.TSPREDIV set tsPreDiv
       _ <- sync()
     } yield {} }
     
@@ -507,7 +507,7 @@ abstract class SIS3300(val vmeBus: VMEBus, val baseAddress: Int) extends Server 
     
     /** Time stamp predivider register (0x1C, read/write) */
     val TIMESTAMP_PREDIVIDER = new RWRegister(0x1C) {
-      def TSPREDEV = RWBitRange(0, 15)
+      def TSPREDIV = RWBitRange(0, 15)
     }
     
     /** Key address general reset (0x20, write-only) */
