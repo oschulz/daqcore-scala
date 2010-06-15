@@ -30,9 +30,10 @@ abstract class Plot extends Proxy {
   def self: JFCChart
   def options: PlotOptions
   
-  def draw(): Unit = {
+  def draw(): PlotFrame = {
     val frame = PlotFrame(this)
     frame.show()
+    frame
   }
 }
 
@@ -155,7 +156,9 @@ class ScatterPlot(points: Array[Array[Float]], val options: XYPlotOptions = XYPl
 
 class PlotPanel(plot: Plot) extends Panel {
   override lazy val peer = {
-    new org.jfree.chart.ChartPanel(plot.self)
+    val jfcPanel = new org.jfree.chart.ChartPanel(plot.self)
+    jfcPanel.setMouseWheelEnabled(true)
+    jfcPanel
   }
 }
 
