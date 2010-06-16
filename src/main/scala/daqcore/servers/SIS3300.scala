@@ -25,8 +25,7 @@ import daqcore.util._
 import daqcore.actors._
 import daqcore.profiles._
 import daqcore.monads._
-import daqcore.monads._
-import daqcore.monads._
+import daqcore.data.raw._
 
 
 abstract class SIS3300(val vmeBus: VMEBus, val baseAddress: Int) extends Server {
@@ -72,6 +71,9 @@ abstract class SIS3300(val vmeBus: VMEBus, val baseAddress: Int) extends Server 
   
   
   def channels = (1 to 8)
+
+  protected var nextEventNoVar = 1
+  def nextEventNo = nextEventNoVar
 
   protected var currentBankVar = 1
   def currentBank = currentBankVar
@@ -240,6 +242,9 @@ abstract class SIS3300(val vmeBus: VMEBus, val baseAddress: Int) extends Server 
       _ <- KEY_START_AUTO_BANK_SWITCH set()
       _ <- sync()
     } yield {} }
+    
+    nextEventNoVar = 1
+    currentBankVar = 1
   }
 
   def stopCapture(): Unit = {
@@ -317,22 +322,30 @@ abstract class SIS3300(val vmeBus: VMEBus, val baseAddress: Int) extends Server 
 
     val raw = bankRaw.grouped(nSamples).toArray.toSeq
 
-    for (i <- 0 to nEvents - 1) yield {
-      val timestamp = TimestampDirEntry.TIMESTAMP(tsDir(i))
+    val events = for (i <- 0 to nEvents - 1) yield {
+      val time = TimestampDirEntry.TIMESTAMP(tsDir(i)) * settings.daq.tsBase
       val end = TriggerEventDirEntry.EVEND(evDir(i)) - i * nSamples
       val wrapped = TriggerEventDirEntry.WRAPPED(evDir(i))
-      val trigged = TriggerEventDirEntry.TRIGGED(evDir(i))
+      val trigInfo = TriggerEventDirEntry.TRIGGED(evDir(i))
+      val trig = for { ch <- channels; if Bit(8-ch)(trigInfo) == 1 } yield ch
 
       val fixedRaw =
         if (wrapped == 1) { val(a,b) = raw(i).splitAt(end); b++a }
         else raw(i) take end
 
-      val samples = Map(
-        1 -> ( fixedRaw map {w => BankMemoryEntry.SAMODD(w)} ),
-        2 -> ( fixedRaw map {w => BankMemoryEntry.SAMEVEN(w)} )
+      val trigPos = fixedRaw.size - settings.daq.stopDelay / settings.daq.nAverage
+
+      val transients = Map(
+        1 -> Transient(trigPos, fixedRaw map {w => BankMemoryEntry.SAMODD(w)}),
+        2 -> Transient(trigPos, fixedRaw map {w => BankMemoryEntry.SAMEVEN(w)} )
       )
-      Event(timestamp, wrapped, trigged, samples)
+      
+      
+      Event(nextEventNoVar + i, time, trig, transients)
     }
+    nextEventNoVar += events.size
+
+    events
   }
 
 
@@ -826,14 +839,6 @@ object SIS3300 extends Logging {
   case class MNPTriggerMode (m: Int = 0x8, n: Int = 0x8, p: Int = 0x8) extends TriggerMode
   case class FIRTriggerMode (nGap: Int = 0x20, nPeak: Int = 0x20, p: Int = 0x8, test: Int = 0) extends TriggerMode
 
-
-  case class Event(
-    timestamp: Int,
-    wrapped: Int,
-    trigged: Int,
-    samples: Map[Int, Seq[Int]]
-  )
-  
 
   import math.{max,min,abs,log}
 
