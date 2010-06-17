@@ -60,14 +60,14 @@ class SCPIParserSpec extends WordSpec with MustMatchers {
     "parse requests correctly" in {
       parser.parseRequest(Request(IDN!).charSeq)
       parser.parseRequest(Request(IDN?).charSeq)
-      val expected = ByteCharSeq("*IDN?;SET:VOLT2:DC 5,5.5,#15Hello")
+      val expected = ByteCharSeq("*IDN?;SET:VOLT2:DC 5,5.5,#15Hello;:MEAS:VOLT?")
 
-      val req = Request(IDN?, SET~VOLTage(2)~DC! (5, 5.5, BlockData(ByteCharSeq("Hello").contents)))
+      val req = Request(IDN?, SET~VOLTage(2)~DC! (5, 5.5, BlockData(ByteCharSeq("Hello").contents)), ~MEASure~VOLTage?)
       val preq = parser.parseRequest(req.charSeq)
       assert( req.charSeq === preq.charSeq )
       assert( req.charSeq === expected )
       
-      val req2 = ByteCharSeq("  *IDN? \t;  SET:VOLT2:DC 5 , 5.5 , #15Hello  ")
+      val req2 = ByteCharSeq("  *IDN? \t;  SET:VOLT2:DC 5 , 5.5 , #15Hello ; :MEAS:VOLT? ")
       val preq2 = parser.parseRequest(req2)
       assert( preq2.charSeq === expected )
       assert( preq === preq2 )

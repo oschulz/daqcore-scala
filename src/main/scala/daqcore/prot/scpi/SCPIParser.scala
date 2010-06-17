@@ -145,7 +145,7 @@ class SCPIParser extends ByteCharSeqParsers {
   def icHeader = icHeaderRel | icHeaderAbs
   
   def icHeaderRel: Parser[ICHeaderRel] =
-    repsep(icHeaderPart, ":") ^^ { parts => ICHeaderRel(parts : _*) }
+    rep1sep(icHeaderPart, ":") ^^ { parts => ICHeaderRel(parts : _*) }
   
   def icHeaderAbs: Parser[ICHeaderAbs] =
     ":"~>icHeaderRel ^^ { rel => ICHeaderAbs(rel.parts : _*) }
