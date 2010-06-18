@@ -19,6 +19,7 @@ package daqcore
 
 
 package object actors {
+
   def profileOf[T <: Profile : ClassManifest] =
     ProfileInfo.apply[T]
 
@@ -62,4 +63,20 @@ package object actors {
 
   def tfuture[T](resp: Responder[T]): scala.actors.Future[T] =
     scala.actors.contrib.daqcore.TFutures.tfuture(resp)
+
+
+  def server(initBody: => Unit)(srvFkt: PartialFunction[Any, Unit]) = {
+    start( new Server {
+      override protected def init() = { super.init; initBody }
+      protected def serve() = srvFkt
+    } )
+  }
+
+  def linkedServer(initBody: => Unit)(srvFkt: PartialFunction[Any, Unit]) = {
+    startLinked( new Server {
+      override protected def init() = { super.init; initBody }
+      protected def serve() = srvFkt
+    } )
+  }
+
 }
