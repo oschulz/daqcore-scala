@@ -18,41 +18,62 @@
 package daqcore.servers
 
 import scala.actors._, scala.actors.Actor._
+
 import daqcore.actors._
+import daqcore.util._
 import daqcore.profiles._
 
 
 class EventServer extends Server with EventSource {
-  @volatile protected var listeners = Map.empty[AbstractActor, PartialFunction[Any, Any]]
+  case class ListenSpec(select: PartialFunction[Any, Any], once: Boolean)
+
+  @volatile protected var listeners = Map.empty[AbstractActor, ListenSpec]
   
-  override def init() = {
+  protected def nListeners: Int = listeners.size
+  protected def hasListeners: Boolean = ! listeners.isEmpty
+  
+  protected def doEmit(event: Any): Unit = {
+      trace("Emitting event %s".format(loggable(event)))
+      for {
+        (listener, ListenSpec(select, once)) <- listeners
+        if select isDefinedAt event
+      } {
+        listener ! select(event)
+        if (once) doUnlisten(listener)
+      }
+  }
+  
+  protected def doListen(listener: AbstractActor, select: PartialFunction[Any, Any], once: Boolean): Unit = {
+    debug("Adding %s as as listener %s, with select = %s".format(listener, nListeners+1, select) + (if (once) ", listen once" else ""))
+    Actor.link(listener)
+    listeners = listeners + (listener -> ListenSpec(select, once))
+  }
+  
+  protected def doUnlisten(listener: AbstractActor): Unit = {
+    debug("Removing listener %s".format(listener))
+    Actor.unlink(listener)
+    listeners = listeners - listener
+  }
+  
+  protected def onListenerExit(listener: AbstractActor): Unit = {
+    debug("%s exited, removing it from listeners".format(listener))
+    listeners = listeners - listener
+  }
+  
+  override protected def init() = {
     super.init()
     trapExit = true
   }
 
-  def serve = {
-    case EventSource.Emit(event) => {
-      trace("Emitting event %s".format(event))
-      for {
-        (listener, select) <- listeners
-        if select isDefinedAt event
-      } listener ! select(event)
-    }
-    case EventSource.Listen(listener, select) => {
-      debug("Adding %s to listeners, with select = %s".format(listener, select))
-      Actor.link(listener)
-      listeners = listeners + (listener -> select)
-    }
-    case EventSource.Unlisten(listener) => {
-      debug("Removing %s from listeners".format(listener))
-      Actor.unlink(listener)
-      listeners = listeners - listener
-    }
+  protected def serve = {
+    case EventSource.Emit(event) =>
+      doEmit(event)
+    case EventSource.Listen(listener, select, once) =>
+      doListen(listener, select, once)
+    case EventSource.Unlisten(listener) =>
+      doUnlisten(listener)
     case Exit(from, reason) => {
-      if (listeners contains from) {
-        debug("%s exited, removing it from listeners".format(from))
-        listeners = listeners - from
-      }
+      if (listeners contains from) onListenerExit(from)
       else exit(reason)
     }
   }

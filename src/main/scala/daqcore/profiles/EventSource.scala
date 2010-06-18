@@ -26,13 +26,22 @@ import daqcore.monads._
 
 trait EventSource extends Profile {
   def listen(select: PartialFunction[Any, Any] = EventSource.Identity): Unit =
-    srv ! EventSource.Listen(Actor.self, select)
+    srv ! EventSource.Listen(Actor.self, select, false)
 
   def listen(listener: AbstractActor): Unit =
-    srv ! EventSource.Listen(listener, EventSource.Identity)
+    srv ! EventSource.Listen(listener, EventSource.Identity, false)
 
   def listen(listener: AbstractActor, select: PartialFunction[Any, Any]): Unit =
-    srv ! EventSource.Listen(listener, select)
+    srv ! EventSource.Listen(listener, select, false)
+
+  def listenOnce(select: PartialFunction[Any, Any] = EventSource.Identity): Unit =
+    srv ! EventSource.Listen(Actor.self, select, true)
+
+  def listenOnce(listener: AbstractActor): Unit =
+    srv ! EventSource.Listen(listener, EventSource.Identity, true)
+
+  def listenOnce(listener: AbstractActor, select: PartialFunction[Any, Any]): Unit =
+    srv ! EventSource.Listen(listener, select, true)
 
   def unlisten(): Unit =
     srv ! EventSource.Unlisten(Actor.self)
@@ -48,7 +57,7 @@ trait EventSource extends Profile {
 object EventSource {
   val Identity: PartialFunction[Any, Any] = { case a => a }
 
-  case class Listen(listener: AbstractActor, select: PartialFunction[Any, Any])
+  case class Listen(listener: AbstractActor, select: PartialFunction[Any, Any], once: Boolean = false)
   case class Unlisten(listener: AbstractActor)
   case class Emit(event: Any)
 }
