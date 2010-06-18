@@ -83,4 +83,10 @@ def ceilLog2(x: Int) = 8 * sizeOf[Int] - java.lang.Integer.numberOfLeadingZeros(
 
 def currentTime: Double = java.lang.System.currentTimeMillis * 1e-3
 
+def loggable(a: Any) = {
+  val s = a.toString
+  val shortened = (if (s.size > 40) s.take(40) + " ..." else s)
+  shortened collect { case '\n' | '\r' => ' '; case c => c }
+}
+
 }
