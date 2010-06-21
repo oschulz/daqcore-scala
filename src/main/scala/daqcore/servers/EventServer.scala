@@ -24,40 +24,31 @@ import daqcore.util._
 import daqcore.profiles._
 
 
-class EventServer extends Server with EventSource {
-  case class ListenSpec(select: PartialFunction[Any, Any], once: Boolean)
-
-  @volatile protected var listeners = Map.empty[AbstractActor, ListenSpec]
+trait EventServer extends Server with EventSource {
+  @volatile protected var handlers = Set.empty[EventHandler]
   
-  protected def nListeners: Int = listeners.size
-  protected def hasListeners: Boolean = ! listeners.isEmpty
+  protected def nHandlers: Int = handlers.size
+  protected def hasHandlers: Boolean = ! handlers.isEmpty
   
   protected def doEmit(event: Any): Unit = {
       trace("Emitting event %s".format(loggable(event)))
-      for {
-        (listener, ListenSpec(select, once)) <- listeners
-        if select isDefinedAt event
-      } {
-        listener ! select(event)
-        if (once) doUnlisten(listener)
+      for { handler <- handlers } {
+        try if (handler.handle isDefinedAt event) {
+          val again = handler.handle(event)
+          if (!again) doRemoveHandler(handler)
+        }
+        catch { case _ => doRemoveHandler(handler) }
       }
   }
   
-  protected def doListen(listener: AbstractActor, select: PartialFunction[Any, Any], once: Boolean): Unit = {
-    debug("Adding %s as as listener %s, with select = %s".format(listener, nListeners+1, select) + (if (once) ", listen once" else ""))
-    Actor.link(listener)
-    listeners = listeners + (listener -> ListenSpec(select, once))
+  protected def doAddHandler(handler: EventHandler): Unit = {
+    trace("Adding %s as as handler %s".format(handler, nHandlers+1))
+    handlers = handlers + handler
   }
   
-  protected def doUnlisten(listener: AbstractActor): Unit = {
-    debug("Removing listener %s".format(listener))
-    Actor.unlink(listener)
-    listeners = listeners - listener
-  }
-  
-  protected def onListenerExit(listener: AbstractActor): Unit = {
-    debug("%s exited, removing it from listeners".format(listener))
-    listeners = listeners - listener
+  protected def doRemoveHandler(handler: EventHandler): Unit = {
+    trace("Removing handler %s".format(handler))
+    handlers = handlers - handler
   }
   
   override protected def init() = {
@@ -68,13 +59,9 @@ class EventServer extends Server with EventSource {
   protected def serve = {
     case EventSource.Emit(event) =>
       doEmit(event)
-    case EventSource.Listen(listener, select, once) =>
-      doListen(listener, select, once)
-    case EventSource.Unlisten(listener) =>
-      doUnlisten(listener)
-    case Exit(from, reason) => {
-      if (listeners contains from) onListenerExit(from)
-      else exit(reason)
-    }
+    case EventSource.AddHandler(handler) =>
+      doAddHandler(handler)
+    case EventSource.RemoveHandler(handler) =>
+      doRemoveHandler(handler)
   }
 }

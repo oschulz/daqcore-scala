@@ -24,30 +24,25 @@ import daqcore.actors._
 import daqcore.monads._
 
 
+trait EventHandler {
+  def handle: PartialFunction[Any, Boolean]
+}
+
+
 trait EventSource extends Profile {
-  def listen(select: PartialFunction[Any, Any] = EventSource.Identity): Unit =
-    srv ! EventSource.Listen(Actor.self, select, false)
+  def addHandler(handler: EventHandler): EventHandler = {
+    srv ! EventSource.AddHandler(handler)
+    handler
+  }
 
-  def listen(listener: AbstractActor): Unit =
-    srv ! EventSource.Listen(listener, EventSource.Identity, false)
+  def addHandlerFunc(f: PartialFunction[Any, Boolean]): EventHandler =
+    addHandler(new EventHandler { def handle = f })
 
-  def listen(listener: AbstractActor, select: PartialFunction[Any, Any]): Unit =
-    srv ! EventSource.Listen(listener, select, false)
-
-  def listenOnce(select: PartialFunction[Any, Any] = EventSource.Identity): Unit =
-    srv ! EventSource.Listen(Actor.self, select, true)
-
-  def listenOnce(listener: AbstractActor): Unit =
-    srv ! EventSource.Listen(listener, EventSource.Identity, true)
-
-  def listenOnce(listener: AbstractActor, select: PartialFunction[Any, Any]): Unit =
-    srv ! EventSource.Listen(listener, select, true)
-
-  def unlisten(): Unit =
-    srv ! EventSource.Unlisten(Actor.self)
-
-  def unlisten(listener: AbstractActor): Unit =
-    srv ! EventSource.Unlisten(listener)
+  def addHandlerActor(a: AbstractActor, repeat: Boolean = true): EventHandler =
+    addHandler(new EventHandler { def handle = { case ev => a ! ev; repeat } })
+  
+  def removeHandler(handler: EventHandler): Unit =
+    srv ! EventSource.RemoveHandler(handler)
   
   def emit(event: Any): Unit =
     srv ! EventSource.Emit(event)
@@ -57,7 +52,7 @@ trait EventSource extends Profile {
 object EventSource {
   val Identity: PartialFunction[Any, Any] = { case a => a }
 
-  case class Listen(listener: AbstractActor, select: PartialFunction[Any, Any], once: Boolean = false)
-  case class Unlisten(listener: AbstractActor)
+  case class AddHandler(handler: EventHandler)
+  case class RemoveHandler(handler: EventHandler)
   case class Emit(event: Any)
 }
