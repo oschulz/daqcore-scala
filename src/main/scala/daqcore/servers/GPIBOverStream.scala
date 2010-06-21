@@ -48,7 +48,8 @@ class GPIBOverStream(val stream: StreamIO) extends Server with MsgIO {
           inBuf = result.next.source.asInstanceOf[ByteCharSeq].drop(result.next.offset)
         } else {
           // trace("Incomplete message, reading more data")
-          for (bytes <- stream.readF()) inBuf = inBuf ++ bytes
+          val bytes = stream.read()
+          inBuf = inBuf ++ bytes
         }
       }
     }

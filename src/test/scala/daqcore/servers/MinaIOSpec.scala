@@ -35,40 +35,29 @@ class MinaIOSpec extends WordSpec with MustMatchers with Logging {
 
 
       val acc = InetAcceptor (8002) { (conn: StreamIO) =>
-        import scala.actors.Futures
-        import scala.actors.Actor.loop
-        loop {
-          for (
-            bytes <- conn.readF();
-            _ <- Futures.alarm(200)
-          ) {
+        start( new Server {
+          override def init = { conn.addHandlerActor(srv) }
+          def serve = { case StreamIO.Received(bytes) =>
+            Thread.sleep(200)
             val msg = bytes.toString.trim
             debug(msg)
             if (msg == quit.toString.trim) conn.close()
             else conn.write(pong)
           }
-        }
+        } )
       }
       
-      Thread.sleep(100)
+      Thread.sleep(2000)
 
-      actwait {
-        val conn = InetConnection("localhost", 8002)
-        
-        def pings(i:Int): Unit = {
-          if (i > 0) {
-            debug("pings(%s)".format(i))
-            conn write ping
-            conn.readF().respond { bytes =>
-              debug(bytes.toString.trim)
-              pings(i - 1)
-            }
-          }
-          else conn write quit
-        }
-        
-        pings(10)
+      val conn = InetConnection("localhost", 8002)
+      
+      for (i <- 1 to 10) {
+        debug("ping %s".format(i))
+        conn write ping
+        val bytes = conn.read()
+        debug(bytes.toString.trim)
       }
+      conn write quit
     }
   }
 }

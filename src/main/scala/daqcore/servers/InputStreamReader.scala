@@ -57,23 +57,6 @@ class InputStreamReader(input: InputStream) extends EventServer with StreamReade
     }
   }
   
-  protected def doStreamIORead(timeout: Long): Unit = {
-      val resp = sender
-      val reader = this
-      new Actor {
-        def act = {
-          val handler = reader.addHandlerActor(self, false)
-          if (timeout >= 0) reactWithin(timeout) {
-            case bytes: ByteCharSeq => resp ! bytes
-            case TIMEOUT => {
-              reader.removeHandler(handler)
-              resp ! Timeout
-            }
-          } else react { case bytes: ByteCharSeq => resp ! bytes }
-        }
-      } start
-  }
-
   protected def doClose(): Unit = {
       input.close()
       exit('closed)
@@ -85,7 +68,6 @@ class InputStreamReader(input: InputStream) extends EventServer with StreamReade
 
   override protected def serve = super.serve orElse {
     case ReadNext => doReadNext()
-    case StreamIO.Read(timeout) => doStreamIORead(timeout)
     case Closeable.Close => doClose()
   }
 }

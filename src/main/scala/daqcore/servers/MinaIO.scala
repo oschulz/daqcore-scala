@@ -34,49 +34,34 @@ import daqcore.profiles._
 
 
 trait MinaIO {
-  class MinaConnection(val session: IoSession) extends Server with InetConnection {
-    def defaultTimeout: Long = 10000
-    
-    protected[MinaIO] object readQueue extends DaemonActor with Logging {
-      import scala.actors.Actor._
-      def act() = loop { react {
-        case StreamIO.Read(timeout) => {
-          val replyTo = sender
-          reactWithin (if (timeout < 0) defaultTimeout else timeout) {
-            case InputData(bytes) => replyTo ! bytes
-            case TIMEOUT => replyTo ! Timeout
-          }
-        }
-        case Closed => {
-          trace("Closed")
-          exit('closed)
-        }
-      } }
-    }
-
-    protected object writeQueue extends DaemonActor with Logging  {
-      import scala.actors.Actor._
-      def act() = loop { react {
-        case StreamIO.Write(data) => {
-          val buffer = IoBuffer.wrap(data.toArray)
-          session.write(buffer)
-        }
-        case StreamIO.Flush => // Mina flushes automatically
-        case _ => throw new RuntimeException("unknown message")
-      } }
+  class MinaConnection(val session: IoSession) extends Server with InetConnection with EventServer {
+    val queue = collection.mutable.Queue[ByteCharSeq]()
+  
+    override protected def doAddHandler(handler: EventHandler): Unit = {
+      super.doAddHandler(handler)
+      while((!queue.isEmpty) && hasHandlers)
+        doEmit(StreamIO.Received(queue.dequeue()))
     }
     
-    override def init() = {
-      link(readQueue); readQueue.startOrRestart()
-      link(writeQueue); writeQueue.startOrRestart()
-    }
-    
-    def serve = {
-      case r: StreamIO.Read => readQueue.forward(r)
-      case w: StreamIO.Write => writeQueue.forward(w)
-      case f: StreamIO.Flush => writeQueue.forward(f)
+    override def serve = super.serve orElse {
+      case StreamIO.Write(data) => {
+        session.write(IoBuffer.wrap(data.toArray))
+      }
+      case StreamIO.Flush => {
+        // Mina flushes automatically
+      }
       case Closeable.Close => {
+        trace("Closed")
         session.close(true)
+        exit('closed)
+      }
+      
+      case InputData(bytes) => {
+        if (hasHandlers) doEmit(StreamIO.Received(bytes))
+        else queue.enqueue(bytes)
+      }
+      case Closed => {
+        trace("Closed")
         exit('closed)
       }
     }
@@ -96,7 +81,7 @@ trait MinaIO {
       trace("sessionClosed(%s)".format(session))
       val server = getServer(session)
       sessions -= session
-      server.readQueue ! Closed
+      server ! Closed
     }
 
     // def override sessionIdle(session: IoSession, status: IdleStatus) = {}
@@ -107,7 +92,7 @@ trait MinaIO {
       val buffer = message.asInstanceOf[IoBuffer]
       // while (buf.hasRemaining()) { ... buf.get ... }
       assert(buffer.hasArray)
-      server.readQueue ! InputData(ByteCharSeq(buffer.array.take(buffer.limit)))
+      server ! InputData(ByteCharSeq(buffer.array.take(buffer.limit)))
     }
   }
 
@@ -221,10 +206,6 @@ class MinaAcceptor(port: Int, body: StreamIO => Unit) extends Server with InetAc
 
   def serve = {
     case Closeable.Close => exit()
-    case NewConnection(connection) => {
-      class ConnProcessor extends Actor { def act() = body(connection) }
-      val connProc = new ConnProcessor
-      connProc.start
-    }
+    case NewConnection(connection) => body(connection)
   }
 }

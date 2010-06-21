@@ -22,34 +22,22 @@ import scala.util.continuations._
 
 import daqcore.util._
 import daqcore.actors._
+import daqcore.monads._
 
 
-trait StreamReader extends Profile with Closeable {
-  def read(): Seq[Byte] = readF()()
+trait StreamReader extends Profile with EventSource with Closeable {
+  def read(): Seq[Byte] = readD(None)()
   
-  def read(timeout: Long): Seq[Byte] =
-    readF(timeout)() match { case Some(bytes) => bytes; case None => Seq.empty[Byte] }
+  def read(timeout: Long): Seq[Byte] = {
+    try { readD(Some(timeout))() }
+    catch { case DelayedTimeout => Seq.empty[Byte] }
+  }
 
-  def readF(): Future[ByteCharSeq] =
-    srv.!!& (StreamIO.Read(Int.MaxValue)) {
-      case x: ByteCharSeq => x
-    }
-
-  def readF(timeout: Long): Future[Option[ByteCharSeq]] =
-    srv.!!& (StreamIO.Read(timeout)) {
-      case x: ByteCharSeq => Some(x)
-      case Timeout => None
-    }
-  
-  def readB(): ByteCharSeq = readF()()
-
-  def readB(timeout: Long): Option[ByteCharSeq] = readF(timeout)()
-
-  def readC(): ByteCharSeq @cps[Unit] =
-    shift { body: (ByteCharSeq => Unit) => readF().respond(body) }
-
-  def readC(timeout: Long): Option[ByteCharSeq] @cps[Unit] =
-    shift { body: (Option[ByteCharSeq] => Unit) => readF(timeout).respond(body) }
+  def readD(timeout: Option[Long]): DelayedVal[Seq[Byte]] = {
+    val result = new DelayedResult[Seq[Byte]](timeout)
+    addHandlerFunc {case StreamIO.Received(bytes) => result.set(Ok(bytes)); false}
+    result
+  }
 }
 
 
@@ -64,6 +52,8 @@ trait StreamWriter extends Profile with Closeable {
 trait StreamIO extends StreamReader with StreamWriter
 
 object StreamIO {
+  case class Received(bytes: Seq[Byte])
+
   case class Read(timeout: Long = -1)
 
   case class Write(data: Seq[Byte])
