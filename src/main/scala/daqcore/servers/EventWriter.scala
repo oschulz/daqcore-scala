@@ -28,6 +28,7 @@ import daqcore.util._
 import daqcore.util.fileops._
 import daqcore.actors._
 import daqcore.profiles._
+import daqcore.monads._
 import daqcore.data.raw._
 
 
@@ -86,17 +87,23 @@ class EventWriter(output: OutputStream) extends Server with Closeable {
       write(~RUN~STOP!(NRf(duration)))
       flush()
     }
+    case op @ Sync() => {
+      debug(op)
+      reply(Ok(true))
+    }
     case Closeable.Close => {
       output.close()
       exit('closed)
     }
   }
 
-
+  case class Sync()
   case class RunStart(uuid: UUID = UUID.randomUUID(), time: Double = currentTime)
   case class RunStop(duration: Double)
   
   def write(event: Event): Unit = srv ! event
+  
+  def sync(): Unit = srv.!!^[MaybeFail[Boolean]](Sync()).apply().get
   
   def runStart(uuid: UUID = UUID.randomUUID(), time: Double = currentTime): Unit =
     srv ! RunStart(uuid, time)
