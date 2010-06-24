@@ -90,7 +90,7 @@ class VMESCPIClient(dev: SCPIClientLink) extends Server with VMEBus {
             case Response(Result(NR1(esr))) =>
               val esrErrorMask = 0x3c;
               val result =
-                if ((esr & esrErrorMask) == 0) Ok(1)
+                if ((esr & esrErrorMask) == 0) Ok(true)
                 else Fail(new RuntimeException("SCPI ESR returned " + esr))
               repl ! result
           }
