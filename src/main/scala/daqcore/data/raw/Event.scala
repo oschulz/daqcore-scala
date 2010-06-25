@@ -23,9 +23,13 @@ case class Transient (
   samples: Seq[Int]
 )
 
+
 case class Event (
   idx: Int,
   time: Double,
   trig: Seq[Int],
   trans: Map[Int, Transient]
 )
+
+
+case class Events(events: Event*)
