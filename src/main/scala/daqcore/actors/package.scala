@@ -51,6 +51,11 @@ package object actors {
   
   def kill(a: scala.actors.AbstractActor, reason: AnyRef) : Unit =
     start(new KillActor(a, reason))
+  
+  def sendAfter(time: Long, dest: scala.actors.AbstractActor, msg: Any) = {
+    import scala.actors._, scala.actors.Actor._
+    actor { reactWithin(time) { case TIMEOUT => dest ! msg } }
+  }
 
   implicit def abstractActorOps(actor: scala.actors.AbstractActor) =
     new AbstractActorOps(actor)
