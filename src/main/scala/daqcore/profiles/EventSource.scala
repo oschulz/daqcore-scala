@@ -46,6 +46,13 @@ trait EventSource extends Profile {
   
   def emit(event: Any): Unit =
     srv ! EventSource.Emit(event)
+
+  def getEvent[T: ClassManifest](timeout: Option[Long] = None): DelayedVal[T] = {
+    val mf = classManifest[T]
+    val result = new DelayedResult[T](timeout)
+    addHandlerFunc { case a if (classMF(a) <:< mf) => result.set(Ok(a.asInstanceOf[T])); false }
+    result
+  }
 }
 
 
