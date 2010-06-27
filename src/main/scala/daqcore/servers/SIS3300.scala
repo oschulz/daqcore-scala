@@ -25,7 +25,7 @@ import daqcore.util._
 import daqcore.actors._
 import daqcore.profiles._
 import daqcore.monads._
-import daqcore.data.raw._
+import daqcore.data._, daqcore.data.raw._
 
 
 abstract class SIS3300(val vmeBus: VMEBus, val baseAddress: Int) extends EventServer with Closeable {
@@ -39,7 +39,7 @@ abstract class SIS3300(val vmeBus: VMEBus, val baseAddress: Int) extends EventSe
 
 
   override def serve = super.serve orElse {
-    case TimedAcquire => if (daqState) {acquireNext; onAcquireNext}
+    case TimedAcquire => if (daqState.running) {acquireNext; onAcquireNext}
     case Closeable.Close => {
       debug("Closing")
       vmeBus.close()
@@ -47,8 +47,8 @@ abstract class SIS3300(val vmeBus: VMEBus, val baseAddress: Int) extends EventSe
     }
   }
 
-  
-  var daqState: Boolean = false
+  case class DAQState (running: Boolean = false, startTime: Double = -1)
+  var daqState = DAQState()
 
   /*protected*/ def acquireNext = sendAfter(100, srv, TimedAcquire)
   
@@ -274,14 +274,18 @@ abstract class SIS3300(val vmeBus: VMEBus, val baseAddress: Int) extends EventSe
     nextEventNoVar = 1
     currentBankVar = 1
     
-    daqState = true
+    daqState = daqState.copy(running = true, startTime = currentTime)
+    doEmit(RunStart().copy(time = daqState.startTime))
     acquireNext
   }
 
   def stopCapture(): Unit = {
+    debug("Stopping acquisition")
+
     import memory._
     
-    daqState = false
+    doEmit(RunStop(currentTime - daqState.startTime))
+    daqState = daqState.copy(running = false, startTime = -1)
     
     run { for {
       _ <- KEY_STOP_AUTO_BANK_SWITCH set()
@@ -291,8 +295,6 @@ abstract class SIS3300(val vmeBus: VMEBus, val baseAddress: Int) extends EventSe
       _ <- ACQUISITION_CONTROL.AUTOBANK_EN set 0
       _ <- sync()
     } yield {} }
-
-    debug("Stopping acquisition")
   }
 
   def getBankBusy(): Boolean = {
