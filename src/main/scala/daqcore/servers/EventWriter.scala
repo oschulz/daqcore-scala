@@ -29,7 +29,7 @@ import daqcore.util.fileops._
 import daqcore.actors._
 import daqcore.profiles._
 import daqcore.monads._
-import daqcore.data.raw._
+import daqcore.data._
 
 
 class EventWriter(output: OutputStream) extends Server with Closeable {
@@ -54,7 +54,7 @@ class EventWriter(output: OutputStream) extends Server with Closeable {
   protected def flush(): Unit = output.flush()
 
   
-  protected def writeImpl(event: Event): Unit = {
+  protected def writeImpl(event: raw.Event): Unit = {
     import daqcore.prot.scpi.mnemonics._
     write( ~EVENt!( NR1(event.idx), NRf(event.time)) )
     write( ~EVEN~TRIGger!(event.trig map {t => NR1(1)}: _*) )
@@ -76,7 +76,7 @@ class EventWriter(output: OutputStream) extends Server with Closeable {
 
 
   def serve = {
-    case event: Event => writeImpl(event)
+    case event: raw.Event => writeImpl(event)
     case startInfo: RunStart => {
       import daqcore.prot.scpi.mnemonics._
       debug(startInfo)
@@ -104,11 +104,9 @@ class EventWriter(output: OutputStream) extends Server with Closeable {
   }
 
   case class Sync()
-  case class RunStart(uuid: UUID = UUID.randomUUID(), time: Double = currentTime)
-  case class RunStop(duration: Double)
   case class GetStartInfo()
   
-  def write(event: Event): Unit = srv ! event
+  def write(event: raw.Event): Unit = srv ! event
   
   def sync(): Unit = srv.!!^[MaybeFail[Boolean]](Sync()).apply().get
   
