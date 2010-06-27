@@ -32,7 +32,7 @@ import daqcore.monads._
 import daqcore.data._
 
 
-class EventWriter(output: OutputStream) extends Server with Closeable {
+class EventWriter(val source: EventSource, val target: OutputStream) extends Server with Closeable {
   import daqcore.prot.scpi._
 
   val CHANnel = Mnemonic("CHANnel")
@@ -41,29 +41,23 @@ class EventWriter(output: OutputStream) extends Server with Closeable {
   val NSAMples = Mnemonic("NSAMples")
   val SAMples = Mnemonic("SAMples")
 
+  val handler = EventHandler {
+    case ev: RunStart => srv ! ev; true
+    case ev: RunStop => srv ! ev; true
+    case ev: raw.Event => srv ! ev; true
+  }
+  
   protected var startState = RunStart()
   
   protected def write(msg: Message): Unit = {
-    output.write(msg.charSeq.toArray)
-    output.write(StreamMsgTerm.toArray)
+    target.write(msg.charSeq.toArray)
+    target.write(StreamMsgTerm.toArray)
   }
 
   protected def write(instr: Instruction): Unit =
     write(Request(instr))
 
-  protected def flush(): Unit = output.flush()
-
-  
-  protected def writeImpl(event: raw.Event): Unit = {
-    import daqcore.prot.scpi.mnemonics._
-    write( ~EVENt!( NR1(event.idx), NRf(event.time)) )
-    write( ~EVEN~TRIGger!(event.trig map {t => NR1(1)}: _*) )
-    write( ~EVENt~TRANSient~CHANnel!(event.trans map {tr => NR1(tr._1)} toSeq: _*) )
-    write( ~EVENt~TRANSient~TPOSition!(event.trans map {tr => NR1(tr._2.trigPos)} toSeq: _*) )
-    write( ~EVENt~TRANSient~NSAMples!(event.trans map {tr => NR1(tr._2.samples.size)} toSeq: _*) )
-    write( ~EVENt~TRANSient~SAMples!((for {(ch,tr) <- event.trans; s <-tr.samples} yield NR1(s)) toSeq: _*) )
-    write( ~EVENt~END! )
-  }
+  protected def flush(): Unit = target.flush()
 
   {
     import daqcore.prot.scpi.mnemonics._
@@ -71,17 +65,28 @@ class EventWriter(output: OutputStream) extends Server with Closeable {
   }
 
   override def init() = {
-    withCleanup{}{ flush() }
+    super.init()
+    withCleanup {source.addHandler(handler)} {source.removeHandler(handler)}
+    withCleanup{}{ flush(); target.close() }
   }
 
 
   def serve = {
-    case event: raw.Event => writeImpl(event)
-    case startInfo: RunStart => {
+    case event: raw.Event => {
       import daqcore.prot.scpi.mnemonics._
-      debug(startInfo)
-      startState = startInfo
-      write(~RUN~STARt!(SPD(startState.uuid.toString), NRf(startState.time)))
+      trace(loggable(event))
+      write( ~EVENt!( NR1(event.idx), NRf(event.time)) )
+      write( ~EVEN~TRIGger!(event.trig map {t => NR1(1)}: _*) )
+      write( ~EVENt~TRANSient~CHANnel!(event.trans map {tr => NR1(tr._1)} toSeq: _*) )
+      write( ~EVENt~TRANSient~TPOSition!(event.trans map {tr => NR1(tr._2.trigPos)} toSeq: _*) )
+      write( ~EVENt~TRANSient~NSAMples!(event.trans map {tr => NR1(tr._2.samples.size)} toSeq: _*) )
+      write( ~EVENt~TRANSient~SAMples!((for {(ch,tr) <- event.trans; s <-tr.samples} yield NR1(s)) toSeq: _*) )
+      write( ~EVENt~END! )
+    }
+    case op @ RunStart(uuid, time) => {
+      import daqcore.prot.scpi.mnemonics._
+      debug(op)
+      write(~RUN~STARt!(SPD(uuid.toString), NRf(time)))
     }
     case op @ RunStop(duration) => {
       import daqcore.prot.scpi.mnemonics._
@@ -89,6 +94,7 @@ class EventWriter(output: OutputStream) extends Server with Closeable {
       write(~RUN~STOP!(NRf(duration)))
       flush()
     }
+
     case op @ Sync() => {
       debug(op)
       reply(Ok(true))
@@ -98,7 +104,6 @@ class EventWriter(output: OutputStream) extends Server with Closeable {
       reply(startState)
     }
     case Closeable.Close => {
-      output.close()
       exit('closed)
     }
   }
@@ -109,20 +114,13 @@ class EventWriter(output: OutputStream) extends Server with Closeable {
   def write(event: raw.Event): Unit = srv ! event
   
   def sync(): Unit = srv.!!^[MaybeFail[Boolean]](Sync()).apply().get
-  
-  def runStart(uuid: UUID = UUID.randomUUID(), time: Double = currentTime): Unit =
-    srv ! RunStart(uuid, time)
-  
-  def currentRun: RunStart = srv.!?>(GetStartInfo) {case a:RunStart => a}
-
-  def runStop(duration: Double = currentTime - currentRun.time): Unit = srv ! RunStop(duration)
 }
 
 
 object EventWriter {
-  def apply(output: OutputStream): EventWriter =
-    start(new EventWriter(output))
+  def apply(source: EventSource, target: OutputStream): EventWriter =
+    start(new EventWriter(source, target))
     
-  def apply(file: File): EventWriter =
-    EventWriter(file.getOStream)
+  def apply(source: EventSource, file: File): EventWriter =
+    start(new EventWriter(source, file.getOStream))
 }
