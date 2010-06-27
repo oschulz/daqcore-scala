@@ -32,6 +32,7 @@ abstract class SIS3300(val vmeBus: VMEBus, val baseAddress: Int) extends EventSe
   import SIS3300._
 
   case object TimedAcquire
+
   
   override def init() = {
     super.init
@@ -39,13 +40,26 @@ abstract class SIS3300(val vmeBus: VMEBus, val baseAddress: Int) extends EventSe
 
 
   override def serve = super.serve orElse {
-    case TimedAcquire => if (daqState.running) {acquireNext; onAcquireNext}
+    case op @ TimedAcquire => if (daqState.running) {debug(""+op+": "+daqState);acquireNext; debug("sent acquireNext");onAcquireNext}
+    
+    case op @ StartCapture() => debug(op); doStartCapture
+    case op @ StopCapture() => debug(op); doStopCapture
+    
     case Closeable.Close => {
       debug("Closing")
+      doStopCapture()
       vmeBus.close()
       exit('closed)
     }
   }
+
+
+  case class StartCapture()
+  case class StopCapture()
+
+  def startCapture(): Unit = srv ! StartCapture()
+  def stopCapture(): Unit = srv ! StopCapture()
+
 
   case class DAQState (running: Boolean = false, startTime: Double = -1)
   var daqState = DAQState()
@@ -257,7 +271,7 @@ abstract class SIS3300(val vmeBus: VMEBus, val baseAddress: Int) extends EventSe
   }
   
   
-  def startCapture(): Unit = {
+  def doStartCapture(): Unit = {
     debug("Starting acquisition")
 
     import memory._
@@ -279,7 +293,8 @@ abstract class SIS3300(val vmeBus: VMEBus, val baseAddress: Int) extends EventSe
     acquireNext
   }
 
-  def stopCapture(): Unit = {
+
+  def doStopCapture(): Unit = {
     debug("Stopping acquisition")
 
     import memory._
@@ -296,6 +311,7 @@ abstract class SIS3300(val vmeBus: VMEBus, val baseAddress: Int) extends EventSe
       _ <- sync()
     } yield {} }
   }
+
 
   def getBankBusy(): Boolean = {
     import memory._
