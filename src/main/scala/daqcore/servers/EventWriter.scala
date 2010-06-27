@@ -41,7 +41,8 @@ class EventWriter(output: OutputStream) extends Server with Closeable {
   val NSAMples = Mnemonic("NSAMples")
   val SAMples = Mnemonic("SAMples")
 
-
+  protected var startState = RunStart()
+  
   protected def write(msg: Message): Unit = {
     output.write(msg.charSeq.toArray)
     output.write(StreamMsgTerm.toArray)
@@ -76,10 +77,11 @@ class EventWriter(output: OutputStream) extends Server with Closeable {
 
   def serve = {
     case event: Event => writeImpl(event)
-    case op @ RunStart(uuid, time) => {
+    case startInfo: RunStart => {
       import daqcore.prot.scpi.mnemonics._
-      debug(op)
-      write(~RUN~STARt!(SPD(uuid.toString), NRf(time)))
+      debug(startInfo)
+      startState = startInfo
+      write(~RUN~STARt!(SPD(startState.uuid.toString), NRf(startState.time)))
     }
     case op @ RunStop(duration) => {
       import daqcore.prot.scpi.mnemonics._
@@ -91,6 +93,10 @@ class EventWriter(output: OutputStream) extends Server with Closeable {
       debug(op)
       reply(Ok(true))
     }
+    case op @ GetStartInfo() => {
+      trace(op)
+      reply(startState)
+    }
     case Closeable.Close => {
       output.close()
       exit('closed)
@@ -100,6 +106,7 @@ class EventWriter(output: OutputStream) extends Server with Closeable {
   case class Sync()
   case class RunStart(uuid: UUID = UUID.randomUUID(), time: Double = currentTime)
   case class RunStop(duration: Double)
+  case class GetStartInfo()
   
   def write(event: Event): Unit = srv ! event
   
@@ -107,8 +114,10 @@ class EventWriter(output: OutputStream) extends Server with Closeable {
   
   def runStart(uuid: UUID = UUID.randomUUID(), time: Double = currentTime): Unit =
     srv ! RunStart(uuid, time)
+  
+  def currentRun: RunStart = srv.!?>(GetStartInfo) {case a:RunStart => a}
 
-  def runStop(duration: Double): Unit = srv ! RunStop(duration)
+  def runStop(duration: Double = currentTime - currentRun.time): Unit = srv ! RunStop(duration)
 }
 
 
