@@ -28,6 +28,11 @@ trait EventHandler {
   def handle: PartialFunction[Any, Boolean]
 }
 
+object EventHandler {
+  def apply(f: PartialFunction[Any, Boolean]): EventHandler =
+    new EventHandler { def handle = f }
+}
+
 
 trait EventSource extends Profile {
   def addHandler(handler: EventHandler): EventHandler = {
