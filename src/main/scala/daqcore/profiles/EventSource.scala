@@ -17,11 +17,7 @@
 
 package daqcore.profiles
 
-import scala.actors._
-
-import daqcore.util._
 import daqcore.actors._
-import daqcore.monads._
 
 
 trait EventHandler {
@@ -43,17 +39,14 @@ trait EventSource extends Profile {
   def addHandlerFunc(f: PartialFunction[Any, Boolean]): EventHandler =
     addHandler(new EventHandler { def handle = f })
 
-  def addHandlerActor(a: AbstractActor, repeat: Boolean = true): EventHandler =
-    addHandler(new EventHandler { def handle = { case ev => a ! ev; repeat } })
-  
   def removeHandler(handler: EventHandler): Unit =
     srv ! EventSource.RemoveHandler(handler)
   
   def emit(event: Any): Unit =
     srv ! EventSource.Emit(event)
 
-  def getEvent[T](f: PartialFunction[Any, T]): Future[T] =
-    srv.!!?(EventSource.GetEvent(f)).asInstanceOf[Future[T]]
+  def getEvent[T](f: PartialFunction[Any, T]): Ft[T] =
+    srv.!!?(EventSource.GetEvent(f)).asInstanceOf[Ft[T]]
 }
 
 

@@ -36,7 +36,7 @@ class MinaIOSpec extends WordSpec with MustMatchers with Logging {
 
       val acc = InetAcceptor (8002) { (conn: StreamIO) =>
         start( new Server {
-          override def init = { conn.addHandlerActor(srv) }
+          override def init = { conn addHandlerFunc {case a => srv ! a; true} }
           def serve = { case StreamIO.Received(bytes) =>
             Thread.sleep(200)
             val msg = bytes.toString.trim
