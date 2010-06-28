@@ -61,6 +61,9 @@ package object actors {
   implicit def actorOps(actor: scala.actors.Actor) =
     new ActorOps(actor)
 
+  implicit def futureOps[T](future: scala.actors.Future[T]) =
+    new FutureOps(future)
+
 
   def server(initBody: => Unit)(srvFkt: PartialFunction[Any, Unit]) = {
     start( new Server {
