@@ -45,11 +45,9 @@ trait Profile extends ServerAccess
 trait Server extends ServerAccess with DaemonActor with Profile {
   import Server._
 
-  type ReplyTarget = OutputChannel[Any]
-  
   def srv: AbstractActor = this
   
-  def replyTarget: ReplyTarget = sender
+  def replyTarget: MsgTarget = sender
   
   val profiles: Set[ProfileInfo] =
     ProfileInfo.profilesOf(this.getClass)

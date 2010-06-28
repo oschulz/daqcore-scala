@@ -27,7 +27,7 @@ import daqcore.profiles._
 trait EventServer extends Server with EventSource {
   @volatile protected var handlers = Set.empty[EventHandler]
   
-  protected class ReplyingEventHandler[T](f: PartialFunction[Any, T], replyTo: ReplyTarget) extends EventHandler {
+  protected class ReplyingEventHandler[T](f: PartialFunction[Any, T], replyTo: MsgTarget) extends EventHandler {
     def handle = { case msg if f.isDefinedAt(msg) => replyTo ! f(msg); false }
   }
   

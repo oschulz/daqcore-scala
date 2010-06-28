@@ -20,6 +20,8 @@ package daqcore
 
 package object actors {
 
+  type MsgTarget = { def !(msg: Any): Unit }
+
   def profileOf[T <: Profile : ClassManifest] =
     ProfileInfo.apply[T]
 
