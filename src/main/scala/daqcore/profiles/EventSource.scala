@@ -52,12 +52,8 @@ trait EventSource extends Profile {
   def emit(event: Any): Unit =
     srv ! EventSource.Emit(event)
 
-  def getEvent[T: ClassManifest](timeout: Option[Long] = None): DelayedVal[T] = {
-    val mf = classManifest[T]
-    val result = new DelayedResult[T](timeout)
-    addHandlerFunc { case a if (classMF(a) <:< mf) => result.set(Ok(a.asInstanceOf[T])); false }
-    result
-  }
+  def getEvent[T](f: PartialFunction[Any, T]): Future[T] =
+    srv.!!?(EventSource.GetEvent(f)).asInstanceOf[Future[T]]
 }
 
 
@@ -65,6 +61,7 @@ object EventSource {
   val Identity: PartialFunction[Any, Any] = { case a => a }
 
   case class AddHandler(handler: EventHandler)
+  case class GetEvent[T](f: PartialFunction[Any, T])
   case class RemoveHandler(handler: EventHandler)
   case class Emit(event: Any)
 }
