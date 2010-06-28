@@ -44,9 +44,9 @@ class InputStreamReader(input: InputStream) extends EventServer with StreamReade
     if (avail > 0) {
       val a = Array.ofDim[Byte](avail min maxChunkSize)
       val count = input.read(a)
-      val bytes = ByteCharSeq(if (count < avail) a.take(count) else a)
+      val bytes = if (count < avail) a.take(count) else a
       trace("Emitting %s bytes".format(bytes.size))
-      doEmit(bytes)
+      doEmit(StreamIO.Received(bytes))
       trace("%s remaining handlers".format(nHandlers))
       if (hasHandlers) {
         trace("Triggering next read")
