@@ -23,24 +23,22 @@ package object actors {
   def profileOf[T <: Profile : ClassManifest] =
     ProfileInfo.apply[T]
 
-
   /** execute code in an actor, then wait for it to exit.
   Useful to execute code that relies on react magic (like Future.respond)
   in a standard thread (e.g. the main thread). */
   def actwait (body: => Unit) {
-    import scala.actors._, scala.actors.Actor._
-    
-    case object Finished
-    val trapE = self.trapExit
-    self.trapExit = true
-    val a = new Actor { def act = body }
-    link(a)
-    a.start
-    receive {
-      case Exit(a, 'normal) =>
-      case Exit(a, reason) => exit(reason)
+    val a = new scala.actors.Actor {
+      def act = react {
+        case e if (! e.isInstanceOf[scala.util.control.ControlThrowable]) =>
+          try { body; reply() }
+          catch { case e => reply(e) }
+      }
     }
-    self.trapExit = trapE
+    a.start
+    a.!?>() {
+      case e: Throwable => throw e
+      case _ =>
+    }
   }
 
   def start[A <: scala.actors.Actor](a: A) : A =
