@@ -63,12 +63,6 @@ package object actors {
   implicit def actorOps(actor: scala.actors.Actor) =
     new ActorOps(actor)
 
-  def tfuture[T](body: => T): scala.actors.Future[T] =
-    scala.actors.contrib.daqcore.TFutures.tfuture(body)
-
-  def tfuture[T](resp: Responder[T]): scala.actors.Future[T] =
-    scala.actors.contrib.daqcore.TFutures.tfuture(resp)
-
 
   def server(initBody: => Unit)(srvFkt: PartialFunction[Any, Unit]) = {
     start( new Server {
