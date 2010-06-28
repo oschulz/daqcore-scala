@@ -22,6 +22,8 @@ package object actors {
 
   type MsgTarget = { def !(msg: Any): Unit }
 
+  type Ft[T] = scala.actors.Future[T]
+  
   def profileOf[T <: Profile : ClassManifest] =
     ProfileInfo.apply[T]
 
