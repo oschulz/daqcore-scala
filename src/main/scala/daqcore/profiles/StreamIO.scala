@@ -26,18 +26,10 @@ import daqcore.monads._
 
 
 trait StreamReader extends Profile with EventSource with Closeable {
-  def read(): Seq[Byte] = readD(None)()
+  def read(): Seq[Byte] = readF().get
   
-  def read(timeout: Long): Seq[Byte] = {
-    try { readD(Some(timeout))() }
-    catch { case DelayedTimeout => Seq.empty[Byte] }
-  }
-
-  def readD(timeout: Option[Long]): DelayedVal[Seq[Byte]] = {
-    val result = new DelayedResult[Seq[Byte]](timeout)
-    addHandlerFunc {case StreamIO.Received(bytes) => result.set(Ok(bytes)); false}
-    result
-  }
+  def readF(): Future[Seq[Byte]] =
+    getEvent {case StreamIO.Received(bytes) => bytes}
 }
 
 
