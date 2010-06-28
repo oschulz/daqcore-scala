@@ -42,7 +42,7 @@ trait EventSource extends Profile {
   def removeHandler(handler: EventHandler): Unit =
     srv ! EventSource.RemoveHandler(handler)
   
-  def getEvent[T](f: PartialFunction[Any, T]): Ft[T] =
+  def getEventF[T](f: PartialFunction[Any, T]): Ft[T] =
     srv.!!?(EventSource.GetEvent(f)).asInstanceOf[Ft[T]]
 }
 

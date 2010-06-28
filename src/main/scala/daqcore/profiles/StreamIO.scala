@@ -29,7 +29,7 @@ trait StreamReader extends Profile with EventSource with Closeable {
   def read(): Seq[Byte] = readF().get
   
   def readF(): Future[Seq[Byte]] =
-    getEvent {case StreamIO.Received(bytes) => bytes}
+    getEventF {case StreamIO.Received(bytes) => bytes}
 }
 
 
