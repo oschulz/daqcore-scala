@@ -61,8 +61,6 @@ trait EventServer extends Server with EventSource {
   }
 
   protected def serve = {
-    case EventSource.Emit(event) =>
-      doEmit(event)
     case EventSource.AddHandler(handler) =>
       doAddHandler(handler)
     case EventSource.GetEvent(f) =>
@@ -70,4 +68,18 @@ trait EventServer extends Server with EventSource {
     case EventSource.RemoveHandler(handler) =>
       doRemoveHandler(handler)
   }
+}
+
+
+
+class EventSenderServer extends EventServer with EventSender {
+  override protected def serve = super.serve orElse {
+    case EventSender.Emit(event) =>
+      doEmit(event)
+  }
+}
+
+
+object EventSenderServer {
+  def apply(): EventSenderServer = start(new EventSenderServer())
 }
