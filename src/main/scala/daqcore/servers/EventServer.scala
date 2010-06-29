@@ -17,8 +17,6 @@
 
 package daqcore.servers
 
-import scala.actors._, scala.actors.Actor._
-
 import daqcore.actors._
 import daqcore.util._
 import daqcore.profiles._

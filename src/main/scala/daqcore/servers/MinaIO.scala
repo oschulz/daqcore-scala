@@ -17,7 +17,6 @@
 
 package daqcore.servers
 
-import scala.actors._
 import java.io.IOException
 import java.net.InetSocketAddress
 

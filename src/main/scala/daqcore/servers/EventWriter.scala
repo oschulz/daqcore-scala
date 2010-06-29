@@ -19,7 +19,6 @@ package daqcore.servers
 
 import scala.collection.immutable.{IntMap, SortedMap}
 import scala.collection.MapLike
-import scala.actors._
 
 import java.io.{OutputStream, File}
 import java.util.UUID

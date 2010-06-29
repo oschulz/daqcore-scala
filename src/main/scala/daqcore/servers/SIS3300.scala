@@ -19,7 +19,6 @@ package daqcore.servers
 
 import scala.collection.immutable.{IntMap, SortedMap}
 import scala.collection.MapLike
-import scala.actors._
 
 import daqcore.util._
 import daqcore.actors._
