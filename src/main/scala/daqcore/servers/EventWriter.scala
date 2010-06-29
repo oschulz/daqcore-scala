@@ -113,7 +113,7 @@ class EventWriter(val source: EventSource, val target: OutputStream) extends Ser
   
   def write(event: raw.Event): Unit = srv ! event
   
-  def sync(): Unit = srv.!!^[MaybeFail[Boolean]](Sync()).apply().get
+  def sync(): Unit = srv.!?>(Sync()) { case r: MaybeFail[_] => r() }
 }
 
 

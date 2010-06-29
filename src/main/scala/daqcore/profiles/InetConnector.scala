@@ -17,8 +17,6 @@
 
 package daqcore.profiles
 
-import scala.actors._
-
 import daqcore.util._
 import daqcore.actors._
 
@@ -26,17 +24,17 @@ import java.net.InetSocketAddress
 
 
 trait InetConnector extends Profile with Closeable {
-  def connectF(host: String, port: Int): Future[InetConnection] =
+  def connectF(host: String, port: Int): Ft[InetConnection] =
     connectF(new InetSocketAddress(host, port), -1)
 
-  def connectF(host: String, port: Int, timeout: Long): Future[InetConnection] =
+  def connectF(host: String, port: Int, timeout: Long): Ft[InetConnection] =
     connectF(new InetSocketAddress(host, port), timeout)
   
-  def connectF(to: InetSocketAddress): Future[InetConnection] =
+  def connectF(to: InetSocketAddress): Ft[InetConnection] =
     connectF(to, -1)
 
-  def connectF(to: InetSocketAddress, timeout: Long): Future[InetConnection] =
-    srv.!!& (InetConnector.Connect(to, timeout))
+  def connectF(to: InetSocketAddress, timeout: Long): Ft[InetConnection] =
+    srv.!!?> (InetConnector.Connect(to, timeout))
       { case a: Server with InetConnection => a }
 }
 

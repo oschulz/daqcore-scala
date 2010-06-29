@@ -17,8 +17,6 @@
 
 package daqcore.profiles
 
-import scala.actors._
-
 import java.net.InetAddress
 
 import daqcore.util._
@@ -28,14 +26,14 @@ import daqcore.prot.scpi._
 
 
 trait SCPIClientLink extends Profile with Closeable {
-  def queryF(timeout: Long, instr: Instruction*): Future[Option[Response]] =
-    srv.!!& (SCPIClientLink.CmdQuery(timeout, instr: _*)) {
+  def queryF(timeout: Long, instr: Instruction*): Ft[Option[Response]] =
+    srv.!!?> (SCPIClientLink.CmdQuery(timeout, instr: _*)) {
       case x: Response => Some(x)
       case Timeout => None
     }
 
-  def queryF(instr: Instruction*): Future[Response] =
-    srv.!!& (SCPIClientLink.CmdQuery(Int.MaxValue, instr: _*)) {
+  def queryF(instr: Instruction*): Ft[Response] =
+    srv.!!?> (SCPIClientLink.CmdQuery(Int.MaxValue, instr: _*)) {
       case x: Response => x
     }
 

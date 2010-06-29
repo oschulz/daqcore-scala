@@ -17,8 +17,6 @@
 
 package daqcore.profiles
 
-import scala.actors._
-
 import daqcore.util._
 import daqcore.actors._
 
@@ -26,17 +24,17 @@ import java.net.InetAddress
 
 
 trait VXI11Connector extends Profile with Closeable {
-  def connectF(host: String, device: String): Future[VXI11ClientLink] =
+  def connectF(host: String, device: String): Ft[VXI11ClientLink] =
     connectF(InetAddress.getByName(host), device, -1)
 
-  def connectF(host: String, device: String, timeout: Long): Future[VXI11ClientLink] =
+  def connectF(host: String, device: String, timeout: Long): Ft[VXI11ClientLink] =
     connectF(InetAddress.getByName(host), device, timeout)
   
-  def connectF(to: InetAddress, device:String): Future[VXI11ClientLink] =
+  def connectF(to: InetAddress, device:String): Ft[VXI11ClientLink] =
     connectF(to, device, -1)
 
-  def connectF(to: InetAddress, device:String, timeout: Long): Future[VXI11ClientLink] =
-    srv.!!& (VXI11Connector.Connect(to, device, timeout))
+  def connectF(to: InetAddress, device:String, timeout: Long): Ft[VXI11ClientLink] =
+    srv.!!?> (VXI11Connector.Connect(to, device, timeout))
       { case a: Server with VXI11ClientLink => a }
 }
 

@@ -31,14 +31,6 @@ class AbstractActorOps(wrapped: AbstractActor) {
   
   def !!?>[A](msg: Any) (f: PartialFunction[Any, A]): Ft[A] =
     wrapped.!!?(msg) map f
-
-  def !!&[A](msg: Any) (handler: PartialFunction[Any, A]): Future[A] =
-    (wrapped !! (msg,handler)).asInstanceOf[Future[A]] // Ugly hack to correct for insufficient return specification of AbstractActor.!!
-
-  def !!^[A: ClassManifest](msg: Any): Ft[A] = {
-    val mf = classManifest[A]
-    this.!!& (msg) { case x if (classMF(x) <:< mf) => x.asInstanceOf[A] }
-  }
 }
 
 

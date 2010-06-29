@@ -17,9 +17,6 @@
 
 package daqcore.profiles
 
-import scala.actors._
-import scala.util.continuations._
-
 import daqcore.util._
 import daqcore.actors._
 
@@ -30,22 +27,16 @@ trait MsgReader extends Profile with Closeable {
   def read(timeout: Long): Seq[Byte] =
     readF(timeout)() match { case Some(bytes) => bytes; case None => Seq.empty[Byte] }
 
-  def readF(): Future[ByteCharSeq] =
-    srv.!!& (MsgIO.Read(Int.MaxValue)) {
+  def readF(): Ft[ByteCharSeq] =
+    srv.!!?> (MsgIO.Read(Int.MaxValue)) {
       case x: ByteCharSeq => x
     }
 
-  def readF(timeout: Long): Future[Option[ByteCharSeq]] =
-    srv.!!& (MsgIO.Read(timeout)) {
+  def readF(timeout: Long): Ft[Option[ByteCharSeq]] =
+    srv.!!?> (MsgIO.Read(timeout)) {
       case x: ByteCharSeq => Some(x)
       case Timeout => None
     }
-
-  def readC(): ByteCharSeq@cps[Unit] =
-    shift { body: (ByteCharSeq => Unit) => readF().respond(body) }
-
-  def readC(timeout: Long): Option[ByteCharSeq]@cps[Unit] =
-    shift { body: (Option[ByteCharSeq] => Unit) => readF(timeout).respond(body) }
 
   def clearInput(timeout: Long): Unit = {
     if (readF(timeout)() != None) {

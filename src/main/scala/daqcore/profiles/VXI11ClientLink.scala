@@ -17,8 +17,6 @@
 
 package daqcore.profiles
 
-import scala.actors._
-
 import java.net.InetAddress
 
 import daqcore.util._
@@ -27,7 +25,7 @@ import daqcore.actors._
 
 trait VXI11ClientLink extends MsgIO {
   // def lock(flags: Long = 0, timeout: Long = -1) =
-  //  srv.!!& (VXI11ClientLink.Lock(flags, timeout)) { case x: Boolean => x }
+  //  srv.!!?> (VXI11ClientLink.Lock(flags, timeout)) { case x: Boolean => x }
 
   // def unlock() = srv ! VXI11ClientLink.Unlock
 

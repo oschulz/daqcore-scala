@@ -28,8 +28,8 @@ trait MemoryReader extends Profile with Closeable {
   def read(address: Long, count: Long): Seq[Byte] =
     readF(address, count)()
 
-  def readF(address: Long, count: Long): Future[IndexedSeq[Byte]] =
-    srv.!!& (MemoryLink.Read(address, count)) {
+  def readF(address: Long, count: Long): Ft[IndexedSeq[Byte]] =
+    srv.!!?>(MemoryLink.Read(address, count)) {
       case x: IndexedSeq[_] => x.asInstanceOf[IndexedSeq[Byte]]
     }
 }
@@ -40,7 +40,7 @@ trait MemoryWriter extends Profile with Closeable {
     srv ! MemoryLink.Write(address: Long, data)
   
   def pause(): Unit = srv ! MemoryLink.Pause()
-  def sync(): Unit = srv.!!^[MaybeFail[Boolean]](MemoryLink.Sync()).apply().get
+  def sync(): Unit = srv.!?>(MemoryLink.Sync()) { case r: MaybeFail[_] => r() }
 }
 
 
