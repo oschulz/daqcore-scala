@@ -41,8 +41,6 @@ trait StreamIO extends StreamReader with StreamWriter
 object StreamIO {
   case class Received(bytes: Seq[Byte])
 
-  case class Read(timeout: Long = -1)
-
   case class Write(data: Seq[Byte])
   
   case class Flush()
