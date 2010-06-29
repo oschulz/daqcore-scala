@@ -20,11 +20,11 @@ package daqcore.profiles
 import daqcore.actors._
 
 
-trait StreamReader extends Profile with EventSource with Closeable {
+trait StreamReader extends Profile with MsgSource with Closeable {
   def read(): Seq[Byte] = readF().apply()
   
   def readF(): Ft[Seq[Byte]] =
-    getEventF {case StreamIO.Received(bytes) => bytes}
+    getMsgF map {case StreamIO.Received(bytes) => bytes}
 }
 
 

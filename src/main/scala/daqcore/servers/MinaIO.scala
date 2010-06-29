@@ -34,15 +34,9 @@ import daqcore.profiles._
 
 
 trait MinaIO {
-  class MinaConnection(val session: IoSession) extends Server with InetConnection with EventServer {
+  class MinaConnection(val session: IoSession) extends MsgServer with InetConnection {
     val queue = collection.mutable.Queue[ByteCharSeq]()
   
-    override protected def doAddHandler(handler: EventHandler): Unit = {
-      super.doAddHandler(handler)
-      while((!queue.isEmpty) && hasHandlers)
-        doEmit(StreamIO.Received(queue.dequeue()))
-    }
-    
     override def serve = super.serve orElse {
       case StreamIO.Write(data) => {
         session.write(IoBuffer.wrap(data.toArray))
@@ -56,9 +50,9 @@ trait MinaIO {
         exit('closed)
       }
       
-      case InputData(bytes) => {
-        if (hasHandlers) doEmit(StreamIO.Received(bytes))
-        else queue.enqueue(bytes)
+      case in @ InputData(bytes) => {
+        trace("Received: " + loggable(in))
+        doSendMsg(StreamIO.Received(bytes))
       }
       case Closed => {
         trace("Closed")

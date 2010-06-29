@@ -25,15 +25,15 @@ import daqcore.profiles._
 import daqcore.util._
 
 
-class InputStreamReader(input: InputStream) extends EventServer with StreamReader with Closeable {
+class InputStreamReader(input: InputStream) extends MsgServer with StreamReader with Closeable {
   val maxChunkSize = 512 * 1024
   
   protected case object ReadNext
 
-  override protected def doAddHandler(handler: EventHandler): Unit = {
-    val isFirstHandler = ! hasHandlers
-    super.doAddHandler(handler)
-    if (isFirstHandler) {
+  override protected def doSetReceiver(receiver: MsgTarget, repeat: Boolean): Unit = {
+    val noReceiverDefined = ! msgReceiver.isDefined
+    super.doSetReceiver(receiver, repeat)
+    if (noReceiverDefined) {
       trace("Triggering first read")
       srv ! ReadNext
     }
@@ -45,10 +45,8 @@ class InputStreamReader(input: InputStream) extends EventServer with StreamReade
       val a = Array.ofDim[Byte](avail min maxChunkSize)
       val count = input.read(a)
       val bytes = if (count < avail) a.take(count) else a
-      trace("Emitting %s bytes".format(bytes.size))
-      doEmit(StreamIO.Received(bytes))
-      trace("%s remaining handlers".format(nHandlers))
-      if (hasHandlers) {
+      doSendMsg(StreamIO.Received(bytes))
+      if (msgReceiver.isDefined) {
         trace("Triggering next read")
         srv ! ReadNext
       }
