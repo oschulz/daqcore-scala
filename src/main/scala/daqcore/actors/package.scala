@@ -20,6 +20,8 @@ package daqcore
 
 package object actors {
 
+  @volatile implicit var defaultTimeout: TimeoutSpec = NoTimeout
+
   type MsgTarget = { def !(msg: Any): Unit }
 
   def profileOf[T <: Profile : ClassManifest] =
