@@ -18,6 +18,9 @@
 package daqcore.actors
 
 import scala.actors.Future, scala.actors.Futures
+import java.lang.System.currentTimeMillis
+
+import daqcore.monads._
 
 
 trait Ft[+A] {
@@ -40,10 +43,26 @@ trait Ft[+A] {
 
 
 object Ft {
-  protected class WrappedFuture[+A](val future: Future[A]) extends Ft[A] {
-    def apply(): A = future.apply()
+  val timeoutException = new java.util.concurrent.TimeoutException("Future timed out")
+  
+  protected class WrappedFuture[+A](val future: Future[A], val timeout: TimeoutSpec) extends Ft[A] {
+    val creationTime = currentTimeMillis
+    
+    protected lazy val get: MaybeFail[A] = {
+      timeout match {
+        case NoTimeout => Ok(future.apply())
+        case SomeTimeout(ms) => {
+          val waitTime = ms - (currentTimeMillis - creationTime)
+          if ((!future.isSet) && (waitTime > 0)) Futures.awaitAll(waitTime, future)
+          if (future.isSet) Ok(future.apply())
+          else Fail(timeoutException)
+        }
+      }
+    }
+    
+    def apply(): A = get.apply()
   }
 
-  def future[A](body: => A) = new WrappedFuture(Futures.future(body))
-  def apply[A](future: Future[A]) = new WrappedFuture(future)
+  def future[A](body: => A)(implicit timeout: TimeoutSpec) = new WrappedFuture(Futures.future(body), timeout)
+  def apply[A](future: Future[A])(implicit timeout: TimeoutSpec) = new WrappedFuture(future, timeout)
 }
