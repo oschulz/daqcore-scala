@@ -23,13 +23,16 @@ import daqcore.util.classMF
 
 
 class AbstractActorOps(wrapped: AbstractActor) {
-  def !?>[A](msg: Any) (f: PartialFunction[Any, A]): A = {
-    f(wrapped !? msg)
+  def !?>[A](msg: Any) (f: PartialFunction[Any, A]) (implicit timeout: TimeoutSpec): A = {
+    timeout match {
+      case NoTimeout => f(wrapped.!?(msg))
+      case SomeTimeout(ms) => f(wrapped.!?(ms,msg))
+    }
   }
 
-  def !!?(msg: Any): Ft[Any] = Ft(wrapped !! msg)
+  def !!?(msg: Any)(implicit timeout: TimeoutSpec): Ft[Any] = Ft(wrapped !! msg)(timeout)
   
-  def !!?>[A](msg: Any) (f: PartialFunction[Any, A]): Ft[A] =
+  def !!?>[A](msg: Any) (f: PartialFunction[Any, A]) (implicit timeout: TimeoutSpec): Ft[A] =
     wrapped.!!?(msg) map f
 }
 
