@@ -17,8 +17,6 @@
 
 package daqcore.profiles
 
-import scala.actors._
-
 import daqcore.util._
 import daqcore.actors._
 
