@@ -24,8 +24,8 @@ trait MsgSource extends Profile {
   def setReceiver(receiver: MsgTarget, repeat: Boolean = true): Unit =
     srv ! MsgSource.SetReceiver(receiver, repeat)
   
-  def getMsgF(): Ft[Any] =
-    srv.!!?(MsgSource.GetMsg())
+  def getMsgF()(implicit timeout: TimeoutSpec): Ft[Any] =
+    srv.!!?(MsgSource.GetMsg())(timeout)
 }
 
 

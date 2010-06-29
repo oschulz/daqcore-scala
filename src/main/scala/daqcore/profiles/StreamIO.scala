@@ -21,10 +21,10 @@ import daqcore.actors._
 
 
 trait StreamReader extends Profile with MsgSource with Closeable {
-  def read(): Seq[Byte] = readF().apply()
+  def read()(implicit timeout: TimeoutSpec): Seq[Byte] = readF()(timeout).apply()
   
-  def readF(): Ft[Seq[Byte]] =
-    getMsgF map {case StreamIO.Received(bytes) => bytes}
+  def readF()(implicit timeout: TimeoutSpec): Ft[Seq[Byte]] =
+    getMsgF()(timeout) map {case StreamIO.Received(bytes) => bytes}
 }
 
 
