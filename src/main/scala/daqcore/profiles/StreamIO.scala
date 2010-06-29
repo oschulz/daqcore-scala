@@ -17,18 +17,13 @@
 
 package daqcore.profiles
 
-import scala.actors._
-import scala.util.continuations._
-
-import daqcore.util._
 import daqcore.actors._
-import daqcore.monads._
 
 
 trait StreamReader extends Profile with EventSource with Closeable {
-  def read(): Seq[Byte] = readF().get
+  def read(): Seq[Byte] = readF().apply()
   
-  def readF(): Future[Seq[Byte]] =
+  def readF(): Ft[Seq[Byte]] =
     getEventF {case StreamIO.Received(bytes) => bytes}
 }
 
