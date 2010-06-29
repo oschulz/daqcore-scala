@@ -22,8 +22,6 @@ package object actors {
 
   type MsgTarget = { def !(msg: Any): Unit }
 
-  type Ft[T] = scala.actors.Future[T]
-  
   def profileOf[T <: Profile : ClassManifest] =
     ProfileInfo.apply[T]
 
@@ -65,8 +63,8 @@ package object actors {
   implicit def actorOps(actor: scala.actors.Actor) =
     new ActorOps(actor)
 
-  implicit def futureOps[T](future: scala.actors.Future[T]) =
-    new FutureOps(future)
+  implicit def ft[T](future: scala.actors.Future[T]) =
+    Ft(future)
 
 
   def server(initBody: => Unit)(srvFkt: PartialFunction[Any, Unit]) = {

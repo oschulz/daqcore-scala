@@ -17,32 +17,33 @@
 
 package daqcore.actors
 
-import scala.actors._
-
-import daqcore.util.classMF
+import scala.actors.Future, scala.actors.Futures
 
 
-class AbstractActorOps(wrapped: AbstractActor) {
-  def !?>[A](msg: Any) (f: PartialFunction[Any, A]): A = {
-    f(wrapped !? msg)
+trait Ft[+A] {
+  ft =>
+
+  def apply(): A
+
+  def foreach(k: A => Unit): Unit = k(apply())
+  
+  def map[B](f: A => B): Ft[B] = new Ft[B] {
+    def apply() = f(ft.apply())
   }
 
-  def !!?(msg: Any): Ft[Any] =
-    this.!!& (msg) { case x => x }
-
-  def !!&[A](msg: Any) (handler: PartialFunction[Any, A]): Future[A] =
-    (wrapped !! (msg,handler)).asInstanceOf[Future[A]] // Ugly hack to correct for insufficient return specification of AbstractActor.!!
-
-  def !!^[A: ClassManifest](msg: Any): Ft[A] = {
-    val mf = classManifest[A]
-    this.!!& (msg) { case x if (classMF(x) <:< mf) => x.asInstanceOf[A] }
+  def flatMap[B](f: A => Ft[B]): Ft[B] = new Ft[B] {
+    def apply() = f(ft.apply()).apply()
   }
+  
+  override def toString = "Ft[]"
 }
 
 
-class ActorOps(wrapped: Actor) {
-  def startOrRestart() = {
-    try { wrapped.restart() }
-    catch { case e: IllegalStateException => wrapped.start() }
+object Ft {
+  protected class WrappedFuture[+A](val future: Future[A]) extends Ft[A] {
+    def apply(): A = future.apply()
   }
+
+  def future[A](body: => A) = new WrappedFuture(Futures.future(body))
+  def apply[A](future: Future[A]) = new WrappedFuture(future)
 }
