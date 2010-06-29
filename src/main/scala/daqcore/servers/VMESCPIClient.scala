@@ -17,8 +17,6 @@
 
 package daqcore.servers
 
-import scala.actors._
-
 import java.io.IOException
 import java.net.InetAddress
 import java.util.concurrent.TimeoutException
@@ -38,9 +36,9 @@ class VMESCPIClient(dev: SCPIClientLink) extends Server with VMEBus {
   val VME = Mnemonic("VME")
   val defaultTimeout = 60000
   
-  protected case class Fwd[T](target: OutputChannel[Any], op: T)
+  protected case class Fwd[T](target: MsgTarget, op: T)
   
-  class ReadQueue extends DaemonActor with Logging {
+  class ReadQueue extends Server {
     protected def unexpectedResponse: PartialFunction[Response, Unit] = { case resp =>
       error("Unexpected SCPI response: " + resp)
       exit('unexpectedResponse)
@@ -61,42 +59,44 @@ class VMESCPIClient(dev: SCPIClientLink) extends Server with VMEBus {
       }
     }
 
-    def act() = {
+    override protected def init() = {
+      super.init()
       link(dev.srv)
-      loop { react {
-        case op @ Fwd(repl, MemoryLink.Read(address, count)) => {
-          trace(op)
-          query(~VME~READ?(NR1(address.toInt), NR1(count.toInt))) {
-            case Response(Result(value)) => value match {
-              case BlockData(bytes) => {
-                trace("Read data: " + bytes)
-                repl ! bytes
-                trace("Replied read result to sender")
-              }
-              case value => {
-                error("Block Data expected: " + value.toList)
-                exit('unexpectedResponse)
-              }
+    }
+    
+    protected def serve = {
+      case op @ Fwd(repl, MemoryLink.Read(address, count)) => {
+        trace(op)
+        query(~VME~READ?(NR1(address.toInt), NR1(count.toInt))) {
+          case Response(Result(value)) => value match {
+            case BlockData(bytes) => {
+              trace("Read data: " + bytes)
+              repl ! bytes
+              trace("Replied read result to sender")
+            }
+            case value => {
+              error("Block Data expected: " + value.toList)
+              exit('unexpectedResponse)
             }
           }
         }
-        case op @ MemoryLink.Pause() => {
-          dev.cmd(WAI!)
-          reply()
+      }
+      case op @ MemoryLink.Pause() => {
+        dev.cmd(WAI!)
+        reply()
+      }
+      case op @ MemoryLink.Sync() => {
+        val repl = sender
+        query(WAI!, ESR?) {
+          case Response(Result(NR1(esr))) =>
+            val esrErrorMask = 0x3c;
+            val result =
+              if ((esr & esrErrorMask) == 0) Ok(true)
+              else Fail(new RuntimeException("SCPI ESR returned " + esr))
+            repl ! result
         }
-        case op @ MemoryLink.Sync() => {
-          val repl = sender
-          query(WAI!, ESR?) {
-            case Response(Result(NR1(esr))) =>
-              val esrErrorMask = 0x3c;
-              val result =
-                if ((esr & esrErrorMask) == 0) Ok(true)
-                else Fail(new RuntimeException("SCPI ESR returned " + esr))
-              repl ! result
-          }
-        }
-        case _ => exit('unknownMessage)
-      } }
+      }
+      case _ => exit('unknownMessage)
     }
   }
   val readQueue = new ReadQueue
