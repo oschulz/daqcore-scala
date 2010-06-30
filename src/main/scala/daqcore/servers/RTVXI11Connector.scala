@@ -17,8 +17,6 @@
 
 package daqcore.servers
 
-import scala.actors._
-
 import java.io.IOException
 import java.net.InetAddress
 import java.util.concurrent.TimeoutException
@@ -33,9 +31,13 @@ import daqcore.util._
 
 class RTVXI11Connector extends Server with VXI11Connector {
   connector =>
+
+  case class ClientClosed(client: Client)
   
   class Client(val address: InetAddress) extends Server {
     client =>
+    
+    case class LinkClosed(lnk: Link)
 
     class Link(val device: String, id: Int, maxRecvSize: Int) extends Server with VXI11ClientLink {
       lnk =>
@@ -45,7 +47,7 @@ class RTVXI11Connector extends Server with VXI11Connector {
       def serve = {
         case MsgIO.Read(timeout) => client.forward(Read(lnk, timeout))
         case MsgIO.Write(data) => client.forward(Write(lnk, defaultTimeout, data))
-        case Closeable.Close => exit('closed)
+        case Closeable.Close => client ! LinkClosed(lnk); exit('closed)
       }
     }
 
@@ -62,7 +64,6 @@ class RTVXI11Connector extends Server with VXI11Connector {
 
     override def init() = {
       super.init()
-      trapExit = true
       
       withCleanup { rtlinks = Map.empty[String, Link] } { rtlinks = null }
 
@@ -73,7 +74,7 @@ class RTVXI11Connector extends Server with VXI11Connector {
         }
         catch { case e =>
           error("Could not open VXI11 client connection to " + address)
-          exit('OpenFailed)
+          connector ! ClientClosed(client); exit('OpenFailed)
         }
       } {
         rtlinks foreach { e => closeLink(e._2) }
@@ -91,19 +92,9 @@ class RTVXI11Connector extends Server with VXI11Connector {
 
       case OpenLink(device, timeout) => reply(openLink(device, timeout))
 
-      case Closeable.Close => exit('closed)
-
-      case Exit(lnk: Link, reason) => reason match {
-        case 'closed => closeLink(lnk)
-        case _ => {
-          error("Restarting VXI11 link to %s, %s".format(address, lnk.device))
-          link(lnk)
-          lnk.restart()
-        }
-      }
+      case Closeable.Close => connector ! ClientClosed(client); exit('closed)
       
-      case Exit(_, 'normal) => 
-      case Exit(_, reason) => exit(reason)
+      case LinkClosed(lnk) => closeLink(lnk)
     }
 
     def tryForLink(lnk: Link)(body: => Unit) = {
@@ -235,7 +226,6 @@ class RTVXI11Connector extends Server with VXI11Connector {
 
   override def init() = {
     super.init()
-    trapExit = true
     
     withCleanup { clients = Map.empty[InetAddress, Client] } { clients = null }
   }
@@ -249,18 +239,7 @@ class RTVXI11Connector extends Server with VXI11Connector {
 
     case Closeable.Close => exit('closed)
 
-    case Exit(client: Client, msg) => msg match {
-      case 'closed => clients -= client.address
-      case 'OpenFailed => clients -= client.address
-      case msg => {
-        error("Restarting VXI11 client connection to " + client.address)
-        link(client)
-        client.restart()
-      }
-    }
-
-    case Exit(_, 'normal) => 
-    case Exit(_, reason) => exit(reason)
+    case ClientClosed(client) => clients -= client.address
   }
 
 
