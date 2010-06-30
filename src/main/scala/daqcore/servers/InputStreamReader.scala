@@ -44,7 +44,7 @@ class InputByteInput(input: InputStream) extends MsgServer with ByteInput with C
       val a = Array.ofDim[Byte](avail min maxChunkSize)
       val count = input.read(a)
       val bytes = if (count < avail) a.take(count) else a
-      doSendMsg(ByteIO.Received(bytes))
+      doSendMsg(ByteInput.Received(bytes))
       if (msgReceiver.isDefined) {
         trace("Triggering next read")
         srv ! ReadNext

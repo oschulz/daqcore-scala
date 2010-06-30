@@ -37,10 +37,10 @@ trait MinaIO {
     val queue = collection.mutable.Queue[ByteCharSeq]()
   
     override def serve = super.serve orElse {
-      case ByteIO.Write(data) => {
+      case ByteOutput.Write(data) => {
         session.write(IoBuffer.wrap(data.toArray))
       }
-      case ByteIO.Flush => {
+      case ByteOutput.Flush => {
         // Mina flushes automatically
       }
       case Closeable.Close => {
@@ -51,7 +51,7 @@ trait MinaIO {
       
       case in @ InputData(bytes) => {
         trace("Received: " + loggable(in))
-        doSendMsg(ByteIO.Received(bytes))
+        doSendMsg(ByteInput.Received(bytes))
       }
       case Closed => {
         trace("Closed")

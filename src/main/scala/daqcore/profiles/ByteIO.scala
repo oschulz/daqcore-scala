@@ -24,24 +24,29 @@ trait ByteInput extends Profile with MsgSource with Closeable {
   def read()(implicit timeout: TimeoutSpec): Seq[Byte] = readF()(timeout).apply()
   
   def readF()(implicit timeout: TimeoutSpec): Ft[Seq[Byte]] =
-    getMsgF()(timeout) map {case ByteIO.Received(bytes) => bytes}
+    getMsgF()(timeout) map {case ByteInput.Received(bytes) => bytes}
+}
+
+object ByteInput {
+  case class Received(bytes: Seq[Byte])
 }
 
 
 trait ByteOutput extends Profile with Closeable {
   def write(data: Seq[Byte]) : Unit =
-    srv ! ByteIO.Write(data)
+    srv ! ByteOutput.Write(data)
     
-  def flush() : Unit = srv ! ByteIO.Flush()
+  def flush() : Unit = srv ! ByteOutput.Flush()
+}
+
+object ByteOutput {
+  case class Write(data: Seq[Byte])
+  
+  case class Flush()
 }
 
 
 trait ByteIO extends ByteInput with ByteOutput
 
 object ByteIO {
-  case class Received(bytes: Seq[Byte])
-
-  case class Write(data: Seq[Byte])
-  
-  case class Flush()
 }
