@@ -24,7 +24,7 @@ import daqcore.profiles._
 import daqcore.util._
 
 
-class InputStreamReader(input: InputStream) extends MsgServer with StreamReader with Closeable {
+class InputByteInput(input: InputStream) extends MsgServer with ByteInput with Closeable {
   val maxChunkSize = 512 * 1024
   
   protected case object ReadNext
@@ -44,7 +44,7 @@ class InputStreamReader(input: InputStream) extends MsgServer with StreamReader 
       val a = Array.ofDim[Byte](avail min maxChunkSize)
       val count = input.read(a)
       val bytes = if (count < avail) a.take(count) else a
-      doSendMsg(StreamIO.Received(bytes))
+      doSendMsg(ByteIO.Received(bytes))
       if (msgReceiver.isDefined) {
         trace("Triggering next read")
         srv ! ReadNext
@@ -70,13 +70,13 @@ class InputStreamReader(input: InputStream) extends MsgServer with StreamReader 
 }
 
 
-object InputStreamReader {
-  def apply(input: InputStream): InputStreamReader =
-    start(new InputStreamReader(input))
+object InputByteInput {
+  def apply(input: InputStream): InputByteInput =
+    start(new InputByteInput(input))
     
-  def apply(file: File): InputStreamReader =
-    InputStreamReader(new FileInputStream(file))
+  def apply(file: File): InputByteInput =
+    InputByteInput(new FileInputStream(file))
 
-  def apply(fileName: String): InputStreamReader =
-    InputStreamReader(new File(fileName))
+  def apply(fileName: String): InputByteInput =
+    InputByteInput(new File(fileName))
 }

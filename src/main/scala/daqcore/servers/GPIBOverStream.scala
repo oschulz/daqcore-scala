@@ -24,7 +24,7 @@ import daqcore.util._
 import daqcore.prot.scpi.{SCPIParser, StreamMsgTerm}
 
 
-class GPIBOverStream(val stream: StreamIO) extends Server with MsgIO {
+class GPIBOverStream(val stream: ByteIO) extends Server with MsgIO {
   gos => 
 
   protected val defaultTimeout: Long = 10000
@@ -96,7 +96,7 @@ class GPIBOverStream(val stream: StreamIO) extends Server with MsgIO {
 
 
 object GPIBOverStream {
-  def apply(stream: StreamIO): GPIBOverStream = {
+  def apply(stream: ByteIO): GPIBOverStream = {
     start(new GPIBOverStream(stream))
   }
 }

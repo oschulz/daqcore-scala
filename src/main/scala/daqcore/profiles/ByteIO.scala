@@ -20,25 +20,25 @@ package daqcore.profiles
 import daqcore.actors._
 
 
-trait StreamReader extends Profile with MsgSource with Closeable {
+trait ByteInput extends Profile with MsgSource with Closeable {
   def read()(implicit timeout: TimeoutSpec): Seq[Byte] = readF()(timeout).apply()
   
   def readF()(implicit timeout: TimeoutSpec): Ft[Seq[Byte]] =
-    getMsgF()(timeout) map {case StreamIO.Received(bytes) => bytes}
+    getMsgF()(timeout) map {case ByteIO.Received(bytes) => bytes}
 }
 
 
-trait StreamWriter extends Profile with Closeable {
+trait ByteOutput extends Profile with Closeable {
   def write(data: Seq[Byte]) : Unit =
-    srv ! StreamIO.Write(data)
+    srv ! ByteIO.Write(data)
     
-  def flush() : Unit = srv ! StreamIO.Flush()
+  def flush() : Unit = srv ! ByteIO.Flush()
 }
 
 
-trait StreamIO extends StreamReader with StreamWriter
+trait ByteIO extends ByteInput with ByteOutput
 
-object StreamIO {
+object ByteIO {
   case class Received(bytes: Seq[Byte])
 
   case class Write(data: Seq[Byte])
