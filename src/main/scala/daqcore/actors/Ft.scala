@@ -23,19 +23,24 @@ import java.lang.System.currentTimeMillis
 import daqcore.monads._
 
 
+object FTTimeout extends java.util.concurrent.TimeoutException("Future timed out")
+
+
 trait Ft[+A] {
   ft =>
 
-  def apply(): A
+  def get: Option[A]
+
+  def apply(): A = get.getOrElse(throw FTTimeout)
 
   def foreach(k: A => Unit): Unit = k(apply())
   
   def map[B](f: A => B): Ft[B] = new Ft[B] {
-    def apply() = f(ft.apply())
+    def get = ft.get map f
   }
 
   def flatMap[B](f: A => Ft[B]): Ft[B] = new Ft[B] {
-    def apply() = f(ft.apply()).apply()
+    def get = ft.get flatMap { f(_).get }
   }
   
   override def toString = "Ft[]"
@@ -43,24 +48,20 @@ trait Ft[+A] {
 
 
 object Ft {
-  val timeoutException = new java.util.concurrent.TimeoutException("Future timed out")
-  
   protected class WrappedFuture[+A](val future: Future[A], val timeout: TimeoutSpec) extends Ft[A] {
     val creationTime = currentTimeMillis
     
-    protected lazy val get: MaybeFail[A] = {
+    lazy val get: Option[A] = {
       timeout match {
-        case NoTimeout => Ok(future.apply())
+        case NoTimeout => Some(future.apply())
         case SomeTimeout(ms) => {
           val waitTime = ms - (currentTimeMillis - creationTime)
           if ((!future.isSet) && (waitTime > 0)) Futures.awaitAll(waitTime, future)
-          if (future.isSet) Ok(future.apply())
-          else Fail(timeoutException)
+          if (future.isSet) Some(future.apply())
+          else None
         }
       }
     }
-    
-    def apply(): A = get.apply()
   }
 
   def future[A](body: => A)(implicit timeout: TimeoutSpec) = new WrappedFuture(Futures.future(body), timeout)
