@@ -33,14 +33,15 @@ import daqcore.profiles._
 
 
 trait MinaIO {
-  class MinaConnection(val session: IoSession) extends MsgServer with InetConnection {
-    val queue = collection.mutable.Queue[ByteCharSeq]()
-  
-    override def serve = super.serve orElse {
-      case ByteOutput.Write(data) => {
+  class MinaConnection(val session: IoSession) extends QueueingServer with InetConnection {
+    val recvQueue = new ReplyQueue
+ 
+    def serve = {
+      case ByteStreamInput.Recv() => recvQueue.addTarget(replyTarget)
+      case ByteStreamOutput.Send(data) => {
         session.write(IoBuffer.wrap(data.toArray))
       }
-      case ByteOutput.Flush => {
+      case ByteStreamOutput.Flush => {
         // Mina flushes automatically
       }
       case Closeable.Close => {
@@ -51,11 +52,11 @@ trait MinaIO {
       
       case in @ InputData(bytes) => {
         trace("Received: " + loggable(in))
-        doSendMsg(ByteInput.Received(bytes))
+        recvQueue.addReply(ByteStreamInput.Received(bytes)){}
       }
       case Closed => {
         trace("Closed")
-        exit('closed)
+        recvQueue.addReply(ByteStreamInput.Closed){exit('closed)}
       }
     }
   }
@@ -160,7 +161,7 @@ class MinaConnector extends Server with InetConnector with MinaIO {
 }
 
 
-class MinaAcceptor(port: Int, body: ByteIO => Unit) extends Server with InetAcceptor with MinaIO {
+class MinaAcceptor(port: Int, body: ByteStreamIO => Unit) extends Server with InetAcceptor with MinaIO {
   accServer =>
 
   protected case class NewConnection(connection: InetConnection)

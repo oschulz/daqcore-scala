@@ -27,12 +27,12 @@ trait InetAcceptor extends Profile with Closeable
 
 
 object InetAcceptor {
-  def apply (port: Int) (body: ByteIO => Unit) (implicit builder: InetAcceptorBuilder) : InetAcceptor = {
+  def apply (port: Int) (body: ByteStreamIO => Unit) (implicit builder: InetAcceptorBuilder) : InetAcceptor = {
     builder(port) (body)
   }
 }
 
 
 abstract class InetAcceptorBuilder {
-  def apply (port: Int) (body: ByteIO => Unit): InetAcceptor
+  def apply (port: Int) (body: ByteStreamIO => Unit): InetAcceptor
 }

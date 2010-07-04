@@ -45,19 +45,19 @@ object InetConnector {
 }
 
 
-trait InetConnection extends ByteIO
+trait InetConnection extends ByteStreamIO
 
 
 object InetConnection {
-  def apply(host: String, port: Int)(implicit connector: InetConnector): ByteIO =
+  def apply(host: String, port: Int)(implicit connector: InetConnector): ByteStreamIO =
     connector.connectF(host, port)()
 
-  def apply(host: String, port: Int, timeout: Long)(implicit connector: InetConnector): ByteIO =
+  def apply(host: String, port: Int, timeout: Long)(implicit connector: InetConnector): ByteStreamIO =
     connector.connectF(host, port, timeout)()
   
-  def apply(to: InetSocketAddress)(implicit connector: InetConnector): ByteIO =
+  def apply(to: InetSocketAddress)(implicit connector: InetConnector): ByteStreamIO =
     connector.connectF(to)()
 
-  def apply(to: InetSocketAddress, timeout: Long)(implicit connector: InetConnector): ByteIO =
+  def apply(to: InetSocketAddress, timeout: Long)(implicit connector: InetConnector): ByteStreamIO =
     connector.connectF(to, timeout)()
 }

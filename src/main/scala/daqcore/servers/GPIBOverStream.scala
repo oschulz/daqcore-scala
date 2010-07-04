@@ -23,7 +23,7 @@ import daqcore.util._
 import daqcore.prot.scpi.{SCPIParser, StreamMsgTerm}
 
 
-class GPIBOverStream(val stream: ByteIO) extends Server with RawMsgIO {
+class GPIBOverStream(val stream: ByteStreamIO) extends Server with RawMsgIO {
   gos => 
 
   case class InputData(bytes: ByteCharSeq)
@@ -37,8 +37,7 @@ class GPIBOverStream(val stream: ByteIO) extends Server with RawMsgIO {
 
     override protected def init() = {
       super.init()
-      link(stream.srv)
-      stream.setReceiver(srv, true)
+      stream.triggerRecv()
     }
     
     protected def sendReplies(): Unit = {
@@ -53,7 +52,8 @@ class GPIBOverStream(val stream: ByteIO) extends Server with RawMsgIO {
     
     def serve = {
       case RawMsgInput.Recv() => replyQueue.enqueue(replyTarget)
-      case ByteInput.Received(bytes) => {
+      case ByteStreamInput.Received(bytes) => {
+        stream.triggerRecv()
         inBuf = inBuf ++ bytes
         val result = parser.extractTermMsg(inBuf)
         if (result.successful) {
@@ -91,7 +91,7 @@ class GPIBOverStream(val stream: ByteIO) extends Server with RawMsgIO {
 
 
 object GPIBOverStream {
-  def apply(stream: ByteIO): GPIBOverStream = {
+  def apply(stream: ByteStreamIO): GPIBOverStream = {
     start(new GPIBOverStream(stream))
   }
 }

@@ -23,7 +23,7 @@ package object servers {
   implicit object DefaultMinaInetAcceptorBuilder extends InetAcceptorBuilder {
     import daqcore.servers._
     
-    def apply (port: Int) (body: ByteIO => Unit) = {
+    def apply (port: Int) (body: ByteStreamIO => Unit) = {
       val ma = new MinaAcceptor(port,body)
       ma.start()
       ma

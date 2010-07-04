@@ -24,32 +24,18 @@ import daqcore.profiles._
 import daqcore.util._
 
 
-class InputByteInput(input: InputStream) extends MsgServer with ByteInput with Closeable {
+class InputStreamReader(input: InputStream) extends Server with ByteStreamInput with Closeable {
   val maxChunkSize = 512 * 1024
   
-  protected case object ReadNext
-
-  override protected def doSetReceiver(receiver: MsgTarget, repeat: Boolean): Unit = {
-    val noReceiverDefined = ! msgReceiver.isDefined
-    super.doSetReceiver(receiver, repeat)
-    if (noReceiverDefined) {
-      trace("Triggering first read")
-      srv ! ReadNext
-    }
-  }
-  
-  protected def doReadNext(): Unit = {
+  protected def doRecv(): Unit = {
     val avail = input.available
     if (avail > 0) {
       val a = Array.ofDim[Byte](avail min maxChunkSize)
       val count = input.read(a)
       val bytes = if (count < avail) a.take(count) else a
-      doSendMsg(ByteInput.Received(bytes))
-      if (msgReceiver.isDefined) {
-        trace("Triggering next read")
-        srv ! ReadNext
-      }
+      reply(ByteStreamInput.Received(bytes))
     } else {
+      reply(ByteStreamInput.Closed)
       doClose()
     }
   }
@@ -59,24 +45,20 @@ class InputByteInput(input: InputStream) extends MsgServer with ByteInput with C
       exit('closed)
   }
   
-  override protected def init() = {
-    super.init()
-  }
-
-  override protected def serve = super.serve orElse {
-    case ReadNext => doReadNext()
+  override protected def serve = {
+    case ByteStreamInput.Recv() => doRecv()
     case Closeable.Close => doClose()
   }
 }
 
 
-object InputByteInput {
-  def apply(input: InputStream): InputByteInput =
-    start(new InputByteInput(input))
+object InputStreamReader {
+  def apply(input: InputStream): InputStreamReader =
+    start(new InputStreamReader(input))
     
-  def apply(file: File): InputByteInput =
-    InputByteInput(new FileInputStream(file))
+  def apply(file: File): InputStreamReader =
+    InputStreamReader(new FileInputStream(file))
 
-  def apply(fileName: String): InputByteInput =
-    InputByteInput(new File(fileName))
+  def apply(fileName: String): InputStreamReader =
+    InputStreamReader(new File(fileName))
 }

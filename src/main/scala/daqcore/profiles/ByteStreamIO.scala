@@ -17,36 +17,55 @@
 
 package daqcore.profiles
 
+import scala.annotation._
+
+import daqcore.util._
 import daqcore.actors._
 
 
-trait ByteInput extends Profile with MsgSource with Closeable {
+trait ByteStreamInput extends Profile with Closeable {
   def read()(implicit timeout: TimeoutSpec): Seq[Byte] = readF()(timeout).apply()
   
   def readF()(implicit timeout: TimeoutSpec): Ft[Seq[Byte]] =
-    getMsgF()(timeout) map {case ByteInput.Received(bytes) => bytes}
+    srv.!!?(ByteStreamInput.Recv())(timeout) map
+      {case ByteStreamInput.Received(msg) => msg}
+  
+  def triggerRecv(): Unit = srv ! ByteStreamInput.Recv()
+
+  def clearInput(timeout: Long): Unit = {
+    @tailrec def clearInputImpl(): Unit = {
+      trace("Clearing input")
+      readF()(SomeTimeout(timeout)).get match {
+        case Some(bytes) => clearInputImpl()
+        case None =>
+      }
+    }
+    clearInputImpl()
+  }
 }
 
-object ByteInput {
-  case class Received(bytes: Seq[Byte])
+object ByteStreamInput {
+  case class Recv()
+  case class Received(msg: Seq[Byte])
+  case object Closed
 }
 
 
-trait ByteOutput extends Profile with Closeable {
+trait ByteStreamOutput extends Profile with Closeable {
   def write(data: Seq[Byte]) : Unit =
-    srv ! ByteOutput.Write(data)
+    srv ! ByteStreamOutput.Send(data)
     
-  def flush() : Unit = srv ! ByteOutput.Flush()
+  def flush() : Unit = srv ! ByteStreamOutput.Flush()
 }
 
-object ByteOutput {
-  case class Write(data: Seq[Byte])
+object ByteStreamOutput {
+  case class Send(msg: Seq[Byte])
   
   case class Flush()
 }
 
 
-trait ByteIO extends ByteInput with ByteOutput
+trait ByteStreamIO extends ByteStreamInput with ByteStreamOutput
 
-object ByteIO {
+object ByteStreamIO {
 }

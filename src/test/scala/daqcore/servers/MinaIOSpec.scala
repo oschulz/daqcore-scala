@@ -34,10 +34,11 @@ class MinaIOSpec extends WordSpec with MustMatchers with Logging {
       val quit = ByteCharSeq("quit\n")
 
 
-      val acc = InetAcceptor (8002) { (conn: ByteIO) =>
+      val acc = InetAcceptor (8002) { (conn: ByteStreamIO) =>
         start(new Server {
-          override def init = { conn setReceiver(srv, true) }
-          def serve = { case ByteInput.Received(bytes) =>
+          override def init = { conn.triggerRecv() }
+          def serve = { case ByteStreamInput.Received(bytes) =>
+            conn.triggerRecv()
             Thread.sleep(200)
             val msg = bytes.toString.trim
             debug(msg)
