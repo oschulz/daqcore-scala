@@ -43,7 +43,7 @@ class MinaIOSpec extends WordSpec with MustMatchers with Logging {
             val msg = bytes.toString.trim
             debug(msg)
             if (msg == quit.toString.trim) { conn.close(); exit() }
-            else conn.write(pong)
+            else conn send pong
           }
         } )
       }
@@ -54,11 +54,11 @@ class MinaIOSpec extends WordSpec with MustMatchers with Logging {
       
       for (i <- 1 to 10) {
         debug("ping %s".format(i))
-        conn write ping
-        val bytes = conn.read()
+        conn send ping
+        val bytes = conn.recv()
         debug(bytes.toString.trim)
       }
-      conn write quit
+      conn send quit
     }
   }
 }

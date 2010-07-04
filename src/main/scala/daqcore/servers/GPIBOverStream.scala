@@ -71,8 +71,8 @@ class GPIBOverStream(val stream: ByteStreamIO) extends QueueingServer with RawMs
     }
     case RawMsgOutput.Send(data) => {
       if ( (!data.isEmpty) && (data(data.length-1) == 0x0A) )
-        stream.write(data)
-      else stream.write(data ++ StreamMsgTerm)
+        stream.send(data)
+      else stream.send(data ++ StreamMsgTerm)
     }
     case Closeable.Close => {
       stream.close()

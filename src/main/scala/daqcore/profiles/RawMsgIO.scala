@@ -24,9 +24,9 @@ import daqcore.actors._
 
 
 trait RawMsgInput extends Profile with Closeable {
-  def read()(implicit timeout: TimeoutSpec): Seq[Byte] = readF()(timeout).apply()
+  def recv()(implicit timeout: TimeoutSpec): Seq[Byte] = recvF()(timeout).apply()
   
-  def readF()(implicit timeout: TimeoutSpec): Ft[Seq[Byte]] =
+  def recvF()(implicit timeout: TimeoutSpec): Ft[Seq[Byte]] =
     srv.!!?(RawMsgInput.Recv())(timeout) map
       {case RawMsgInput.Received(msg) => msg}
   
@@ -35,7 +35,7 @@ trait RawMsgInput extends Profile with Closeable {
   def clearInput(timeout: Long): Unit = {
     @tailrec def clearInputImpl(): Unit = {
       trace("Clearing input")
-      readF()(SomeTimeout(timeout)).get match {
+      recvF()(SomeTimeout(timeout)).get match {
         case Some(bytes) => clearInputImpl()
         case None =>
       }
@@ -52,7 +52,7 @@ object RawMsgInput {
 
 
 trait RawMsgOutput extends Profile with Closeable {
-  def write(data: Seq[Byte]) : Unit =
+  def send(data: Seq[Byte]) : Unit =
     srv ! RawMsgOutput.Send(data)
     
   def flush() : Unit = srv ! RawMsgOutput.Flush()
