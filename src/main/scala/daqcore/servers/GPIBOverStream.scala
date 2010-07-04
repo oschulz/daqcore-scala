@@ -17,72 +17,67 @@
 
 package daqcore.servers
 
-import scala.actors._, scala.actors.Actor._
 import daqcore.actors._
 import daqcore.profiles._
 import daqcore.util._
 import daqcore.prot.scpi.{SCPIParser, StreamMsgTerm}
 
 
-class GPIBOverStream(val stream: ByteIO) extends Server with MsgIO {
+class GPIBOverStream(val stream: ByteIO) extends Server with RawMsgIO {
   gos => 
 
-  protected val defaultTimeout: Long = 10000
-  
   case class InputData(bytes: ByteCharSeq)
 
-  object reader extends DaemonActor with Logging {
+  object reader extends Server {
+    val replyQueue = collection.mutable.Queue[MsgTarget]()
+    val resultQueue = collection.mutable.Queue[ByteCharSeq]()
+    
     var inBuf = ByteCharSeq()
+    val parser = new SCPIParser
 
-    override def act() = {
-      val parser = new SCPIParser
+    override protected def init() = {
+      super.init()
       link(stream.srv)
-
-      loop {
-        // trace("inBuf: (" + inBuf.length + ") = [" + inBuf + "]")
+      stream.setReceiver(srv, true)
+    }
+    
+    protected def sendReplies(): Unit = {
+      while (!replyQueue.isEmpty && !resultQueue.isEmpty)
+        replyQueue.dequeue() ! resultQueue.dequeue()
+    }
+    
+    protected def pushResult(bytes: ByteCharSeq): Unit = {
+      resultQueue.enqueue(bytes)
+      sendReplies()
+    }
+    
+    def serve = {
+      case RawMsgInput.Recv() => replyQueue.enqueue(replyTarget)
+      case ByteInput.Received(bytes) => {
+        inBuf = inBuf ++ bytes
         val result = parser.extractTermMsg(inBuf)
         if (result.successful) {
           val msg = result.get
-          trace("Complete message available: (" +  msg.length + ") [" + msg + "]")
-          readQueue ! InputData(msg)
+          trace("Complete message of length %s available: [%s]".format(msg.length, loggable(msg)))
+          pushResult(msg)
           inBuf = result.next.source.asInstanceOf[ByteCharSeq].drop(result.next.offset)
         } else {
           // trace("Incomplete message, reading more data")
-          val bytes = stream.read()
-          inBuf = inBuf ++ bytes
         }
       }
     }
-  }
-
-  protected object readQueue extends DaemonActor with Logging {
-    import scala.actors.Actor._
-    override def act() = loop { react {
-      case MsgIO.Read(timeout) => {
-        val replyTo = sender
-        reactWithin (if (timeout < 0) defaultTimeout else timeout) {
-          case InputData(bytes) =>
-            trace("Got message: (" + bytes.length + ") = [" + bytes + "]")
-            replyTo ! bytes
-          case TIMEOUT =>
-            trace("Timeout")
-            replyTo ! Timeout
-        }
-      }
-    } }
   }
   
   override def init() = {
     link(stream.srv)
     link(reader); reader.startOrRestart()
-    link(readQueue); readQueue.startOrRestart()
   }
 
   def serve = {
-    case r: MsgIO.Read => {
-      readQueue.forward(r)
+    case r: RawMsgInput.Recv => {
+      reader.forward(r)
     }
-    case MsgIO.Write(data) => {
+    case RawMsgOutput.Send(data) => {
       if ( (!data.isEmpty) && (data(data.length-1) == 0x0A) )
         stream.write(data)
       else stream.write(data ++ StreamMsgTerm)

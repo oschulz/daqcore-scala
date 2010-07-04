@@ -23,7 +23,7 @@ import daqcore.util._
 import daqcore.actors._
 
 
-trait VXI11ClientLink extends MsgIO {
+trait VXI11ClientLink extends RawMsgIO {
   // def lock(flags: Long = 0, timeout: Long = -1) =
   //  srv.!!?> (VXI11ClientLink.Lock(flags, timeout)) { case x: Boolean => x }
 

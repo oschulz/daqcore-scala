@@ -17,46 +17,53 @@
 
 package daqcore.profiles
 
+import scala.annotation._
+
 import daqcore.util._
 import daqcore.actors._
 
 
-trait MsgReader extends Profile with Closeable {
-  def read(): Seq[Byte] = readF()()
+trait RawMsgInput extends Profile with Closeable {
+  def read()(implicit timeout: TimeoutSpec): Seq[Byte] = readF()(timeout).apply()
   
-  def read(timeout: Long): Seq[Byte] =
-    readF(timeout)() match { case Some(bytes) => bytes; case None => Seq.empty[Byte] }
-
-  def readF(): Ft[ByteCharSeq] =
-    srv.!!?> (MsgIO.Read(Int.MaxValue)) {
-      case x: ByteCharSeq => x
-    }
-
-  def readF(timeout: Long): Ft[Option[ByteCharSeq]] =
-    srv.!!?> (MsgIO.Read(timeout)) {
-      case x: ByteCharSeq => Some(x)
-      case Timeout => None
-    }
+  def readF()(implicit timeout: TimeoutSpec): Ft[Seq[Byte]] =
+    srv.!!?(RawMsgInput.Recv())(timeout) map
+      {case RawMsgInput.Received(msg) => msg}
 
   def clearInput(timeout: Long): Unit = {
-    if (readF(timeout)() != None) {
+    @tailrec def clearInputImpl(): Unit = {
       trace("Clearing input")
-      clearInput(timeout)
+      readF()(SomeTimeout(timeout)).get match {
+        case Some(bytes) => clearInputImpl()
+        case None =>
+      }
     }
+    clearInputImpl()
   }
 }
 
-
-trait MsgWriter extends Profile with Closeable {
-  def write(data: Seq[Byte]) : Unit =
-    srv ! MsgIO.Write(data)
+object RawMsgInput {
+  case class Recv()
+  case class Received(msg: Seq[Byte])
+  case object Closed
 }
 
 
-trait MsgIO extends MsgReader with MsgWriter
+trait RawMsgOutput extends Profile with Closeable {
+  def write(data: Seq[Byte]) : Unit =
+    srv ! RawMsgOutput.Send(data)
+    
+  def flush() : Unit = srv ! RawMsgOutput.Flush()
+}
 
-object MsgIO {
-  case class Read(timeout: Long = -1)
+object RawMsgOutput {
+  case class Send(msg: Seq[Byte])
+  
+  case class Flush()
+}
 
-  case class Write(data: Seq[Byte])
+
+trait RawMsgIO extends RawMsgInput with RawMsgOutput
+
+object RawMsgIO {
 }

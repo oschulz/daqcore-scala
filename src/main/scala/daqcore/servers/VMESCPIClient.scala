@@ -34,7 +34,7 @@ import daqcore.prot.scpi._, daqcore.prot.scpi.mnemonics._
 
 class VMESCPIClient(dev: SCPIClientLink) extends Server with VMEBus {
   val VME = Mnemonic("VME")
-  val defaultTimeout = 60000
+  val defaultTimeout = SomeTimeout(60000)
   
   protected case class Fwd[T](target: MsgTarget, op: T)
   
@@ -45,18 +45,9 @@ class VMESCPIClient(dev: SCPIClientLink) extends Server with VMEBus {
     }
   
     protected def query(instr: Instruction*)(body: PartialFunction[Response, Unit]) = {
-      for (optRes <- dev.queryF(defaultTimeout, instr: _*)) {
-        optRes match {
-          case Some(response) => {
-            trace("Processing response: " + response)
-            (body orElse unexpectedResponse)(response)
-          }
-          case None => {
-            trace("Read timed out")
-            exit(Timeout)
-          }
-        }
-      }
+      val response = dev.queryF(instr: _*)(defaultTimeout)()
+      trace("Processing response: " + response)
+      (body orElse unexpectedResponse)(response)
     }
 
     override protected def init() = {

@@ -26,16 +26,9 @@ import daqcore.prot.scpi._
 
 
 trait SCPIClientLink extends Profile with Closeable {
-  def queryF(timeout: Long, instr: Instruction*): Ft[Option[Response]] =
-    srv.!!?> (SCPIClientLink.CmdQuery(timeout, instr: _*)) {
-      case x: Response => Some(x)
-      case Timeout => None
-    }
-
-  def queryF(instr: Instruction*): Ft[Response] =
-    srv.!!?> (SCPIClientLink.CmdQuery(Int.MaxValue, instr: _*)) {
-      case x: Response => x
-    }
+  def queryF(instr: Instruction*)(implicit timeout: TimeoutSpec): Ft[Response] =
+    srv.!!? (SCPIClientLink.CmdQuery(instr: _*))(timeout) map
+      { case x: Response => x }
 
   def cmd(instr: Instruction*) : Unit = {
     srv ! SCPIClientLink.CmdOnly(instr: _*)
@@ -44,7 +37,7 @@ trait SCPIClientLink extends Profile with Closeable {
 
 
 object SCPIClientLink {
-  case class CmdQuery(timeout: Long, instr: Instruction*) {
+  case class CmdQuery(instr: Instruction*) {
     val request = Request(instr: _*)
     require (request.hasResponse)
   }
@@ -54,7 +47,7 @@ object SCPIClientLink {
     require (!request.hasResponse)
   }
 
-  def apply(lnk: MsgIO) = SCPIMsgClient(lnk)
+  def apply(lnk: RawMsgIO) = SCPIMsgClient(lnk)
 
   def apply(host: String, device: String) = SCPIMsgClient(VXI11ClientLink(host, device))
 

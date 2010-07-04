@@ -33,44 +33,42 @@ import daqcore.util._
 import daqcore.prot.scpi._
 
 
-class SCPIMsgClient(msgLnk: MsgIO) extends Server with SCPIClientLink {
+class SCPIMsgClient(msgLnk: RawMsgIO) extends Server with SCPIClientLink {
   var parser: SCPIParser = null
 
-  protected case class ReadTo(target: OutputChannel[Any], timeout:Long)
+  protected case class ReadResponse()
   
-  class ReadQueue extends DaemonActor with Logging {
-    def act() = {
+  class SCPIResponseInput(msgLnk: RawMsgIO) extends Server {
+    val replyQueue = collection.mutable.Queue[MsgTarget]()
+
+    protected override def init() = {
+      super.init()
       link(msgLnk.srv)
-      loop { react {
-        case ReadTo(repl, timeout) => {
-          for (optBytes <- msgLnk.readF(timeout)) {
-            optBytes match {
-              case Some(bytes) => {
-                trace("Received bytes: %s".format(optBytes))
-                
-                val response = parser.parseResponse(bytes)
-                trace("Received: %s".format(response.toString))
-                repl ! response
-              }
-              case None => {
-                trace("Read timed out")
-                repl ! Timeout
-              }
-            }
-          }
-        }
-        case _ => exit('unknownMessage)
-      } }
+    }
+
+    protected def serve = {
+      case ReadResponse() => {
+        val replyTo = replyTarget
+        msgLnk.srv ! RawMsgInput.Recv()
+        replyQueue.enqueue(replyTo)
+      }
+      case RawMsgInput.Received(bytes) => {
+          trace("Received %s bytes: %s".format(bytes.size, loggable(bytes)))
+          
+          val response = parser.parseResponse(ByteCharSeq(bytes: _*))
+          trace("Received response: %s".format(loggable(response.toString)))
+          replyQueue.dequeue() ! response
+      }
     }
   }
-  val readQueue = new ReadQueue
+  val responseInput = new SCPIResponseInput(msgLnk)
 
   override def init() = {
     parser = new SCPIParser
     link(msgLnk.srv)
     msgLnk.clearInput(100)
-    link(readQueue)
-    readQueue.startOrRestart()
+    link(responseInput)
+    responseInput.startOrRestart()
   }
 
   def serve = {
@@ -84,7 +82,7 @@ class SCPIMsgClient(msgLnk: MsgIO) extends Server with SCPIClientLink {
       val request = cmdqry.request
       msgLnk.write(request.charSeq) // Append CR-LF?
       trace("Sent: %s".format(request.toString))
-      readQueue ! ReadTo(repl, cmdqry.timeout)
+      responseInput forward ReadResponse()
     }
     case Closeable.Close => {
       msgLnk.close()
@@ -95,7 +93,7 @@ class SCPIMsgClient(msgLnk: MsgIO) extends Server with SCPIClientLink {
 
 
 object SCPIMsgClient {
-  def apply (msgLnk: MsgIO): SCPIMsgClient =
+  def apply (msgLnk: RawMsgIO): SCPIMsgClient =
     start(new SCPIMsgClient(msgLnk))
   
   def apply (streamLnk: ByteIO): SCPIMsgClient =

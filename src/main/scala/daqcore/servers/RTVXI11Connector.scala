@@ -45,8 +45,8 @@ class RTVXI11Connector extends Server with VXI11Connector {
       def lid = new vxi11core.Device_Link(id)
       
       def serve = {
-        case MsgIO.Read(timeout) => client.forward(Read(lnk, timeout))
-        case MsgIO.Write(data) => client.forward(Write(lnk, defaultTimeout, data))
+        case RawMsgInput.Recv() => client.forward(Read(lnk, defaultTimeout))
+        case RawMsgOutput.Send(data) => client.forward(Write(lnk, defaultTimeout, data))
         case Closeable.Close => client ! LinkClosed(lnk); exit('closed)
       }
     }
