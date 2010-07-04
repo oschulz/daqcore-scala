@@ -23,35 +23,24 @@ import daqcore.util._
 import daqcore.prot.scpi.{SCPIParser, StreamMsgTerm}
 
 
-class GPIBOverStream(val stream: ByteStreamIO) extends Server with RawMsgIO {
+class GPIBOverStream(val stream: ByteStreamIO) extends QueueingServer with RawMsgIO {
   gos => 
 
   case class InputData(bytes: ByteCharSeq)
 
   object reader extends Server {
-    val replyQueue = collection.mutable.Queue[MsgTarget]()
-    val resultQueue = collection.mutable.Queue[ByteCharSeq]()
-    
     var inBuf = ByteCharSeq()
     val parser = new SCPIParser
 
+    val recvQueue = new ReplyQueue
+ 
     override protected def init() = {
       super.init()
       stream.triggerRecv()
     }
     
-    protected def sendReplies(): Unit = {
-      while (!replyQueue.isEmpty && !resultQueue.isEmpty)
-        replyQueue.dequeue() ! resultQueue.dequeue()
-    }
-    
-    protected def pushResult(bytes: ByteCharSeq): Unit = {
-      resultQueue.enqueue(bytes)
-      sendReplies()
-    }
-    
     def serve = {
-      case RawMsgInput.Recv() => replyQueue.enqueue(replyTarget)
+      case RawMsgInput.Recv() => recvQueue addTarget replyTarget
       case ByteStreamInput.Received(bytes) => {
         stream.triggerRecv()
         inBuf = inBuf ++ bytes
@@ -59,11 +48,14 @@ class GPIBOverStream(val stream: ByteStreamIO) extends Server with RawMsgIO {
         if (result.successful) {
           val msg = result.get
           trace("Complete message of length %s available: [%s]".format(msg.length, loggable(msg)))
-          pushResult(msg)
+          recvQueue.addReply(RawMsgInput.Received(msg)){}
           inBuf = result.next.source.asInstanceOf[ByteCharSeq].drop(result.next.offset)
         } else {
           // trace("Incomplete message, reading more data")
         }
+      }
+      case ByteStreamInput.Closed => {
+        recvQueue.addReply(RawMsgInput.Closed){exit('closed)}
       }
     }
   }
