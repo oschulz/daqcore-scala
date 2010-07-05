@@ -38,26 +38,28 @@ class SCPIMsgClient(msgLnk: RawMsgIO) extends Server with SCPIClientLink {
 
   protected case class ReadResponse()
   
-  class SCPIResponseInput(msgLnk: RawMsgIO) extends Server {
-    val replyQueue = collection.mutable.Queue[MsgTarget]()
+  class SCPIResponseInput(msgLnk: RawMsgIO) extends QueueingServer {
+    val recvQueue = new ReplyQueue
 
     protected override def init() = {
       super.init()
-      link(msgLnk.srv)
+      // msgLnk.clearInput(100) //!! Doesn't work here currently, will result in receiving "!(..., Received)" later
     }
 
     protected def serve = {
       case ReadResponse() => {
-        val replyTo = replyTarget
-        msgLnk.srv ! RawMsgInput.Recv()
-        replyQueue.enqueue(replyTo)
+        msgLnk.triggerRecv()
+        recvQueue.addTarget(replyTarget)
       }
       case RawMsgInput.Received(bytes) => {
           trace("Received %s bytes: %s".format(bytes.size, loggable(bytes)))
           
           val response = parser.parseResponse(ByteCharSeq(bytes: _*))
           trace("Received response: %s".format(loggable(response.toString)))
-          replyQueue.dequeue() ! response
+          recvQueue.addReply(response){}
+      }
+      case ByteStreamInput.Closed => {
+        exit('closed)
       }
     }
   }
@@ -65,8 +67,6 @@ class SCPIMsgClient(msgLnk: RawMsgIO) extends Server with SCPIClientLink {
 
   override def init() = {
     parser = new SCPIParser
-    link(msgLnk.srv)
-    msgLnk.clearInput(100)
     link(responseInput)
     responseInput.startOrRestart()
   }
