@@ -30,7 +30,7 @@ trait RawMsgInput extends Profile with Closeable {
     srv.!!?(RawMsgInput.Recv())(timeout) map
       {case RawMsgInput.Received(msg) => msg}
   
-  def triggerRecv(): Unit = srv ! ByteStreamInput.Recv()
+  def triggerRecv(): Unit = srv ! RawMsgInput.Recv()
 
   def clearInput(timeout: Long): Unit = {
     @tailrec def clearInputImpl(): Unit = {
