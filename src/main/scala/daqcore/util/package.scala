@@ -24,6 +24,8 @@ package object util {
 implicit def iteratorOps[A](it: Iterator[A])  = new IteratorOps(it)
 implicit def iterableOps[A](coll: Iterable[A]) = new IterableOps(coll)
 implicit def traversableOnceOps[A](coll: TraversableOnce[A]) = new TraversableOnceOps(coll)
+implicit def NestedSeqOps[A: ClassManifest](seq: Seq[Seq[A]]) = new NestedSeqOps(seq)
+implicit def SeqOps[A](seq: Seq[A]) = new SeqOps(seq)
 
 
 implicit def idxSeq2subSeq[T](seq: IndexedSeq[T]) = new SubIdxSeq(seq, 0, seq.length)
