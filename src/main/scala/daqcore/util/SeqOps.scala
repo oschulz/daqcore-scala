@@ -31,13 +31,12 @@ class NestedSeqOps[A: ClassManifest](seq: Seq[Seq[A]]) extends SeqOps[Seq[A]](se
 
 
 class FlattenedWithSep[A: ClassManifest](val seq: Seq[Seq[A]], val sep: Seq[A]) extends Seq[A] {
-  lazy val length: Int = (seq.view map {_.size} sum) + (0 max ((seq.size - 1) * sep.size))
+  lazy val length: Int = (seq.view map {_.length} sum) + (0 max ((seq.length - 1) * sep.length))
   
   lazy val contents: IndexedSeq[A] = toArray(classManifest[A]).toSeq.asInstanceOf[IndexedSeq[A]]
   
   override def toArray[B >: A](implicit arg0: ClassManifest[B]): Array[B] = {
     val builder = ArrayBuilder.make[B]
-    builder.sizeHint(size)
     var first = true
     for (s <- seq) {
       if (!first) builder ++= sep
