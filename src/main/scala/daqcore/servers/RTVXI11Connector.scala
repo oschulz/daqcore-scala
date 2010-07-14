@@ -172,7 +172,7 @@ class RTVXI11Connector extends Server with VXI11Connector {
           // if end or chr bit set, read is complete, if not, more chunks to read
           if ((rresp.reason & (rcv_reason_end | rcv_reason_chr)) != 0) {
             trace("Finished reading")
-            Some(ByteCharSeq((acc ++ boxedData) flatten))
+            Some(ByteCharSeq((acc ++ boxedData) flatten: _*))
           } else {
             trace("Partial read")
             read(lnk, timeout, (acc ++ boxedData))

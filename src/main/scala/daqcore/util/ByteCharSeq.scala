@@ -46,20 +46,26 @@ class ByteCharSeq(val contents: IndexedSeq[Byte]) extends CharSequence
 
 object ByteCharSeq {
   def encoding  = "ASCII"
-  def apply(bytes: IndexedSeq[Byte]): ByteCharSeq = new ByteCharSeq(bytes)
-  def apply(s: String): ByteCharSeq = apply(s.getBytes(encoding))
+
+  def apply(): ByteCharSeq = empty
+  def apply(bytes: Byte*): ByteCharSeq = bytes match {
+    case seq: ByteCharSeq => seq
+    case seq: IndexedSeq[_] => new ByteCharSeq(bytes.asInstanceOf[IndexedSeq[Byte]])
+    case seq: Seq[_] => apply(bytes.toArray.toSeq.asInstanceOf[IndexedSeq[Byte]]: _*)
+  }
   def apply(seq: CharSequence): ByteCharSeq = seq match {
     case seq: ByteCharSeq => seq
     case seq => apply(seq.toString)
   }
-  def apply(bytes: Byte*): ByteCharSeq = apply(IndexedSeq(bytes : _*))
-  def apply(char: Char): ByteCharSeq = apply(IndexedSeq(char.toByte))
+  def apply(array: Array[Byte]): ByteCharSeq = new ByteCharSeq(array.toSeq.asInstanceOf[IndexedSeq[Byte]])
+  def apply(s: String): ByteCharSeq = apply(s.getBytes(encoding))
+  def apply(char: Char): ByteCharSeq = apply(char.toString)
+
+  val empty = apply(Array.empty[Byte])
 
   def newBuilder: Builder[Byte, ByteCharSeq] =
-    new ArrayBuilder.ofByte() mapResult { a => apply(a.toSeq.asInstanceOf[IndexedSeq[Byte]]) }
+    new ArrayBuilder.ofByte() mapResult { a => apply(a.toSeq.asInstanceOf[IndexedSeq[Byte]]: _*) }
   
-  val empty = apply(IndexedSeq[Byte]())
-
   val lf = ByteCharSeq('\n')
   val cr = ByteCharSeq('\r')
   val crlf = ByteCharSeq("\r\n")
