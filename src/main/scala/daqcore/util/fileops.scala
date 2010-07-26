@@ -81,10 +81,10 @@ object fileops {
       using (this.getSource) { _.mkString }
 
     def readLines : List[String] =
-      using (this.getSource) { _.getLines("\n").toList }
+      using (this.getSource) { _.getLines.toList }
 
     def readLineSeq : IndexedSeq[String] =
-      using (this.getSource) { _.getLines("\n").toSeq.asInstanceOf[IndexedSeq[String]] }
+      using (this.getSource) { _.getLines.toSeq.asInstanceOf[IndexedSeq[String]] }
     
     def readXML: scala.xml.Elem = xml.XML.loadFile(file)
     
