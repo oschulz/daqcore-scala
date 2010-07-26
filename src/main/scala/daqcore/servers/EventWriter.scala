@@ -49,7 +49,7 @@ class EventWriter(val source: EventSource, val target: OutputStream) extends Ser
   protected var startState = RunStart()
   
   protected def write(msg: Message): Unit = {
-    target.write(msg.charSeq.toArray)
+    target.write(msg.getBytes.toArray)
     target.write(StreamMsgTerm.toArray)
   }
 

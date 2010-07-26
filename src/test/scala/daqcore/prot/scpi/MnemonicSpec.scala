@@ -20,7 +20,7 @@ package daqcore.prot.scpi
 import org.scalatest.WordSpec
 import org.scalatest.matchers.MustMatchers
 
-import daqcore.util.ByteCharSeq
+import daqcore.util._
 
 
 class MnemonicSpec extends WordSpec with MustMatchers {

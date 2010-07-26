@@ -20,7 +20,7 @@ package daqcore.prot.scpi
 import org.scalatest.WordSpec
 import org.scalatest.matchers.MustMatchers
 
-import daqcore.util.ByteCharSeq
+import daqcore.util._
 import daqcore.prot.scpi.mnemonics._
 
 
@@ -36,10 +36,10 @@ class SCPIParserSpec extends WordSpec with MustMatchers {
       val bytes = "Some block data".getBytes("ASCII").toSeq.asInstanceOf[IndexedSeq[Byte]]
       val bytes2 = (0 to 511) map {_.toByte}
 
-      val input = Response(Result(NR1(i), BlockData(bytes), SRD(s), BlockData(bytes2), NRf(x)) + l.map{NR1(_)}).charSeq
+      val input = Response(Result(NR1(i) :: BlockData(bytes) :: SRD(s) :: BlockData(bytes2) :: NRf(x) :: l.map{NR1(_)}: _*)).getBytes
 
       val response = parser.parseResponse(input)
-      assert( response.charSeq === input )
+      assert( response.getBytes === input )
 
       //!! Currently broken with scala-2.8.0.RC3, should work again with RC4:
       /* val Response(Result(NR1(iR), BlockData(bytesR), SRD(sR), BlockData(bytes2R), NRf(xR), lRR @_*)) = response
@@ -54,22 +54,22 @@ class SCPIParserSpec extends WordSpec with MustMatchers {
       val input2 = ByteCharSeq("  1,  \t 2,3 ,  #15Hello , 4 ")
       val response2 = parser.parseResponse(input2)
       println(response2)
-      assert( response2.charSeq === ByteCharSeq("1,2,3,#15Hello,4") )
+      assert( response2.getBytes === ByteCharSeq("1,2,3,#15Hello,4") )
     }
     
     "parse requests correctly" in {
-      parser.parseRequest(Request(IDN!).charSeq)
-      parser.parseRequest(Request(IDN?).charSeq)
+      parser.parseRequest(Request(IDN!).getBytes)
+      parser.parseRequest(Request(IDN?).getBytes)
       val expected = ByteCharSeq("*IDN?;SET:VOLT2:DC 5,5.5,#15Hello;:MEAS:VOLT?")
 
       val req = Request(IDN?, SET~VOLTage(2)~DC! (5, 5.5, BlockData(ByteCharSeq("Hello").contents)), ~MEASure~VOLTage?)
-      val preq = parser.parseRequest(req.charSeq)
-      assert( req.charSeq === preq.charSeq )
-      assert( req.charSeq === expected )
+      val preq = parser.parseRequest(req.getBytes)
+      assert( req.getBytes === preq.getBytes )
+      assert( req.getBytes === expected )
       
       val req2 = ByteCharSeq("  *IDN? \t;  SET:VOLT2:DC 5 , 5.5 , #15Hello ; :MEAS:VOLT? ")
       val preq2 = parser.parseRequest(req2)
-      assert( preq2.charSeq === expected )
+      assert( preq2.getBytes === expected )
       assert( preq === preq2 )
     }
     

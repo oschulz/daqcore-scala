@@ -20,29 +20,33 @@ package daqcore.prot.keithley
 import daqcore.util._
 
 
-abstract class Message
-
-
-case class Request(val commands: Command*) extends Message {
-  def charSeq = {
-    commands.map(_.charSeq).reduceLeft { _ ++ _ } ++
-    ByteCharSeq('X')
-  }
-
-  override def toString = charSeq.toString
+abstract class Message extends HasByteRep {
+  def getBytes: ByteCharSeq
 }
 
 
-case class Output(data: ByteCharSeq) extends Message
+case class Request(val commands: Command*) extends Message {
+  def getBytes = {
+    commands.map(_.getBytes).reduceLeft { _ ++ _ } ++
+    ByteCharSeq('X')
+  }
+
+  override def toString = getBytes.toString
+}
 
 
-class Command(val code: Char, val params:ByteCharSeq*) extends ByteCharSeqFragment {
+case class Output(data: ByteCharSeq) extends Message {
+  def getBytes = data
+}
+
+
+class Command(val code: Char, val params:ByteCharSeq*) extends Message {
   require( (code >= 'A') && (code <= 'Z') )
 
-  def charSeq = ByteCharSeq(code) ++
+  def getBytes = ByteCharSeq(code) ++
     params.reduceLeft {_ ++ ByteCharSeq(',') ++ _ }
 
-  override def toString = charSeq.toString
+  override def toString = getBytes.toString
 }
 
 

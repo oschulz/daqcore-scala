@@ -75,7 +75,7 @@ object SRD extends StringData
 
 
 abstract class CharacterData {
-  def apply(mnemonic: SpecMnemonic) = mnemonic.charSeq
+  def apply(mnemonic: SpecMnemonic): ByteCharSeq = mnemonic.getBytes
 
   def unapply(bs: ByteCharSeq) : Option[RecMnemonic] =
     try { Some(RecMnemonic(bs)) } catch { case _ => None }

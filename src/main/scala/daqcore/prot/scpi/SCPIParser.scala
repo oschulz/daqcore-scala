@@ -134,7 +134,7 @@ class SCPIParser extends ByteCharSeqParsers {
   def header = ccqHeader | icHeader
 
   def ccqHeader: Parser[CCQHeader] =
-    "*" ~> recMnemonic ^^ { mnem => CCQHeader(mnem.charSeq.toString) }
+    "*" ~> recMnemonic ^^ { mnem => CCQHeader(mnem.getBytes.toString) }
     
   def mnemSuffix: Parser[Int] = mnemSuffixExpr ^^ { _.toString.toInt }
 
@@ -168,19 +168,19 @@ class SCPIParser extends ByteCharSeqParsers {
     skipWS(repsep(instruction, ";") ^^ { instr => Request(instr : _*) })
     
   /** Extract a CR+LF or LF terminated message from a CharSequence */
-  def extractTermMsg(in: ByteCharSeq) =
+  def extractTermMsg(in: Seq[Byte]) =
     streamMsgRaw(ByteCharSeqReader(in))
 
   /** Extract a CR+LF or LF terminated message from a Reader */
   def extractTermMsg(in: Input) =  streamMsgRaw(in)
 
-  def parseResponse(in: ByteCharSeq): Response =
+  def parseResponse(in: Seq[Byte]): Response =
     parseAll(response, ByteCharSeqReader(in)).get
 
-  def parseHeader(in: ByteCharSeq): Header =
+  def parseHeader(in: Seq[Byte]): Header =
     parseAll(header, ByteCharSeqReader(in)).get
 
-  def parseRequest(in: ByteCharSeq): Request =
+  def parseRequest(in: Seq[Byte]): Request =
     parseAll(request, ByteCharSeqReader(in)).get
 }
 

@@ -74,13 +74,13 @@ class SCPIMsgClient(msgLnk: RawMsgIO) extends Server with SCPIClientLink {
   def serve = {
     case cmd: SCPIClientLink.CmdOnly => {
       val request = cmd.request
-      msgLnk.send(request.charSeq) // Append CR-LF?
+      msgLnk.send(request.getBytes) // Append CR-LF?
       trace("Sent: %s".format(request.toString))
     }
     case cmdqry: SCPIClientLink.CmdQuery => {
       val repl = sender
       val request = cmdqry.request
-      msgLnk.send(request.charSeq) // Append CR-LF?
+      msgLnk.send(request.getBytes) // Append CR-LF?
       trace("Sent: %s".format(request.toString))
       responseInput forward ReadResponse()
     }

@@ -70,8 +70,3 @@ object ByteCharSeq {
   val cr = ByteCharSeq('\r')
   val crlf = ByteCharSeq("\r\n")
 }
-
-
-trait ByteCharSeqFragment {
-  def charSeq: ByteCharSeq
-}

@@ -17,31 +17,7 @@
 
 package daqcore.util
 
-import scala.util.parsing.input._
 
-
-class ByteCharSeqReader(override val source: ByteCharSeq) extends Reader[Char] {
-  import CharSequenceReader._
-
-  override def offset = 0
-
-  def first = if (source.length > 0) source.charAt(0) else EofCh 
-
-  def rest: ByteCharSeqReader = {
-    if (source.length > 0)
-      new ByteCharSeqReader(source.subSequence(1, source.length))
-    else this
-  }
-
-  def pos: Position = new OffsetPosition(source, 0)
-
-  def atEnd = source.length <= 0
-
-  override def drop(n: Int): ByteCharSeqReader =
-    new ByteCharSeqReader(source.subSequence(n, source.length))
-}
-
-
-object ByteCharSeqReader {
-  def apply(source: Seq[Byte]) = new ByteCharSeqReader(ByteCharSeq(source: _*))
+trait HasByteRep {
+  def getBytes: Seq[Byte]
 }

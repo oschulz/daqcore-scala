@@ -20,67 +20,51 @@ package daqcore.prot.scpi
 import daqcore.util._
 
 
-sealed abstract class Message extends ByteCharSeqFragment
+sealed abstract class Message extends HasByteRep
 
 
 case class Response(val results: Result*) extends Message {
-  def charSeq: ByteCharSeq = results.toList match {
-    case Nil => ByteCharSeq.empty
-    case head::Nil => head.charSeq
-    case head::tail => tail.foldLeft(head.charSeq) { (bs, r) => bs ++ ByteCharSeq(';') ++ r.charSeq }
-  }
+  def getBytes = results map {_.getBytes} flatWithSep ByteCharSeq(";")
 }
 
 
 case class Result(values: ByteCharSeq*) {
-  def charSeq: ByteCharSeq = values.toList match {
-    case Nil => ByteCharSeq.empty
-    case head::Nil => head
-    case head::tail => tail.foldLeft(head) { (bs, v) => bs ++ ByteCharSeq(",") ++ v }
-  }
-  
-  def +(seq: Seq[ByteCharSeq]): Result = Result(values ++ seq : _*)
+  def getBytes = values flatWithSep ByteCharSeq(",")
 }
 
 
 case class Request(val instr: Instruction*) extends Message {
-  def charSeq: ByteCharSeq = instr.toList match {
-    case Nil => ByteCharSeq.empty
-    case head::Nil => head.charSeq
-    case head::tail => tail.foldLeft(head.charSeq) { (bs, r) => bs ++ ByteCharSeq(";") ++ r.charSeq }
-  }
+  def getBytes = instr map {_.getBytes} flatWithSep ByteCharSeq(";")
   
   def hasResponse: Boolean = instr.find(_.isInstanceOf[Query]) != None
   override def toString = instr.map(_.toString).mkString("; ")
 }
 
 
-sealed abstract class Instruction extends ByteCharSeqFragment {
+sealed abstract class Instruction extends HasByteRep {
   def params: Seq[ByteCharSeq]
 }
 
 
 case class Command(header: Header, params: ByteCharSeq*) extends Instruction {
-  def charSeq = header.charSeq ++ {
-    if (!params.isEmpty) ByteCharSeq(" ") ++ Result(params:_*).charSeq
-    else ByteCharSeq.empty
+  def getBytes = {
+    if (!params.isEmpty) Seq(header.getBytes, ByteCharSeq(" "), Result(params:_*).getBytes).flat
+    else header.getBytes
   }
-  def ? = Query(header, params:_*)
-  override def toString = header.toString + {
-    if (!params.isEmpty) " " + params.map(_.toString).mkString(", ")
-    else ""
+  override def toString = {
+    if (!params.isEmpty) header.toString + " " + Result(params:_*).toString
+    else header.toString
   }
 }
 
 
 case class Query(header: Header, params: ByteCharSeq*) extends Instruction {
-  def charSeq = header.charSeq ++ {
-    if (!params.isEmpty) ByteCharSeq("? ") ++ Result(params:_*).charSeq
-    else ByteCharSeq("?")
+  def getBytes = {
+    if (!params.isEmpty) Seq(header.getBytes, ByteCharSeq("? "), Result(params:_*).getBytes).flat
+    else Seq(header.getBytes, ByteCharSeq("?")).flat
   }
-  def ? = Query(header, params:_*)
-  override def toString = header.toString + {
-    if (!params.isEmpty) "? " + params.map(_.toString).mkString(", ")
-    else "?"
+  override def toString = {
+    if (!params.isEmpty) header.toString + "? " + Result(params:_*).toString
+    else header.toString + "?"
   }
 }
