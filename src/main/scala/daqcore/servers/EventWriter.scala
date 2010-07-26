@@ -74,12 +74,13 @@ class EventWriter(val source: EventSource, val target: OutputStream) extends Ser
     case event: raw.Event => {
       import daqcore.prot.scpi.mnemonics._
       trace(loggable(event))
+      val transCh = event.trans.keys.toSeq
       write( ~EVENt!( NR1(event.idx), NRf(event.time)) )
       write( ~EVEN~TRIGger!(event.trig map {t => NR1(1)}: _*) )
-      write( ~EVENt~TRANSient~CHANnel!(event.trans map {tr => NR1(tr._1)} toSeq: _*) )
-      write( ~EVENt~TRANSient~TPOSition!(event.trans map {tr => NR1(tr._2.trigPos)} toSeq: _*) )
-      write( ~EVENt~TRANSient~NSAMples!(event.trans map {tr => NR1(tr._2.samples.size)} toSeq: _*) )
-      write( ~EVENt~TRANSient~SAMples!((for {(ch,tr) <- event.trans; s <-tr.samples} yield NR1(s)) toSeq: _*) )
+      write( ~EVENt~TRANSient~CHANnel!((for (ch <- transCh.view) yield NR1(ch)): _*) )
+      write( ~EVENt~TRANSient~TPOSition!((for (ch <- transCh.view) yield NR1(event.trans(ch).trigPos)): _*) )
+      write( ~EVENt~TRANSient~NSAMples!((for (ch <- transCh.view) yield NR1(event.trans(ch).samples.size)): _*) )
+      write( ~EVENt~TRANSient~SAMples! ((for {ch <- transCh.view; s <-event.trans(ch).samples.view} yield NR1(s)): _*) )
       write( ~EVENt~END! )
     }
     case op @ RunStart(uuid, time) => {
