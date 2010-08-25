@@ -361,40 +361,82 @@ abstract class SIS3300(val vmeBus: VMEBus, val baseAddress: Int) extends EventSe
   def getEvents() = {
     import memory._
 
-    val (evDirRegs, tsDirRegs, bankRegs) = {
-      if (currentBank == 1) (EVENT_DIRECTORY_BANK1, EVENT_TIMESTAMP_DIR_BANK1, MEM_BANK1_ADC12)
-      else (EVENT_DIRECTORY_BANK2, EVENT_TIMESTAMP_DIR_BANK2, MEM_BANK2_ADC12)
-    }
+    case class ADCGroup(chOdd: Int, chEven: Int)
+    
+    case class BankMemCfg (
+      val evDirRegs: Range,
+      val tsDirRegs: Range,
+      val groupMem: Map[ADCGroup, Range]
+    )
+
+    val bankMemCfg: Map[Int, BankMemCfg] = Map(
+      1 -> BankMemCfg(
+        evDirRegs = EVENT_DIRECTORY_BANK1,
+        tsDirRegs = EVENT_TIMESTAMP_DIR_BANK1,
+        groupMem = Map(
+          ADCGroup(1, 2) -> MEM_BANK1_ADC12,
+          ADCGroup(3, 4) -> MEM_BANK1_ADC34,
+          ADCGroup(5, 6) -> MEM_BANK1_ADC56,
+          ADCGroup(7, 8) -> MEM_BANK1_ADC78
+        )
+      ),
+      2 -> BankMemCfg(
+        evDirRegs = EVENT_DIRECTORY_BANK2,
+        tsDirRegs = EVENT_TIMESTAMP_DIR_BANK2,
+        groupMem = Map(
+          ADCGroup(1, 2) -> MEM_BANK2_ADC12,
+          ADCGroup(3, 4) -> MEM_BANK2_ADC34,
+          ADCGroup(5, 6) -> MEM_BANK2_ADC56,
+          ADCGroup(7, 8) -> MEM_BANK2_ADC78
+        )
+      )
+    )
+
+    val currentBankMemCfg = bankMemCfg(currentBank)
+    import currentBankMemCfg._
     
     val nSamples = settings.daq.nSamples
     val nEvents = getNEvents
 
     val evDir = read(evDirRegs take nEvents)
     val tsDir = read(tsDirRegs take nEvents)
-    val bankRaw = read(bankRegs take nEvents * nSamples)
-
-    val raw = bankRaw.grouped(nSamples).toArray.toSeq
-
-    val events = for (i <- 0 to nEvents - 1) yield {
+    val rawGroupEvData = for {(group, mem) <- groupMem} yield {
+      val raw = read(mem take nEvents * nSamples)
+      group -> raw.grouped(nSamples).toArray.toSeq
+    }
+ 
+    val events = for {i <- 0 to nEvents - 1} yield {
       val time = TimestampDirEntry.TIMESTAMP(tsDir(i)) * settings.daq.tsBase
       val end = TriggerEventDirEntry.EVEND(evDir(i)) - i * nSamples
       val wrapped = TriggerEventDirEntry.WRAPPED(evDir(i))
       val trigInfo = TriggerEventDirEntry.TRIGGED(evDir(i))
       val trig = for { ch <- channels; if Bit(8-ch)(trigInfo) == 1 } yield ch
-
-      val fixedRaw =
-        if (wrapped == 1) { val(a,b) = raw(i).splitAt(end); b++a }
-        else raw(i) take end
-
-      val trigPos = fixedRaw.size - settings.daq.stopDelay / settings.daq.nAverage
-
-      val transients = Map(
-        1 -> Transient(trigPos, fixedRaw map {w => BankMemoryEntry.SAMODD(w)}),
-        2 -> Transient(trigPos, fixedRaw map {w => BankMemoryEntry.SAMEVEN(w)} )
-      )
       
+      val fixedRawGroupEvData: Map[ADCGroup, Seq[Word]] =
+        for {(group, raw) <- rawGroupEvData} yield {
+          val fixedRaw =
+            if (wrapped == 1) { val(a,b) = raw(i).splitAt(end); b++a }
+            else raw(i) take end
+          group -> fixedRaw
+        }
+
+      val transSeq: Seq[Seq[(Int, Transient)]] =
+        for {(group, fixedRaw) <- fixedRawGroupEvData.toSeq} yield {
+          val trigPos = fixedRaw.size - settings.daq.stopDelay / settings.daq.nAverage
+          Seq(
+            group.chOdd -> Transient(trigPos, fixedRaw map {w => BankMemoryEntry.SAMODD(w)}),
+            group.chEven -> Transient(trigPos, fixedRaw map {w => BankMemoryEntry.SAMEVEN(w)})
+          )
+        }
       
-      Event(nextEventNoVar + i, time, trig, transients)
+      val transients = Map(transSeq.flatten: _*)
+
+      val ev = Event(nextEventNoVar + i, time, trig, transients)
+      
+      for { ch <- (1 to 8); if !ev.trans.isDefinedAt(ch) }
+        error("event(%i).trans is not defined at %i".format(ev.idx, ch))
+
+      ev
     }
     nextEventNoVar += events.size
 
