@@ -114,6 +114,10 @@ abstract class SIS3300(val vmeBus: VMEBus, val baseAddress: Int) extends EventSe
   protected var nextEventNoVar = 1
   def nextEventNo = nextEventNoVar
 
+  protected var lastTimeStampVar = 0
+  protected var TimeStampNOverflowsVar = 0
+  
+
   protected var currentBankVar = 1
   def currentBank = currentBankVar
 
@@ -427,7 +431,16 @@ abstract class SIS3300(val vmeBus: VMEBus, val baseAddress: Int) extends EventSe
     }
  
     val events = for {i <- 0 to nEvents - 1} yield {
-      val time = TimestampDirEntry.TIMESTAMP(tsDir(i)) * settings.daq.tsBase
+      val time = {
+        val ts = TimestampDirEntry.TIMESTAMP(tsDir(i))
+        if (ts < lastTimeStampVar) TimeStampNOverflowsVar += 1
+        lastTimeStampVar = ts
+        val timeStampCycle = 1 << memory.TimestampDirEntry.TIMESTAMP.size
+  
+        settings.daq.tsBase * TimeStampNOverflowsVar * timeStampCycle  +
+          settings.daq.tsBase * ts
+      }
+      
       val end = TriggerEventDirEntry.EVEND(evDir(i)) - i * nSamples
       val wrapped = TriggerEventDirEntry.WRAPPED(evDir(i))
       val trigInfo = TriggerEventDirEntry.TRIGGED(evDir(i))
