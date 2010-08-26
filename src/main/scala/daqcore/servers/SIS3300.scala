@@ -240,7 +240,7 @@ abstract class SIS3300(val vmeBus: VMEBus, val baseAddress: Int) extends EventSe
   def set(toSet: DAQSettings): Unit = {
     import memory._
 
-    val clock = 100E6
+    val clock = 105E6
     
     val modNSampes = findNearestInt(pageConfigTable.keys, toSet.nSamples)
     val modStopDelay = findNearestInt((0 to 0xffff), toSet.stopDelay)
