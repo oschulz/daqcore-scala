@@ -76,7 +76,7 @@ class EventWriter(val source: EventSource, val target: OutputStream) extends Ser
       trace(loggable(event))
       val transCh = event.trans.keys.toSeq
       write( ~EVENt!( NR1(event.idx), NRf(event.time)) )
-      write( ~EVEN~TRIGger!(event.trig map {t => NR1(1)}: _*) )
+      write( ~EVEN~TRIGger!(event.trig map {t => NR1(t)}: _*) )
       write( ~EVENt~TRANSient~CHANnel!((for (ch <- transCh.view) yield NR1(ch)): _*) )
       write( ~EVENt~TRANSient~TPOSition!((for (ch <- transCh.view) yield NR1(event.trans(ch).trigPos)): _*) )
       write( ~EVENt~TRANSient~NSAMples!((for (ch <- transCh.view) yield NR1(event.trans(ch).samples.size)): _*) )
