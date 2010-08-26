@@ -450,7 +450,13 @@ abstract class SIS3300(val vmeBus: VMEBus, val baseAddress: Int) extends EventSe
           )
         }
       
-      val transients = Map(transSeq.flatten: _*)
+      val userIn: Transient = {
+        val fixedRaw = fixedRawGroupEvData.head._2
+        val trigPos = fixedRaw.size - settings.daq.stopDelay / settings.daq.nAverage
+        Transient(trigPos, fixedRaw map {w => BankMemoryEntry.USRIN(w)})
+      }
+      
+      val transients = Map(transSeq.flatten: _*) + (9 -> userIn)
 
       val ev = Event(nextEventNoVar + i, time, trig, transients)
       
