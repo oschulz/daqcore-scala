@@ -264,6 +264,7 @@ abstract class SIS3300(val vmeBus: VMEBus, val baseAddress: Int) extends EventSe
     run { for {
       _ <- ACQUISITION_CONTROL.CLOCKSRC set clockSourceTable(modSampleRate)
       _ <- ACQUISITION_CONTROL.STOPDELAY_EN set 1
+      _ <- ACQUISITION_CONTROL.FPLEMOSS_EN set 1
       _ <- STOP_DELAY.STOPDEL set modStopDelay
       _ <- TIMESTAMP_PREDIVIDER.TSPREDIV set tsPreDiv
       _ <- sync()
