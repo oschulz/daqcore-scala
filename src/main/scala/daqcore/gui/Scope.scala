@@ -36,7 +36,7 @@ class Scope(source: EventSource) extends Server with Closeable {
 
   val plot = XYLinePlot()
 
-  val channels = Seq(1,2)
+  val channels = 1 to 9
   val chSeries = Map ( (
     for (ch <- channels) yield { ch -> XYSeries("Ch%s".format(ch)) }
   ) : _*)
