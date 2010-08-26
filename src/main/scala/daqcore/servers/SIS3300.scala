@@ -132,7 +132,7 @@ abstract class SIS3300(val vmeBus: VMEBus, val baseAddress: Int) extends EventSe
     import memory._
 
     run { for {
-      _ <- CONTROL_STATUS.USRTRGOUT set 1
+      _ <- CONTROL_STATUS.USRTRGOUT set 0
       _ <- CONTROL_STATUS.TRGARMST set 1
       _ <- CONTROL_STATUS.TRGROUTE set 1
       _ <- CONTROL_STATUS.BKFULLOUT2 set 1
@@ -158,6 +158,26 @@ abstract class SIS3300(val vmeBus: VMEBus, val baseAddress: Int) extends EventSe
     import memory._
     run { for {
       state <- CONTROL_STATUS.USRLED get()
+      _ <- sync()
+    } yield {
+      if (state() == 1) true else false
+    } }
+  }
+
+
+  def setUserOutput(state: Boolean): Unit = {
+    import memory._
+    run { for {
+      _ <- CONTROL_STATUS.USROUT set (if (state) 1 else 0)
+      _ <- sync()
+    } yield {} }
+  }
+
+
+  def getUserOutput(): Boolean = {
+    import memory._
+    run { for {
+      state <- CONTROL_STATUS.USROUT get()
       _ <- sync()
     } yield {
       if (state() == 1) true else false
