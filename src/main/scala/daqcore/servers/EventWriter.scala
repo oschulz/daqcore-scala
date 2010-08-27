@@ -121,6 +121,17 @@ object EventWriter {
   def apply(source: EventSource, target: OutputStream): EventWriter =
     start(new EventWriter(source, target))
     
-  def apply(source: EventSource, file: File): EventWriter =
-    start(new EventWriter(source, file.getOStream))
+  def apply(source: EventSource, file: File, compression: Compression = Uncompressed): EventWriter = {
+    import java.io._
+    import java.util.zip.GZIPOutputStream
+    
+    val oStream = compression match {
+      case Uncompressed => new BufferedOutputStream(new FileOutputStream(file))
+      case Gzip(level) => new GZIPOutputStream(new FileOutputStream(file), 16384) {
+        `def`.setLevel(level);
+      }
+      case _ => throw new IllegalArgumentException("Compression " + compression + "not supported")
+    }
+    start(new EventWriter(source, oStream))
+  }
 }
