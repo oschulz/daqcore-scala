@@ -79,6 +79,21 @@ object fileops {
 
     def read : String =
       using (this.getSource) { _.mkString }
+      
+    def readBytes: IndexedSeq[Byte] = {
+      val fileSize = file.length
+      if (fileSize > Int.MaxValue) throw new IllegalArgumentException("File " + file + "to large to read into array")
+      val arraySize = fileSize.toInt
+      val bytes = Array.ofDim[Byte](arraySize)
+      var offset = 0
+      using(this.getIStream) { iStream =>
+        while (offset < bytes.size) {
+          val nRead = iStream.read(bytes, offset, bytes.size - offset)
+          offset += nRead;
+        }
+      }
+      bytes.toSeq.asInstanceOf[IndexedSeq[Byte]]
+    }
 
     def readLines : List[String] =
       using (this.getSource) { _.getLines.toList }
