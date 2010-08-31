@@ -254,7 +254,7 @@ abstract class SIS3300(val vmeBus: VMEBus, val baseAddress: Int) extends EventSe
     val maxNPages = pageConfigTable(modNSampes).nEvents
     val modNPages = findNearestInt((1 to maxNPages), toSet.nPages)
 
-    val clampedSettings = DAQSettings (
+    val clampedSettings = toSet.copy (
       nSamples = modNSampes,
       stopDelay = modStopDelay,
       nAverage = modNAverage,
@@ -457,10 +457,14 @@ abstract class SIS3300(val vmeBus: VMEBus, val baseAddress: Int) extends EventSe
       val transSeq: Seq[Seq[(Int, Transient)]] =
         for {(group, fixedRaw) <- fixedRawGroupEvData.toSeq} yield {
           val trigPos = fixedRaw.size - settings.daq.stopDelay / settings.daq.nAverage
-          Seq(
-            group.chOdd -> Transient(trigPos, fixedRaw map {w => BankMemoryEntry.SAMODD(w)}),
-            group.chEven -> Transient(trigPos, fixedRaw map {w => BankMemoryEntry.SAMEVEN(w)})
-          )
+          if (!settingsVar.daq.trigOnly || trig.contains(group.chOdd) || trig.contains(group.chEven)) {
+            Seq(
+              group.chOdd -> Transient(trigPos, fixedRaw map {w => BankMemoryEntry.SAMODD(w)}),
+              group.chEven -> Transient(trigPos, fixedRaw map {w => BankMemoryEntry.SAMEVEN(w)})
+            )
+          } else {
+            Seq()
+          }
         }
       
       val userIn: Transient = {
@@ -469,13 +473,15 @@ abstract class SIS3300(val vmeBus: VMEBus, val baseAddress: Int) extends EventSe
         Transient(trigPos, fixedRaw map {w => BankMemoryEntry.USRIN(w)})
       }
       
-      val transients = Map(transSeq.flatten: _*) + (9 -> userIn)
+      val userInMap =
+        if (!settingsVar.daq.trigOnly || (userIn.samples.max > 0))
+          Map(9 -> userIn)
+        else Map()
+      
+      val transients = Map(transSeq.flatten: _*) ++ userInMap
 
       val ev = Event(nextEventNoVar + i, time, trig, transients)
       
-      for { ch <- (1 to 8); if !ev.trans.isDefinedAt(ch) }
-        error("event(%i).trans is not defined at %i".format(ev.idx, ch))
-
       ev
     }
     nextEventNoVar += events.size
@@ -957,7 +963,8 @@ object SIS3300 extends Logging {
     nAverage: Int = 1,
     sampleRate: Double = 100E6,
     tsBase: Double = 10E-9.toLong, // in ns
-    nPages: Int = Int.MaxValue
+    nPages: Int = Int.MaxValue,
+    trigOnly: Boolean = false
   )
 
   case class TriggerSettings (
