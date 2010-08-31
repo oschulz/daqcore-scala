@@ -101,4 +101,7 @@ def loggable(a: Any) = {
   shortened collect { case '\n' | '\r' => ' '; case c => c }
 }
 
+
+def localHostName: String = java.net.InetAddress.getLocalHost.getHostName
+
 }
