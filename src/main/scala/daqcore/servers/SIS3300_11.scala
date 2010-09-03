@@ -75,7 +75,7 @@ class SIS3300_11(vmeBus: VMEBus, baseAddress: Int) extends SIS3300(vmeBus, baseA
       _ <- TRIGGER_SETUP_ADC56.GTODD set (if (cfg(5).polarity) 1 else 0)
       _ <- TRIGGER_THRESHOLD_ADC56.THRESHEVEN set firThresh(cfg(6).threshold)
       _ <- TRIGGER_SETUP_ADC56.LTEVEN set (if (cfg(6).polarity) 0 else 1)
-      _ <- TRIGGER_SETUP_ADC56.GTEVEN set (if (cfg(7).polarity) 1 else 0)
+      _ <- TRIGGER_SETUP_ADC56.GTEVEN set (if (cfg(6).polarity) 1 else 0)
 
       _ <- TRIGGER_THRESHOLD_ADC78.THRESHODD set firThresh(cfg(7).threshold)
       _ <- TRIGGER_SETUP_ADC78.LTODD set (if (cfg(7).polarity) 0 else 1)
