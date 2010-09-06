@@ -27,6 +27,7 @@ class DaqcoreScalaProject(info: ProjectInfo) extends DefaultProject(info) with A
   val jfreechart = "jfree" % "jfreechart" % "1.0.13"
   val jcommon = "jfree" % "jcommon" % "1.0.15"
 
+  val colt = "colt" % "colt" % "1.2.0"
   val remotetea_oncrpc = "org.acplt" % "remotetea-oncrpc" % "1.0.7"
 
   def javaSrcDir = "src" / "main" / "java"
