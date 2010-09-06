@@ -9,6 +9,14 @@
     </layout> 
   </appender> 
 
+  <appender name="file" class="org.apache.log4j.FileAppender">
+    <param name="Append" value="true"/> 
+    <param name="File" value="daqcore.log4j"/>
+    <layout class="org.apache.log4j.PatternLayout"> 
+      <param name="ConversionPattern" value="%-5p %c{1} - %m%n"/> 
+    </layout> 
+  </appender>
+
   <logger name="daqcore">
     <level value="debug"/> 
   </logger>
