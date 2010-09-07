@@ -54,3 +54,9 @@ object VLEncoding {
     builder.result.toSeq.asInstanceOf[IndexedSeq[Int]]
   }
 }
+
+
+object ZigZagVLEnc {
+  def apply(seq: Seq[Int]) = VLEncoding.apply(seq.view map ZigZagEnc.encode)
+  def unapply(seq: Seq[Byte]) = VLEncoding.unapply(seq) map { _ map ZigZagEnc.decode }
+}
