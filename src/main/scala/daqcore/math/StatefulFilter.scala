@@ -26,7 +26,10 @@ trait StatefulFilter[A,B] extends Mutable with Function[A,B]
 // y(n) = 1/a(0) * ( (b(0)*x(n-0) + b(1) * x(n-1) + ...
 //                  - a(1) * y(n-1) - a(2) * y(n-2) - ... )
 
-case class iirFilter(a: IndexedSeq[Double], b:IndexedSeq[Double]) extends StatefulFilter[Double, Double] {
+abstract class IIRFilter extends StatefulFilter[Double, Double] {
+  def a: IndexedSeq[Double]
+  def b: IndexedSeq[Double]
+
   var initialized = false
   var x: RingBuffer[Double] = null
   var y: RingBuffer[Double] = null
@@ -49,9 +52,16 @@ case class iirFilter(a: IndexedSeq[Double], b:IndexedSeq[Double]) extends Statef
 }
 
 
-object RCFilter {
-  def apply(c: Double) = {
-    val alpha = 1. / (1. + c)
-    iirFilter(a = Vector(1., alpha-1), b = Vector(alpha))
+object IIRFilter {
+  def apply(ca: IndexedSeq[Double], cb:IndexedSeq[Double]) = new IIRFilter {
+    def a = ca
+    def b = cb
   }
+}
+
+
+case class RCFilter(c: Double) extends IIRFilter {
+  val alpha = 1. / (1. + c)
+  val a = Vector(1., alpha-1)
+  val b = Vector(alpha)
 }
