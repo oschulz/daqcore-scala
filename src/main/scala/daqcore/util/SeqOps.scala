@@ -20,7 +20,14 @@ package daqcore.util
 import scala.collection.mutable.ArrayBuilder
 
 
-class SeqOps[A](seq: Seq[A]) {
+class SeqOps[A: ClassManifest](seq: Seq[A]) {
+  def toIISeq = seq.toArray.toSeq.asInstanceOf[IndexedSeq[A]]
+}
+
+
+object IISeq {
+  def apply[A: ClassManifest](v: A*) = v.toIISeq
+   def fill[T: ClassManifest](n: Int)(elem: => T) = Array.fill(n)(elem).toIISeq
 }
 
 
