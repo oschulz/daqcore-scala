@@ -95,6 +95,10 @@ def timedExec[T](body: => T): (T, Double) = {
 }
 
 
+def timedExecN[T](n: Int)(body: => T): Double =
+  timedExec{ for (i <- 1 to n) (body) }._2
+
+
 def loggable(a: Any) = {
   val s = a.toString
   val shortened = (if (s.size > 40) s.take(40) + " ..." else s)
