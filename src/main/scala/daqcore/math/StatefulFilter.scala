@@ -67,7 +67,7 @@ case class RCFilter(c: Double) extends IIRFilter {
 }
 
 
-case class DifferenceFilter[A <: AnyVal](implicit num: scala.math.Numeric[A]) extends StatefulFilter[A, A] {
+case class DifferenceFilter[@specialized(scala.Int, scala.Long, scala.Float, scala.Double) A](implicit num: scala.math.Numeric[A]) extends StatefulFilter[A, A] {
   var last: A = num.zero
   
   @specialized def apply(x: A): A = {
@@ -78,7 +78,7 @@ case class DifferenceFilter[A <: AnyVal](implicit num: scala.math.Numeric[A]) ex
 }
 
 
-case class IntegrateFilter[A <: AnyVal](implicit num: scala.math.Numeric[A]) extends StatefulFilter[A, A] {
+case class IntegrateFilter[@specialized(scala.Int, scala.Long, scala.Float, scala.Double) A](implicit num: scala.math.Numeric[A]) extends StatefulFilter[A, A] {
   var last: A = num.zero
   
   @specialized def apply(x: A): A = {
