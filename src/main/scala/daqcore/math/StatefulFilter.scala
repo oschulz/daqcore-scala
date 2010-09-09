@@ -20,7 +20,7 @@ package daqcore.math
 import daqcore.util._
 
 
-trait StatefulFilter[A,B] extends Mutable with Function[A,B]
+trait StatefulFilter[@specialized(scala.Int, scala.Long, scala.Float, scala.Double) A, @specialized(scala.Int, scala.Long, scala.Float, scala.Double) B] extends Mutable with Function[A,B]
 
 
 // y(n) = 1/a(0) * ( (b(0)*x(n-0) + b(1) * x(n-1) + ...
