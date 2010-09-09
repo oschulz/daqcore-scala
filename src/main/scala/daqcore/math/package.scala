@@ -22,6 +22,11 @@ import scala.math._
 package object math {
 
 
+implicit def filterBuilderInt = FilterBuilderInt
+implicit def filterBuilderFloat = FilterBuilderFloat
+implicit def filterBuilderDouble = FilterBuilderDouble
+
+
 def hammingWindow(N:Int): PartialFunction[Int, Double] = _ match {
   case i if ((i >= 0) && (i < N)) => {
     0.54 - 0.46 * cos(2*Pi*i / (N-1))

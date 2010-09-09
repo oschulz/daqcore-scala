@@ -67,7 +67,7 @@ case class RCFilter(c: Double) extends IIRFilter {
 }
 
 
-case class DifferenceFilter[@specialized(scala.Int, scala.Long, scala.Float, scala.Double) A](implicit num: scala.math.Numeric[A]) extends StatefulFilter[A, A] {
+case class GenericDifferenceFilter[@specialized(scala.Int, scala.Long, scala.Float, scala.Double) A](implicit num: scala.math.Numeric[A]) extends StatefulFilter[A, A] {
   var last: A = num.zero
   
   @specialized def apply(x: A): A = {
@@ -78,12 +78,72 @@ case class DifferenceFilter[@specialized(scala.Int, scala.Long, scala.Float, sca
 }
 
 
-case class IntegrateFilter[@specialized(scala.Int, scala.Long, scala.Float, scala.Double) A](implicit num: scala.math.Numeric[A]) extends StatefulFilter[A, A] {
+case class GenericIntegrateFilter[@specialized(scala.Int, scala.Long, scala.Float, scala.Double) A](implicit num: scala.math.Numeric[A]) extends StatefulFilter[A, A] {
   var last: A = num.zero
   
   @specialized def apply(x: A): A = {
     val next = num.plus(x, last)
     last = next
     next
+  }
+}
+
+
+object DifferenceFilter {
+  trait Builder[A] { def differenceFilter(): StatefulFilter[A, A] }
+  def apply[A]()(implicit builder: Builder[A]) = builder.differenceFilter()
+}
+
+
+object IntegrateFilter {
+  trait Builder[A] { def integrateFilter(): StatefulFilter[A, A] }
+  def apply[A]()(implicit builder: Builder[A]) = builder.integrateFilter()
+}
+
+
+object FilterBuilderInt extends
+  DifferenceFilter.Builder[Int]
+  with IntegrateFilter.Builder[Int]
+{
+  def differenceFilter() = new StatefulFilter[Int, Int] {
+    var last: Int = 0
+    def apply(x: Int): Int = { val next = x - last; last = x; next }
+  }
+
+  def integrateFilter() = new StatefulFilter[Int, Int] {
+    var last: Int = 0
+    def apply(x: Int): Int = { val next = x + last; last = next; next }
+  }
+}
+
+
+object FilterBuilderFloat extends
+  DifferenceFilter.Builder[Float]
+  with IntegrateFilter.Builder[Float]
+{
+  def differenceFilter() = new StatefulFilter[Float, Float] {
+    var last: Float = 0
+    def apply(x: Float): Float = { val next = x - last; last = x; next }
+  }
+
+  def integrateFilter() = new StatefulFilter[Float, Float] {
+    var last: Float = 0
+    def apply(x: Float): Float = { val next = x + last; last = next; next }
+  }
+}
+
+
+object FilterBuilderDouble extends
+  DifferenceFilter.Builder[Double]
+  with IntegrateFilter.Builder[Double]
+{
+  def differenceFilter() = new StatefulFilter[Double, Double] {
+    var last: Double = 0
+    def apply(x: Double): Double = { val next = x - last; last = x; next }
+  }
+
+  def integrateFilter() = new StatefulFilter[Double, Double] {
+    var last: Double = 0
+    def apply(x: Double): Double = { val next = x + last; last = next; next }
   }
 }
