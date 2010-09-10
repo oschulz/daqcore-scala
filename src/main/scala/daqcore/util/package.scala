@@ -28,6 +28,8 @@ implicit def nestedSeqOps[A: ClassManifest](seq: Seq[Seq[A]]) = new NestedSeqOps
 implicit def seqOps[A: ClassManifest](seq: Seq[A]) = new SeqOps(seq)
 implicit def arrayOps[A: ClassManifest](array: Array[A]) = new ArrayOps(array)
 
+def fast[A: ClassManifest](seq: Seq[A]) = FastSeqOps[A](seq)
+
 implicit def idxSeq2subSeq[T](seq: IndexedSeq[T]) = new SubIdxSeq(seq, 0, seq.length)
 
 
