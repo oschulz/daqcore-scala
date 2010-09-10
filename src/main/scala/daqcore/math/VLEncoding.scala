@@ -23,40 +23,51 @@ import scala.collection.mutable.ArrayBuilder
 
 object VLEncoding {
   def apply(seq: Seq[Int]) : IndexedSeq[Byte] = {
-    val builder = ArrayBuilder.make[Byte]
+    val inputArray = seq.toArray
     val maxBytesPerValue = (sizeOf[Int] * 8 - 1) / 7 + 1
-    builder.sizeHint(seq.size * maxBytesPerValue)
-    
-    for {v <- seq} {
-      var rest = v
+    val outputArray = Array.ofDim[Byte](seq.size * maxBytesPerValue)
+ 
+    var outputPos = 0;
+    for (i <- 0 to (inputArray.size - 1)) {
+      var rest = inputArray(i)
       do {
         val newRest = rest >>> 7
-        if (newRest == 0) builder += (rest & 0x7F).toByte
-        else builder += ((rest & 0x7F) | 0x80).toByte
+        if (newRest == 0) outputArray(outputPos) = (rest & 0x7F).toByte
+        else outputArray(outputPos) = ((rest & 0x7F) | 0x80).toByte
+        outputPos += 1
         rest = newRest
       } while (rest != 0)
     }
     
-    builder.result.toSeq.asInstanceOf[IndexedSeq[Byte]]
+    val resultArray = Array.ofDim[Byte](outputPos)
+    for (i <- 0 to (outputPos - 1)) resultArray(i) = outputArray(i)
+    resultArray.toIISeq
   }
 
   def unapply(bytes: Seq[Byte]) : Option[IndexedSeq[Int]] = Some {
-    val builder = ArrayBuilder.make[Int]
-    builder.sizeHint(bytes.size)
+    val inputArray = bytes.toArray
+    val outputArray = Array.ofDim[Int](inputArray.size)
     
+    var outputPos = 0;
     var v = 0; var pos = 0;
-    for { b <- bytes } {
+    for (i <- 0 to (inputArray.size - 1)) {
+      val b = inputArray(i)
       v = v | ((b & 0x7f) << pos)
-      if ((b & 0x80) == 0) { builder += v; v = 0; pos = 0; }
+      if ((b & 0x80) == 0) {
+        outputArray(outputPos) = v; outputPos += 1
+        v = 0; pos = 0
+      }
       else pos += 7
     }
     
-    builder.result.toSeq.asInstanceOf[IndexedSeq[Int]]
+    val resultArray = Array.ofDim[Int](outputPos)
+    for (i <- 0 to (outputPos - 1)) resultArray(i) = outputArray(i)
+    resultArray.toIISeq
   }
 }
 
 
 object ZigZagVLEnc {
-  def apply(seq: Seq[Int]) = VLEncoding.apply(seq.view map ZigZagEnc.encode)
-  def unapply(seq: Seq[Byte]) = VLEncoding.unapply(seq) map { _ map ZigZagEnc.decode }
+  def apply(seq: Seq[Int]) = VLEncoding.apply(fast(seq) map ZigZagEnc.encode)
+  def unapply(seq: Seq[Byte]) = VLEncoding.unapply(seq) map { fast(_) map ZigZagEnc.decode }
 }
