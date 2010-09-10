@@ -426,8 +426,8 @@ abstract class SIS3300(val vmeBus: VMEBus, val baseAddress: Int) extends EventSe
     val evDir = read(evDirRegs take nEvents)
     val tsDir = read(tsDirRegs take nEvents)
     val rawGroupEvData = for {(group, mem) <- groupMem} yield {
-      val raw = read(mem take nEvents * nSamples)
-      group -> raw.grouped(nSamples).toArray.toSeq
+      val raw = read(mem take nEvents * nSamples).toArray.toIISeq
+      group -> fast(raw).grouped(nSamples).toArray.toIISeq
     }
  
     val events = for {i <- 0 to nEvents - 1} yield {
@@ -446,11 +446,11 @@ abstract class SIS3300(val vmeBus: VMEBus, val baseAddress: Int) extends EventSe
       val trigInfo = TriggerEventDirEntry.TRIGGED(evDir(i))
       val trig = for { ch <- channels; if Bit(8-ch)(trigInfo) == 1 } yield ch
       
-      val fixedRawGroupEvData: Map[ADCGroup, Seq[Word]] =
+      val fixedRawGroupEvData: Map[ADCGroup, IndexedSeq[Word]] =
         for {(group, raw) <- rawGroupEvData} yield {
           val fixedRaw =
-            if (wrapped == 1) { val(a,b) = raw(i).splitAt(end); b++a }
-            else raw(i) take end
+            if (wrapped == 1) { val(a,b) = fast(raw(i)).splitAt(end); b++a }
+            else fast(raw(i)) take end
           group -> fixedRaw
         }
 
@@ -459,8 +459,8 @@ abstract class SIS3300(val vmeBus: VMEBus, val baseAddress: Int) extends EventSe
           val trigPos = fixedRaw.size - settings.daq.stopDelay / settings.daq.nAverage
           if (!settingsVar.daq.trigOnly || trig.contains(group.chOdd) || trig.contains(group.chEven)) {
             Seq(
-              group.chOdd -> Transient(trigPos, fixedRaw map {w => BankMemoryEntry.SAMODD(w)}),
-              group.chEven -> Transient(trigPos, fixedRaw map {w => BankMemoryEntry.SAMEVEN(w)})
+              group.chOdd -> Transient(trigPos, fast(fixedRaw) map {w => BankMemoryEntry.SAMODD(w)}),
+              group.chEven -> Transient(trigPos, fast(fixedRaw) map {w => BankMemoryEntry.SAMEVEN(w)})
             )
           } else {
             Seq()
@@ -470,7 +470,7 @@ abstract class SIS3300(val vmeBus: VMEBus, val baseAddress: Int) extends EventSe
       val userIn: Transient = {
         val fixedRaw = fixedRawGroupEvData.head._2
         val trigPos = fixedRaw.size - settings.daq.stopDelay / settings.daq.nAverage
-        Transient(trigPos, fixedRaw map {w => BankMemoryEntry.USRIN(w)})
+        Transient(trigPos, fast(fixedRaw) map {w => BankMemoryEntry.USRIN(w)})
       }
       
       val userInMap =
