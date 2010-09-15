@@ -67,6 +67,17 @@ case class RCFilter(c: Double) extends IIRFilter {
 }
 
 
+case class RCFilter2(c: Double) extends StatefulFilter[Double, Double] {
+  val alpha = 1 / (1 + c)
+  var last: Double = 0
+  def apply(x: Double) = {
+    val y = alpha * x + (1-alpha) * last
+    last = y
+    y
+  }
+}
+
+
 case class GenericDifferenceFilter[@specialized(scala.Int, scala.Long, scala.Float, scala.Double) A](implicit num: scala.math.Numeric[A]) extends StatefulFilter[A, A] {
   var last: A = num.zero
   
