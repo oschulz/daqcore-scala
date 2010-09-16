@@ -29,6 +29,7 @@ implicit def seqOps[A: ClassManifest](seq: Seq[A]) = new SeqOps(seq)
 implicit def arrayOps[A: ClassManifest](array: Array[A]) = new ArrayOps(array)
 
 implicit def randomOps(rnd: scala.util.Random) = new RandomOps(rnd)
+implicit val defaultRandom = scala.util.Random
 
 def fast[A: ClassManifest](seq: Seq[A]) = FastSeqOps[A](seq)
 
