@@ -18,6 +18,9 @@
 package daqcore
 
 import scala.math._
+import scala.util.Random
+
+import daqcore.util._
 
 package object math {
 
@@ -72,5 +75,9 @@ def turkeyWindow(N:Int): PartialFunction[Int, Double] = _ match {
 
 
 def harmN(N:Int)(n:Double)(phase: Double)(i:Int) = sin(n * 2*Pi*i / (N-1) + phase)
+
+
+def dither(x: Int)(implicit rnd: Random) = x + rnd.nextTriangular
+
 
 }
