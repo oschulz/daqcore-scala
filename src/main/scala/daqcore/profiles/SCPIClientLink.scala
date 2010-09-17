@@ -53,5 +53,5 @@ object SCPIClientLink {
 
   def apply(lnk: ByteStreamIO) = SCPIMsgClient(lnk)
 
-  def apply(host: String, port: Int) = SCPIMsgClient(GPIBOverStream(InetConnection(host, port)))
+  def apply(host: String, port: Int) = SCPIMsgClient(GPIBStreamIO(InetConnection(host, port)))
 }

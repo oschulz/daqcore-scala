@@ -97,5 +97,5 @@ object SCPIMsgClient {
     start(new SCPIMsgClient(msgLnk))
   
   def apply (streamLnk: ByteStreamIO): SCPIMsgClient =
-    SCPIMsgClient(GPIBOverStream(streamLnk))
+    SCPIMsgClient(GPIBStreamIO(streamLnk))
 }
