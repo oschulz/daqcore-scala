@@ -41,7 +41,7 @@ trait MinaIO {
       case ByteStreamOutput.Send(data) => {
         session.write(IoBuffer.wrap(data.toArray))
       }
-      case ByteStreamOutput.Flush => {
+      case ByteStreamOutput.Flush() => {
         // Mina flushes automatically
       }
       case Closeable.Close => {
