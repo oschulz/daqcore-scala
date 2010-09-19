@@ -20,12 +20,11 @@ package daqcore.servers
 import daqcore.actors._
 import daqcore.profiles._
 import daqcore.util._
-import daqcore.prot.scpi.{SCPIParser, StreamMsgTerm}
 
 
 class GPIBStreamIO(val stream: ByteStreamIO) extends RawMsgIO with GPIBStreamInput with GPIBStreamOutput {
-  val inputStream = stream
-  val outputStream = stream
+  val source = stream
+  val target = stream
 }
 
 

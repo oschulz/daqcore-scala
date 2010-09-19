@@ -22,35 +22,27 @@ import java.io.{File}
 import daqcore.actors._
 import daqcore.profiles._
 import daqcore.util._
-import daqcore.prot.scpi.{SCPIParser, StreamMsgTerm}
+import daqcore.prot.scpi.{StreamMsgTerm}
 
 
-trait GPIBStreamOutput extends CloseableServer with QueueingServer with RawMsgOutput {
-  def outputStream: ByteStreamOutput
+trait GPIBStreamOutput extends OutputFilterServer with RawMsgOutput {
+  override def target: ByteStreamOutput
+  val targetCompanion = ByteStreamOutput
 
-  override def init() = {
-    super.init()
-    addResource(outputStream)
-  }
-  
-  def srvSend(data: Seq[Byte]): Unit = if (!data.isEmpty) {
-    outputStream.send(data)
-    if (! (data(data.length-1) == 0x0A)) outputStream.send(StreamMsgTerm)
-    outputStream.flush()
-  }
-
-  override def serve = super.serve orElse {
-    case RawMsgOutput.Send(data) => srvSend(data)
+  protected def srvSend(data: Seq[Byte]): Unit = if (!data.isEmpty) {
+    target.send(data)
+    if (! (data(data.length-1) == 0x0A)) target.send(StreamMsgTerm)
+    target.flush()
   }
 }
 
 
 object GPIBStreamOutput {
   def apply(stream: ByteStreamOutput): GPIBStreamOutput = {
-    start(new GPIBStreamOutput { val outputStream = stream})
+    start(new GPIBStreamOutput { val target = stream})
   }
 
   def apply(file: File, compression: Compression = Uncompressed): GPIBStreamOutput = {
-    start(new GPIBStreamOutput { val outputStream = OutputStreamWriter(file, compression) })
+    start(new GPIBStreamOutput { val target = OutputStreamWriter(file, compression) })
   }
 }

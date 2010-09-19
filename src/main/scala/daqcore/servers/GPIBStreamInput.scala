@@ -25,50 +25,29 @@ import daqcore.util._
 import daqcore.prot.scpi.{GPIBStreamExtractor}
 
 
-trait GPIBStreamInput extends CloseableServer with QueueingServer with RawMsgInput {
-  def inputStream: ByteStreamInput
-  
-  val recvQueue = new ReplyQueue
-
-  override protected def init() = {
-    super.init()
-    addResource(inputStream)
-    inputStream.triggerRecv()
-  }
+trait GPIBStreamInput extends InputFilterServer with RawMsgInput {
+  override def source: ByteStreamInput
+  val sourceCompanion = ByteStreamInput
   
   val extractor = GPIBStreamExtractor()
   
-  def doHandleInput(bytes: Seq[Byte]) = {
-    inputStream.triggerRecv()
-    trace("doHandleInput(%s)".format(loggable(bytes)))
-    val extracted = extractor(bytes)
+  protected def srvHandleInput(data: Seq[Byte]) = {
+    trace("doHandleInput(%s)".format(loggable(data)))
+    val extracted = extractor(data)
     for (msg <- extracted) {
       trace("Complete message of length %s available: [%s]".format(msg.length, loggable(ByteCharSeq(msg: _*))))
       recvQueue.addReply(RawMsgInput.Received(msg)){}
     }
   }
-  
-  override def srvClose() = {
-    super.srvClose()
-  }
-
-  override def serve = super.serve orElse {
-    case RawMsgInput.Recv() => recvQueue addTarget replyTarget
-    case ByteStreamInput.Received(bytes) => doHandleInput(bytes)
-    case ByteStreamInput.Closed => {
-      recvQueue.addReply(RawMsgInput.Closed){exit('closed)}
-    }
-  }
-
 }
 
 
 object GPIBStreamInput {
   def apply(stream: ByteStreamInput): GPIBStreamInput = {
-    start(new GPIBStreamInput { val inputStream = stream })
+    start(new GPIBStreamInput { val source = stream })
   }
 
   def apply(file: File, compression: Compression = Uncompressed): GPIBStreamInput = {
-    start(new GPIBStreamInput { val inputStream = InputStreamReader(file, compression) })
+    start(new GPIBStreamInput { val source = InputStreamReader(file, compression) })
   }
 }
