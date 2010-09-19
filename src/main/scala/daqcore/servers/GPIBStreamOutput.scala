@@ -17,6 +17,8 @@
 
 package daqcore.servers
 
+import java.io.{File}
+
 import daqcore.actors._
 import daqcore.profiles._
 import daqcore.util._
@@ -46,5 +48,9 @@ trait GPIBStreamOutput extends CloseableServer with QueueingServer with RawMsgOu
 object GPIBStreamOutput {
   def apply(stream: ByteStreamOutput): GPIBStreamOutput = {
     start(new GPIBStreamOutput { val outputStream = stream})
+  }
+
+  def apply(file: File, compression: Compression = Uncompressed): GPIBStreamOutput = {
+    start(new GPIBStreamOutput { val outputStream = OutputStreamWriter(file, compression) })
   }
 }
