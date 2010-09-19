@@ -17,6 +17,8 @@
 
 package daqcore.servers
 
+import java.io.{File}
+
 import daqcore.actors._
 import daqcore.profiles._
 import daqcore.util._
@@ -64,5 +66,9 @@ trait GPIBStreamInput extends CloseableServer with QueueingServer with RawMsgInp
 object GPIBStreamInput {
   def apply(stream: ByteStreamInput): GPIBStreamInput = {
     start(new GPIBStreamInput { val inputStream = stream })
+  }
+
+  def apply(file: File, compression: Compression = Uncompressed): GPIBStreamInput = {
+    start(new GPIBStreamInput { val inputStream = InputStreamReader(file, compression) })
   }
 }
