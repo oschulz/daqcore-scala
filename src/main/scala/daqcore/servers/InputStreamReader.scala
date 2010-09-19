@@ -24,10 +24,15 @@ import daqcore.profiles._
 import daqcore.util._
 
 
-class InputStreamReader(input: InputStream) extends Server with ByteStreamInput with Closeable {
+class InputStreamReader(input: InputStream) extends CloseableServer with ByteStreamInput with Closeable {
   val maxChunkSize = 512 * 1024
+
+  override def init() = {
+    super.init()
+    addResource(input)
+  }
   
-  protected def doRecv(): Unit = {
+  protected def srvRecv(): Unit = {
     val avail = input.available
     if (avail > 0) {
       val a = Array.ofDim[Byte](avail min maxChunkSize)
@@ -36,18 +41,12 @@ class InputStreamReader(input: InputStream) extends Server with ByteStreamInput 
       reply(ByteStreamInput.Received(bytes))
     } else {
       reply(ByteStreamInput.Closed)
-      doClose()
+      srvClose()
     }
   }
   
-  protected def doClose(): Unit = {
-      input.close()
-      exit('closed)
-  }
-  
-  override protected def serve = {
-    case ByteStreamInput.Recv() => doRecv()
-    case Closeable.Close => doClose()
+  override def serve = super.serve orElse {
+    case ByteStreamInput.Recv() => srvRecv()
   }
 }
 
@@ -56,9 +55,6 @@ object InputStreamReader {
   def apply(input: InputStream): InputStreamReader =
     start(new InputStreamReader(input))
     
-  def apply(file: File): InputStreamReader =
-    InputStreamReader(new FileInputStream(file))
-
-  def apply(fileName: String): InputStreamReader =
-    InputStreamReader(new File(fileName))
+  def apply(file: File, compression: Compression = Uncompressed): InputStreamReader =
+    InputStreamReader(compression.inputStream(file))
 }
