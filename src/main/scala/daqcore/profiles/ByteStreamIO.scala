@@ -23,49 +23,10 @@ import daqcore.util._
 import daqcore.actors._
 
 
-trait ByteStreamInput extends Profile with Closeable {
-  def recv()(implicit timeout: TimeoutSpec): Seq[Byte] = recvF()(timeout).apply()
-  
-  def recvF()(implicit timeout: TimeoutSpec): Ft[Seq[Byte]] =
-    srv.!!?(ByteStreamInput.Recv())(timeout) map
-      {case ByteStreamInput.Received(msg) => msg}
-  
-  def triggerRecv(): Unit = srv ! ByteStreamInput.Recv()
+trait ByteStreamInput extends GenericInput { val inputCompanion = ByteStreamInput }
+object ByteStreamInput extends GenericInputCompanion { type InputData = Seq[Byte] }
 
-  def clearInput(timeout: Long): Unit = {
-    @tailrec def clearInputImpl(): Unit = {
-      trace("Clearing input")
-      recvF()(SomeTimeout(timeout)).get match {
-        case Some(bytes) => clearInputImpl()
-        case None =>
-      }
-    }
-    clearInputImpl()
-  }
-}
-
-object ByteStreamInput {
-  case class Recv()
-  case class Received(msg: Seq[Byte])
-  case object Closed
-}
-
-
-trait ByteStreamOutput extends Profile with Closeable {
-  def send(data: Seq[Byte]) : Unit =
-    srv ! ByteStreamOutput.Send(data)
-    
-  def flush() : Unit = srv ! ByteStreamOutput.Flush()
-}
-
-object ByteStreamOutput {
-  case class Send(msg: Seq[Byte])
-  
-  case class Flush()
-}
-
+trait ByteStreamOutput extends GenericOutput { val outputCompanion = ByteStreamOutput }
+object ByteStreamOutput extends GenericOutputCompanion { type OutputData = Seq[Byte] }
 
 trait ByteStreamIO extends ByteStreamInput with ByteStreamOutput
-
-object ByteStreamIO {
-}
