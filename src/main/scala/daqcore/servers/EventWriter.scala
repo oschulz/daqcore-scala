@@ -31,7 +31,7 @@ import daqcore.monads._
 import daqcore.data._
 
 
-class EventWriter(val source: EventSource, val target: OutputStream) extends Server with Closeable {
+class EventWriter(val source: EventSource, val output: RawMsgOutput) extends CloseableServer {
   import daqcore.prot.scpi._
 
   val CHANnel = Mnemonic("CHANnel")
@@ -49,14 +49,13 @@ class EventWriter(val source: EventSource, val target: OutputStream) extends Ser
   protected var startState = RunStart()
   
   protected def write(msg: Message): Unit = {
-    target.write(msg.getBytes.toArray)
-    target.write(StreamMsgTerm.toArray)
+    output.send(msg.getBytes.toArray)
   }
 
   protected def write(instr: Instruction): Unit =
     write(Request(instr))
 
-  protected def flush(): Unit = target.flush()
+  protected def flush(): Unit = output.flush()
 
   {
     import daqcore.prot.scpi.mnemonics._
@@ -66,11 +65,11 @@ class EventWriter(val source: EventSource, val target: OutputStream) extends Ser
   override def init() = {
     super.init()
     withCleanup {source.addHandler(handler)} {source.removeHandler(handler)}
-    withCleanup{}{ flush(); target.close() }
+    addResource(output)
   }
 
 
-  def serve = {
+  override def serve = super.serve orElse {
     case event: raw.Event => {
       import daqcore.prot.scpi.mnemonics._
       trace(loggable(event))
@@ -118,20 +117,9 @@ class EventWriter(val source: EventSource, val target: OutputStream) extends Ser
 
 
 object EventWriter {
-  def apply(source: EventSource, target: OutputStream): EventWriter =
-    start(new EventWriter(source, target))
+  def apply(source: EventSource, output: RawMsgOutput): EventWriter =
+    start(new EventWriter(source, output))
     
-  def apply(source: EventSource, file: File, compression: Compression = Uncompressed): EventWriter = {
-    import java.io._
-    import java.util.zip.GZIPOutputStream
-    
-    val oStream = compression match {
-      case Uncompressed => new BufferedOutputStream(new FileOutputStream(file))
-      case Gzip(level) => new GZIPOutputStream(new FileOutputStream(file), 16384) {
-        `def`.setLevel(level);
-      }
-      case _ => throw new IllegalArgumentException("Compression " + compression + "not supported")
-    }
-    start(new EventWriter(source, oStream))
-  }
+  def apply(source: EventSource, file: File, compression: Compression = Uncompressed): EventWriter =
+    EventWriter(source, GPIBStreamOutput(file, compression))
 }
