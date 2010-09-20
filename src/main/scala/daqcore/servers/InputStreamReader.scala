@@ -35,9 +35,9 @@ class InputStreamReader(input: InputStream) extends CloseableServer with ByteStr
   protected def srvRecv(): Unit = {
     val avail = input.available
     if (avail > 0) {
-      val a = Array.ofDim[Byte](avail min maxChunkSize)
+      val a = Array.ofDim[Byte](maxChunkSize)
       val count = input.read(a)
-      val bytes = if (count < avail) a.take(count) else a
+      val bytes = if (count < a.size) a.take(count) else a
       reply(ByteStreamInput.Received(bytes))
     } else {
       reply(ByteStreamInput.Closed)
