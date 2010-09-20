@@ -26,6 +26,34 @@ import daqcore.actors._
 trait GenericInput extends Profile with Closeable {
   val inputCompanion: GenericInputCompanion
   import inputCompanion._
+  
+  def toIterator(implicit timeout: TimeoutSpec): Iterator[InputData] = new Iterator[InputData] {
+    protected var atEnd = false
+
+    protected var nextElem: Option[InputData] = None
+    
+    protected def recvNext(): Unit = if (!atEnd && (nextElem == None)) {
+      srv.!!?(Recv())(timeout).apply() match {
+        case Received(data) => nextElem = Some(data)
+        case Closed => atEnd = true; None
+      }
+    }
+    
+    def hasNext = {
+      recvNext()
+      !atEnd
+    }
+    
+    def next = {
+      recvNext()
+      val res = nextElem match {
+        case Some(a) => a
+        case None => Iterator.empty.next
+      }
+      nextElem = None
+      res
+    }
+  }
 
   def recv()(implicit timeout: TimeoutSpec): InputData = recvF()(timeout).apply()
   
