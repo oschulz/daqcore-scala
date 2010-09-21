@@ -31,6 +31,16 @@ trait GPIBStreamInput extends InputFilterServer with RawMsgInput {
   
   val extractor = GPIBStreamExtractor()
   
+  override protected def init() = {
+    if (extractor.unfinished) source.triggerRecv()
+    super.init()
+  }
+  
+  override protected def onRecv(): Unit = {
+    if (!(recvQueue.pendingReplies > 0) && !extractor.unfinished)
+      source.triggerRecv()
+  }
+  
   protected def srvHandleInput(data: Seq[Byte]) = {
     trace("doHandleInput(%s)".format(loggable(data)))
     val extracted = extractor(data)
@@ -38,6 +48,7 @@ trait GPIBStreamInput extends InputFilterServer with RawMsgInput {
       trace("Complete message of length %s available: [%s]".format(msg.length, loggable(ByteCharSeq(msg: _*))))
       recvQueue.addReply(RawMsgInput.Received(msg)){}
     }
+    if (extractor.unfinished) source.triggerRecv()
   }
 }
 

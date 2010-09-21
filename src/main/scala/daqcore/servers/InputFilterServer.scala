@@ -35,16 +35,19 @@ trait InputFilterServer extends CloseableServer with QueueingServer with Generic
   override protected def init() = {
     super.init()
     addResource(source)
-    source.triggerRecv()
   }
+  
+  protected def onRecv(): Unit = source.triggerRecv()
   
   protected def srvHandleInput(data: sourceCompanion.InputData)
   
   override def serve = super.serve orElse {
-    case RawMsgInput.Recv() => recvQueue addTarget replyTarget
+    case RawMsgInput.Recv() => {
+      onRecv()
+      recvQueue addTarget replyTarget
+    }
 
     case sourceCompanion.Received(data) => {
-      source.triggerRecv()
       srvHandleInput(data)
     }
 
