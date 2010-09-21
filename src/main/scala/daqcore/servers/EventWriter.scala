@@ -31,7 +31,7 @@ import daqcore.monads._
 import daqcore.data._
 
 
-class EventWriter(val source: EventSource, val output: RawMsgOutput) extends CloseableServer {
+class EventWriter(val source: EventSource, val output: SCPIRequestOutput) extends CloseableServer {
   import daqcore.prot.scpi._
 
   val CHANnel = Mnemonic("CHANnel")
@@ -48,9 +48,8 @@ class EventWriter(val source: EventSource, val output: RawMsgOutput) extends Clo
   
   protected var startState = RunStart()
   
-  protected def write(msg: Message): Unit = {
-    output.send(msg.getBytes.toArray)
-  }
+  protected def write(request: Request): Unit =
+    output.send(request)
 
   protected def write(instr: Instruction): Unit =
     write(Request(instr))
@@ -117,9 +116,9 @@ class EventWriter(val source: EventSource, val output: RawMsgOutput) extends Clo
 
 
 object EventWriter {
-  def apply(source: EventSource, output: RawMsgOutput): EventWriter =
+  def apply(source: EventSource, output: SCPIRequestOutput): EventWriter =
     start(new EventWriter(source, output))
     
   def apply(source: EventSource, file: File, compression: Compression = Uncompressed): EventWriter =
-    EventWriter(source, GPIBStreamOutput(file, compression))
+    EventWriter(source, SCPIRequestOutputFilter(file, compression))
 }
