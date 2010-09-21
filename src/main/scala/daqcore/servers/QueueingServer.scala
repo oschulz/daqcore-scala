@@ -26,8 +26,8 @@ import daqcore.prot.scpi.{SCPIParser, StreamMsgTerm}
 abstract trait QueueingServer extends Server {
   class ReplyQueue {
     queue => 
-    val targetQueue = collection.mutable.Queue[MsgTarget]()
-    val replyQueue = collection.mutable.Queue[(Any, () => Unit)]()
+    protected val targetQueue = collection.mutable.Queue[MsgTarget]()
+    protected val replyQueue = collection.mutable.Queue[(Any, () => Unit)]()
     
     protected def sendReplies(): Unit = {
       while (!targetQueue.isEmpty && !replyQueue.isEmpty) {
@@ -48,5 +48,8 @@ abstract trait QueueingServer extends Server {
       replyQueue.enqueue((msg, () => action))
       sendReplies()
     }
+    
+    def pendingRequests = targetQueue.size
+    def pendingReplies = targetQueue.size
   }
 }
