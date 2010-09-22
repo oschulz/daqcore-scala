@@ -21,24 +21,62 @@ import collection.IndexedSeqLike
 import collection.mutable.{Builder,ArrayBuffer,ArrayBuilder}
 
 
-class ByteCharSeq(val contents: IndexedSeq[Byte]) extends CharSequence
+class ByteCharSeq(protected val buffer: Array[Byte], val from: Int, val until: Int) extends CharSequence
   with scala.collection.immutable.IndexedSeq[Byte]
   with IndexedSeqLike[Byte, ByteCharSeq]
 {
-  def apply(index: Int): Byte = contents(index)
+  require((from <= until) && (until <= buffer.length))
 
-  def charAt(index: Int) = contents(index).toChar
+  def length = until - from
 
-  def length = contents.length
+  override final def apply(index: Int): Byte = {
+    if (index < length) buffer(from + index)
+    else throw new java.lang.IndexOutOfBoundsException(index.toString)
+  }
   
-  def subSequence(start: Int = 0, end: Int = size) =
-    new ByteCharSeq(contents.subSequence(start, end))
+  override def copyToArray[B >: Byte](xs: Array[B], start: Int, len: Int): Unit = {
+    try copyToArray(xs.asInstanceOf[Array[Byte]], start, len, 0)
+    catch {
+      case e: java.lang.ClassCastException =>
+        super.copyToArray(xs, start, len)
+    }
+  }
+
+  def copyToArray(xs: Array[Byte], start: Int, len: Int, offset: Int): Unit =
+    for (i <- 0 to len - 1) xs(offset + i) = buffer(from + start + i)
+
+  override def toArray[B >: Byte](implicit arg0: ClassManifest[B]): Array[B] = {
+    val a: Array[Byte] = Array.ofDim[Byte](length)
+    copyToArray(a)
+    a.asInstanceOf[Array[B]]    
+  }
   
-  def ++(that: ByteCharSeq): ByteCharSeq = new ByteCharSeq(this.contents ++ that.contents)
-  def ++(that: Seq[Byte]): ByteCharSeq = new ByteCharSeq(this.contents ++ that)
+  override def foreach[U](f: (Byte) => U): Unit =
+    for (i <- this.from to this.until-1) f(buffer(i))
+
+  def charAt(index: Int) = apply(index).toChar
+
+  def subSequence(from: Int = 0, until: Int = length) =
+    new ByteCharSeq(buffer, this.from + from, this.from + until)
+  
+  def sharedWith(that: ByteCharSeq): Boolean = this.buffer eq that.buffer
+  
+  def ++(that: ByteCharSeq): ByteCharSeq = {
+    if ((this sharedWith that) && (this.until == that.from)) {
+      new ByteCharSeq(this.buffer, this.from, that.until)
+    } else {
+      val a = Array.ofDim[Byte](this.length + that.length)
+      this.copyToArray(a, 0, this.length, 0)
+      that.copyToArray(a, 0, that.length, this.length)
+      new ByteCharSeq(a, 0, a.length)
+    }
+  }
+  
+  def ++(that: Seq[Byte]): ByteCharSeq = this ++ ByteCharSeq(that: _*)
   def ++(s: String): ByteCharSeq = this ++ ByteCharSeq(s)
   
-  override def toString = contents.view map {_.toChar} mkString
+  override def toString =
+    new String(toArray, ByteCharSeq.encoding)
   
   override protected def newBuilder: Builder[Byte, ByteCharSeq] = ByteCharSeq.newBuilder
 }
@@ -48,23 +86,27 @@ object ByteCharSeq {
   def encoding  = "ASCII"
 
   def apply(): ByteCharSeq = empty
+  
   def apply(bytes: Byte*): ByteCharSeq = bytes match {
     case seq: ByteCharSeq => seq
-    case seq: IndexedSeq[_] => new ByteCharSeq(bytes.asInstanceOf[IndexedSeq[Byte]])
-    case seq: Seq[_] => apply(bytes.toArray.toSeq.asInstanceOf[IndexedSeq[Byte]]: _*)
+    case seq => apply(bytes.toArray)
   }
+  
   def apply(seq: CharSequence): ByteCharSeq = seq match {
     case seq: ByteCharSeq => seq
     case seq => apply(seq.toString)
   }
-  def apply(array: Array[Byte]): ByteCharSeq = new ByteCharSeq(array.toSeq.asInstanceOf[IndexedSeq[Byte]])
+  
+  def apply(array: Array[Byte]): ByteCharSeq = new ByteCharSeq(array, 0, array.length)
+  
   def apply(s: String): ByteCharSeq = apply(s.getBytes(encoding))
+  
   def apply(char: Char): ByteCharSeq = apply(char.toString)
 
   val empty = apply(Array.empty[Byte])
 
   def newBuilder: Builder[Byte, ByteCharSeq] =
-    new ArrayBuilder.ofByte() mapResult { a => apply(a.toSeq.asInstanceOf[IndexedSeq[Byte]]: _*) }
+    new ArrayBuilder.ofByte() mapResult { a => apply(a.toArray) }
   
   val lf = ByteCharSeq('\n')
   val cr = ByteCharSeq('\r')

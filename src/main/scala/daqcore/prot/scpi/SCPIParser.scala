@@ -48,7 +48,7 @@ class SCPIParser extends ByteCharSeqParsers {
     if (offset >= source.length) Failure("Reached end of input", in)
     else try {
       val inSeq = in.source.asInstanceOf[ByteCharSeq]
-      val input = inSeq.contents.subSequence(offset, source.length)
+      val input = inSeq.subSequence(offset, source.length)
       if ( (input.length >= 0) && (input(0) == '#') && (input(1) >= '0') && (input(1) <= '9')) {
         val sizeLength = input(1).toChar.toString.toInt
         val dataOffset = sizeLength + 2
