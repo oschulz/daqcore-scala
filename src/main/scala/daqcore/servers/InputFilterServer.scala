@@ -40,18 +40,21 @@ trait InputFilterServer extends CloseableServer with QueueingServer with Generic
     if (needMoreInput) source.triggerRecv()
   }
   
- protected def srvHandleInput(data: sourceCompanion.InputData)
+  protected def srvProcessInput(data: sourceCompanion.InputData): Seq[InputData]
   
   override def serve = super.serve orElse {
     case RawMsgInput.Recv() => {
       recvQueue addTarget replyTarget
       if ((recvQueue.pendingRequests > 0) && !needMoreInput)
         source.triggerRecv()
-      
     }
 
     case sourceCompanion.Received(data) => {
-      srvHandleInput(data)
+      val results = srvProcessInput(data)
+      for (msg <- results) {
+        trace("Message available: [%s]".format(loggable(msg.toString)))
+        recvQueue.addReply(Received(msg)){}
+      }
       if ((recvQueue.pendingRequests > 0) || needMoreInput) source.triggerRecv()
     }
 

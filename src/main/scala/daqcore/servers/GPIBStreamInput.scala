@@ -33,13 +33,13 @@ trait GPIBStreamInput extends InputFilterServer with RawMsgInput {
   
   override def needMoreInput = extractor.unfinished
   
-  protected def srvHandleInput(data: Seq[Byte]) = {
+  protected def srvProcessInput(data: Seq[Byte]) = {
     trace("doHandleInput(%s)".format(loggable(data)))
     val extracted = extractor(data)
     for (msg <- extracted) {
       trace("Complete message of length %s available: [%s]".format(msg.length, loggable(ByteCharSeq(msg: _*))))
-      recvQueue.addReply(RawMsgInput.Received(msg)){}
     }
+    extracted
   }
 }
 
