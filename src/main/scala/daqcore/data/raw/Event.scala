@@ -27,8 +27,8 @@ case class Transient (
 case class Event (
   idx: Int,
   time: Double,
-  trig: Seq[Int],
-  trans: Map[Int, Transient]
+  trig: Seq[Int] = Vector.empty[Int],
+  trans: Map[Int, Transient] = Map.empty[Int, Transient]
 )
 
 
