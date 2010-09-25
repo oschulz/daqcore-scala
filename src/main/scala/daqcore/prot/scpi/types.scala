@@ -30,6 +30,19 @@ object NR1 {
 }
 
 
+object NR1Seq {
+  def apply(values: Int*) = for { x <- values } yield NR1(x)
+
+  def unapplySeq(args: Seq[_]) = try {
+    Some( for { arg <- args} yield
+      { val NR1(i) = arg.asInstanceOf[ByteCharSeq]; i } )
+  } catch {
+    case e: scala.MatchError => None
+    case e: java.lang.ClassCastException => None
+  }
+}
+
+
 // Fixed-point number with explicit decimal point. Example: 42.3
 // object NR2 - not implemented yet
 
@@ -44,6 +57,19 @@ object NRf {
 
   def unapply(bs: ByteCharSeq) : Option[Double] =
     try { Some(bs.toString.toDouble) } catch { case e: NumberFormatException => None }
+}
+
+
+object NRfSeq {
+  def apply(values: Double*) = for { x <- values } yield NRf(x)
+
+  def unapplySeq(args: Seq[_]) = try {
+    Some( for { arg <- args} yield
+      { val NRf(i) = arg.asInstanceOf[ByteCharSeq]; i } )
+  } catch {
+    case e: scala.MatchError => None
+    case e: java.lang.ClassCastException => None
+  }
 }
 
 
