@@ -20,36 +20,44 @@ package daqcore.util
 import java.lang.{System => JSystem}
 
 
-case class Timer(initNSec: Long = 0, initCount: Long = 0) {
+case class Timer(initNSec: Long = 0, initNSecUser: Long = 0, initCount: Long = 0) {
   protected var totalTime: Long = initNSec
+  protected var totalUserTime: Long = initNSec
   protected var totalCount: Long = initCount
 
   def nsec: Long = synchronized { totalTime }
+  def nsecUser: Long = synchronized { totalUserTime }
   
   def sec: Double = nsec * 1E-9
+  def secUser: Double = nsecUser * 1E-9
 
   def count: Long = synchronized { totalCount }
 
-  def reset(): Unit = synchronized { totalTime = 0; totalCount = 0; }
+  def reset(): Unit = synchronized { totalTime = 0; totalUserTime = 0; totalCount = 0; }
 
   def wrap [T, U] (body: PartialFunction[T, U]) : PartialFunction[T, U] = {
     case i if (body isDefinedAt i) => this.apply { body(i) }
   }
 
   def apply [T] (body : => T) : T = {
+    val tmxb = java.lang.management.ManagementFactory.getThreadMXBean()
+    val threadId = Thread.currentThread().getId()
     val t1 = JSystem.nanoTime
+    val u1 = tmxb.getThreadUserTime(threadId)
     val res = body
     val t2 = JSystem.nanoTime
+    val u2 = tmxb.getThreadUserTime(threadId)
     synchronized {
       totalTime += (t2 - t1)
+      totalUserTime += (u2 - u1)
       totalCount += 1
     }
     res
   }
   
-  def +(that: Timer) : Timer = Timer(this.nsec + that.nsec, this.count + that.count)
+  def +(that: Timer) : Timer = Timer(this.nsec + that.nsec, this.nsecUser + that.nsecUser, this.count + that.count)
   
-  override def toString = "Timer(sec = %s, count = %s)".format(sec, count)
+  override def toString = "Timer(total = %s, user = %s, count = %s)".format(sec, secUser, count)
 }
 
 
