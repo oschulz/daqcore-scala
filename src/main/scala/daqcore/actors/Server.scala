@@ -42,9 +42,9 @@ trait Profile extends ServerAccess
 
 
 
-trait Server extends ServerAccess with DaemonActor with Profile {
+trait Server extends ServerAccess with DaemonActor with Profile with Profiling {
   import Server._
-
+  
   def srv: AbstractActor = this
   
   def replyTarget: MsgTarget = sender
@@ -95,11 +95,11 @@ trait Server extends ServerAccess with DaemonActor with Profile {
     if (!restarted) { restarted = true; onStart() } else onRestart()
     init()
     
-    eventloop (
+    eventloop ( profilingTimer("EventLoop") wrap {
       handleGenericPre orElse
       serve orElse
       handleGenericPost
-    )
+    } )
   }
 
 
