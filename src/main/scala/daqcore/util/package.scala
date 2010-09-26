@@ -91,16 +91,21 @@ def ceilLog2(x: Int) = 8 * sizeOf[Int] - java.lang.Integer.numberOfLeadingZeros(
 def currentTime: Double = java.lang.System.currentTimeMillis * 1e-3
 
 
-def timedExec[T](body: => T): (T, Double) = {
+def timedExec[T](body: => T): (T, (Double, Double)) = {
+  val tmxb = java.lang.management.ManagementFactory.getThreadMXBean()
+  val threadId = Thread.currentThread().getId()
   val t1 = java.lang.System.nanoTime
+  val u1 = tmxb.getThreadUserTime(threadId)
   val res = body
   val t2 = java.lang.System.nanoTime
+  val u2 = tmxb.getThreadUserTime(threadId)
   val totalTime = (t2 - t1) * 1E-9d
-  (res, totalTime)
+  val totalUserTime = (u2 - u1) * 1E-9d
+  (res, (totalTime, totalUserTime))
 }
 
 
-def timedExecN[T](n: Int)(body: => T): Double =
+def timedExecN[T](n: Int)(body: => T): (Double, Double) =
   timedExec{ for (i <- 1 to n) (body) }._2
 
 
