@@ -32,6 +32,10 @@ case class Timer(initNSec: Long = 0, initCount: Long = 0) {
 
   def reset(): Unit = synchronized { totalTime = 0; totalCount = 0; }
 
+  def wrap [T, U] (body: PartialFunction[T, U]) : PartialFunction[T, U] = {
+    case i if (body isDefinedAt i) => this.apply { body(i) }
+  }
+
   def apply [T] (body : => T) : T = {
     val t1 = JSystem.nanoTime
     val res = body
@@ -58,10 +62,15 @@ case object Timers extends collection.mutable.HashMap[String, Timer] {
       timer
     }
   }
+  
+  def printTop(n: Int = 20) = this.toSeq.sortWith {(a,b) => a._2.sec >= b._2.sec} take (n) foreach {
+    e => println("%s: %s".format(e._1,e._2))
+  }
 }
 
 
 trait Profiling {
   protected val timerBaseName = this.getClass.getName
   def prof[T](name: => String)(body : => T) : T = Timers(timerBaseName + "." + name)(body)
+  def profilingTimer[T, U](name: => String) : Timer = Timers(timerBaseName + "." + name)
 }
