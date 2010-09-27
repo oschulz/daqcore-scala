@@ -32,23 +32,23 @@ trait EventServer extends Server with EventSource {
   protected def nHandlers: Int = handlers.size
   protected def hasHandlers: Boolean = ! handlers.isEmpty
   
-  protected def doEmit(event: Any): Unit = {
+  protected def srvEmit(event: Any): Unit = {
       trace("Emitting event %s".format(loggable(event)))
       for { handler <- handlers } {
         try if (handler.handle isDefinedAt event) {
           val again = handler.handle(event)
-          if (!again) doRemoveHandler(handler)
+          if (!again) srvRemoveHandler(handler)
         }
-        catch { case _ => doRemoveHandler(handler) }
+        catch { case _ => srvRemoveHandler(handler) }
       }
   }
   
-  protected def doAddHandler(handler: EventHandler): Unit = {
+  protected def srvAddHandler(handler: EventHandler): Unit = {
     trace("Adding %s as as handler %s".format(handler, nHandlers+1))
     handlers = handlers + handler
   }
   
-  protected def doRemoveHandler(handler: EventHandler): Unit = {
+  protected def srvRemoveHandler(handler: EventHandler): Unit = {
     trace("Removing handler %s".format(handler))
     handlers = handlers - handler
   }
@@ -60,11 +60,11 @@ trait EventServer extends Server with EventSource {
 
   protected def serve = {
     case EventSource.AddHandler(handler) =>
-      doAddHandler(handler)
+      srvAddHandler(handler)
     case EventSource.GetEvent(f) =>
-      doAddHandler(new ReplyingEventHandler(f, replyTarget))
+      srvAddHandler(new ReplyingEventHandler(f, replyTarget))
     case EventSource.RemoveHandler(handler) =>
-      doRemoveHandler(handler)
+      srvRemoveHandler(handler)
   }
 }
 
@@ -73,7 +73,7 @@ trait EventServer extends Server with EventSource {
 class EventSenderServer extends EventServer with EventSender {
   override protected def serve = super.serve orElse {
     case EventSender.Emit(event) =>
-      doEmit(event)
+      srvEmit(event)
   }
 }
 

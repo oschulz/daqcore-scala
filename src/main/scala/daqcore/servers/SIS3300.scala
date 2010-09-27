@@ -70,8 +70,8 @@ abstract class SIS3300(val vmeBus: VMEBus, val baseAddress: Int) extends EventSe
       trace("Bank %s full".format(currentBank))
       val events = getEvents()
       clearBankFull()
-      doEmit(Events(events: _*))
-      events foreach { doEmit(_) }
+      srvEmit(Events(events: _*))
+      events foreach { srvEmit(_) }
     }
     else {
       trace("%s events in Bank %s".format(getNEvents(), currentBank))
@@ -313,7 +313,7 @@ abstract class SIS3300(val vmeBus: VMEBus, val baseAddress: Int) extends EventSe
     currentBankVar = 1
     
     daqState = daqState.copy(running = true, startTime = currentTime)
-    doEmit(RunStart().copy(time = daqState.startTime))
+    srvEmit(RunStart().copy(time = daqState.startTime))
     acquireNext
   }
 
@@ -323,7 +323,7 @@ abstract class SIS3300(val vmeBus: VMEBus, val baseAddress: Int) extends EventSe
 
     import memory._
     
-    doEmit(RunStop(currentTime - daqState.startTime))
+    srvEmit(RunStop(currentTime - daqState.startTime))
     daqState = daqState.copy(running = false, startTime = -1)
     
     run { for {
