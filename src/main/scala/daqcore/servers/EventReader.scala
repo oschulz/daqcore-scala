@@ -26,6 +26,7 @@ import daqcore.actors._
 import daqcore.profiles._
 import daqcore.monads._
 import daqcore.data._
+import daqcore.math._
 
 
 trait EventInput extends GenericInput { val inputCompanion = EventInput }
@@ -38,7 +39,7 @@ class EventReader(val source: SCPIRequestInput) extends InputFilterServer with E
   val sourceCompanion = SCPIRequestInput
   
   var currentEvent: Option[raw.Event] = None
-  var eventQueue: List[raw.Event] = Nil
+  var eventQueue: List[EventInput.InputData] = Nil
   override def needMoreInput = currentEvent == None
   
   var transChannels: Seq[Int] = Nil
@@ -76,8 +77,19 @@ class EventReader(val source: SCPIRequestInput) extends InputFilterServer with E
         transTrigPos = trigPos
       case SeqCmd(`H_EVENt_TRANSient_NSAMples`, NR1Seq(nSamples @ _*)) =>
         transNSamples = nSamples
-      case SeqCmd(`H_EVENt_TRANSient_SAMples`, NR1Seq(allSamples @ _*)) => {
+      case SeqCmd(`H_EVENt_TRANSient_SAMples`, sampleArgs) => {
+        val allSamples = sampleArgs match {
+          case Seq(BlockData(bytes)) => {
+            val ZigZagVLEnc(diff) = bytes
+            val samples = fast(diff) map IntegrateFilter()
+            samples
+          }
+          case NR1Seq(samples @ _*) => samples
+          case _ => throw new MatchError(loggable(sampleArgs))
+        }
+
         require ( (transChannels.size > 0) && (transNSamples.sum == allSamples.size) )
+
         val channelIt = transChannels.iterator
         val trigPosIt = transTrigPos.iterator
         val nSamplesIt = transNSamples.iterator
@@ -102,9 +114,14 @@ class EventReader(val source: SCPIRequestInput) extends InputFilterServer with E
         eventQueue = currentEvent.get::eventQueue
         currentEvent = None
       }
-      case Command(`H_RUN_STARt`, SPD(uuidString), NRf(time)) =>
-      case Command(`H_RUN_STOP`, NRf(duration)) =>
-
+      case Command(`H_RUN_STARt`, SPD(uuidString), NRf(time)) => {
+        require(currentEvent == None)
+        eventQueue = RunStart(java.util.UUID.fromString(uuidString), time)::eventQueue
+      }
+      case Command(`H_RUN_STOP`, NRf(duration)) => {
+        require(currentEvent == None)
+        eventQueue = RunStop(duration)::eventQueue
+      }
       case _ => throw new MatchError(loggable(cmd.toString))
     } }
     
