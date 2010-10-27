@@ -27,6 +27,9 @@ class DaqcoreScalaProject(info: ProjectInfo) extends DefaultProject(info) with A
   val jfreechart = "jfree" % "jfreechart" % "1.0.13"
   val jcommon = "jfree" % "jcommon" % "1.0.15"
 
+  val xstream = "com.thoughtworks.xstream" % "xstream" % "1.3.1"
+  val jettison = "org.codehaus.jettison" % "jettison" % "1.0.1"
+
   val colt = "colt" % "colt" % "1.2.0"
   val remotetea_oncrpc = "org.acplt" % "remotetea-oncrpc" % "1.0.7"
 
