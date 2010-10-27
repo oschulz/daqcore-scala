@@ -28,6 +28,8 @@ implicit def nestedSeqOps[A: ClassManifest](seq: Seq[Seq[A]]) = new NestedSeqOps
 implicit def seqOps[A: ClassManifest](seq: Seq[A]) = new SeqOps(seq)
 implicit def arrayOps[A: ClassManifest](array: Array[A]) = new ArrayOps(array)
 
+implicit def reflectionOps(cl: java.lang.Class[_]) = new ReflectionOps(cl)
+
 implicit def randomOps(rnd: scala.util.Random) = new RandomOps(rnd)
 implicit val defaultRandom = scala.util.Random
 
