@@ -12,6 +12,8 @@ class DaqcoreScalaProject(info: ProjectInfo) extends DefaultProject(info) with A
 
   val snapshotsRepo = ScalaToolsSnapshots
 
+  val jBossRepo = "jBoss" at "http://repository.jboss.org/maven2"
+
   val scala_continuations = compilerPlugin("org.scala-lang.plugins" % "continuations" % "2.8.0")
 
   val scala_swing = "org.scala-lang" % "scala-swing" % "2.8.0"
@@ -23,6 +25,8 @@ class DaqcoreScalaProject(info: ProjectInfo) extends DefaultProject(info) with A
 
   val mina_ore = "org.apache.mina" % "mina-core" % "2.0.0-RC1"
   val mina_serial = "org.apache.mina" % "mina-transport-serial" % "2.0.0-RC1"
+
+  val netty = "org.jboss.netty" % "netty" % "3.2.1.Final" % "compile"
 
   val jfreechart = "jfree" % "jfreechart" % "1.0.13"
   val jcommon = "jfree" % "jcommon" % "1.0.15"
