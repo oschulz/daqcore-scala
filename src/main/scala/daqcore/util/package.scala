@@ -55,6 +55,9 @@ def classMF(a: Any): ClassManifest[_] = a match {
 }
 
 
+def genClassMF[A: ClassManifest](a: A) = classManifest[A]
+
+
 def as[A](x:Any) = x.asInstanceOf[A]
 
 
