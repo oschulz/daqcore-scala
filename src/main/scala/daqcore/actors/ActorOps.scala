@@ -26,7 +26,7 @@ class AbstractActorOps(wrapped: AbstractActor) {
   def !?>[A](msg: Any) (f: PartialFunction[Any, A]) (implicit timeout: TimeoutSpec): A = {
     timeout match {
       case NoTimeout => f(wrapped.!?(msg))
-      case SomeTimeout(ms) => f(wrapped.!?(ms,msg))
+      case SomeTimeout(ms) => f(wrapped.!?(ms,msg) get)
     }
   }
 
@@ -34,6 +34,13 @@ class AbstractActorOps(wrapped: AbstractActor) {
   
   def !!?>[A](msg: Any) (f: PartialFunction[Any, A]) (implicit timeout: TimeoutSpec): Ft[A] =
     wrapped.!!?(msg) map f
+
+
+  def !>[R](msg: ActorQuery[R])(implicit timeout: TimeoutSpec): R =
+    wrapped.!?>(msg){case x => x}(timeout).asInstanceOf[R]
+
+  def !!>[R](msg: ActorQuery[R])(implicit timeout: TimeoutSpec): Ft[R] =
+    wrapped.!!?(msg)(timeout) map { _.asInstanceOf[R] }
 }
 
 
