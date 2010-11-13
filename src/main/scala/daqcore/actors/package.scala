@@ -82,5 +82,6 @@ package object actors {
       protected def serve() = srvFkt
     } )
   }
-
+  
+  def spawn(body: => Unit): Unit = scala.actors.Actor.actor(body)
 }
