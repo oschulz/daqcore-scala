@@ -74,6 +74,13 @@ object fileops {
         writer.write(xmlString)
       } }
     }
+
+    def writeBytes(data: Seq[Byte]): Unit = {
+      using(this.getOStream) { oStream =>
+        oStream.write(data.toArray)
+        oStream.flush()
+      }
+    }
     
     def getSource : scala.io.Source = scala.io.Source.fromFile(file)
 
