@@ -110,6 +110,17 @@ object fileops {
     
     def readXML: scala.xml.Elem = xml.XML.loadFile(file)
     
+    def splitPath: (Option[String], String, Option[String]) = {
+      val dir = Option(file.getParent)
+      val name = file.getName
+      val (basename, ext) = name.lastIndexWhere {_ == '.'} match {
+        case 0 => (name, None)
+        case idx: Int if (idx >= 0) => { val (b, e) = name.splitAt(idx); (b, Some(e.drop(1))) }
+        case idx: Int => (name, None)
+      }
+      (dir, basename, ext)
+    }
+    
     def relativeTo(that: File) = {
       def takeSame[T](a:Seq[T], b:Seq[T]) : Seq[T] = {
         def takeSameImpl[T](s:Seq[(T,T)], r:List[T] = Nil) : List [T] = if (s.isEmpty || (s.head._1 != s.head._2)) r; else takeSameImpl(s.tail, s.head._1::r)
