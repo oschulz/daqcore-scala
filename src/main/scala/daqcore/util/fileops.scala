@@ -153,7 +153,9 @@ object fileops {
     def /(path: String) : File = new File(file.getPath + File.separator + path)
   }
   
-  def homeDir = new java.io.File(System.getProperty("user.home"))
+  val tmpDir = new java.io.File(System.getProperty("java.io.tmpdir"))
 
-  def currDir = new java.io.File(".")
+  val homeDir = new java.io.File(System.getProperty("user.home"))
+
+  val currDir = new java.io.File(".")
 }
