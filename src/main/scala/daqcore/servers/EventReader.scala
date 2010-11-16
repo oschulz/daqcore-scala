@@ -38,6 +38,7 @@ class EventReader(val source: SCPIRequestInput) extends InputFilterServer with E
   
   val sourceCompanion = SCPIRequestInput
   
+  var runUUID = UUID.randomUUID()
   var currentEvent: Option[raw.Event] = None
   var eventQueue: List[EventInput.InputData] = Nil
   override def needMoreInput = currentEvent == None
@@ -65,7 +66,7 @@ class EventReader(val source: SCPIRequestInput) extends InputFilterServer with E
     
       case Command(`H_EVENt`, NR1(idx), NRf(time)) => {
         require(currentEvent == None)
-        currentEvent = Some(raw.Event(idx, time))
+        currentEvent = Some(raw.Event(idx = idx, run = runUUID, time = time))
       }
       case SeqCmd(`H_EVEN_TRIGger`, NR1Seq(channels @ _*)) => {
         val ev = currentEvent.get
@@ -116,7 +117,9 @@ class EventReader(val source: SCPIRequestInput) extends InputFilterServer with E
       }
       case Command(`H_RUN_STARt`, SPD(uuidString), NRf(time)) => {
         require(currentEvent == None)
-        eventQueue = RunStart(java.util.UUID.fromString(uuidString), time)::eventQueue
+        val runStart = RunStart(idx = 0, uuid = java.util.UUID.fromString(uuidString), startTime = time)
+        runUUID = runStart.uuid
+        eventQueue = runStart::eventQueue
       }
       case Command(`H_RUN_STOP`, NRf(duration)) => {
         require(currentEvent == None)

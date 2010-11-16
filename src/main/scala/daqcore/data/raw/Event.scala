@@ -17,6 +17,8 @@
 
 package daqcore.data.raw
 
+import java.util.UUID
+
 
 case class Transient (
   trigPos: Int,
@@ -26,6 +28,7 @@ case class Transient (
 
 case class Event (
   idx: Int,
+  run: UUID,
   time: Double,
   trig: Seq[Int] = Vector.empty[Int],
   trans: Map[Int, Transient] = Map.empty[Int, Transient]

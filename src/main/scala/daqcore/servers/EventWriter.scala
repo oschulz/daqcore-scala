@@ -76,7 +76,7 @@ class EventWriter(val source: EventSource, val output: SCPIRequestOutput) extend
       write( H_EVENt_TRANSient_SAMples! ((for {ch <- transCh.view; s <-event.trans(ch).samples.view} yield NR1(s)): _*) )
       write( H_EVENt_END! )
     }
-    case op @ RunStart(uuid, time) => {
+    case op @ RunStart(_, uuid, time) => {
       import daqcore.prot.scpi.mnemonics._
       debug(op)
       write(H_RUN_STARt!(SPD(uuid.toString), NRf(time)))

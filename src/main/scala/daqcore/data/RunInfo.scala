@@ -22,9 +22,24 @@ import java.util.UUID
 import daqcore.util._
 
 
-case class RunInfo(uuid: UUID = UUID.randomUUID(), time: Double, duration: Double) {
-  def this(start: RunStart, stop: RunStop) = this(start.uuid, start.time, stop.duration)
+case class RunInfo(
+  idx: Int,
+  uuid: UUID = UUID.randomUUID(),
+  startTime: Double,
+  duration: Double)
+{
+  def this(start: RunStart, stop: RunStop) = this(
+    idx = start.idx,
+    uuid = start.uuid,
+    startTime = start.startTime,
+    duration = stop.duration
+  )
 }
 
-case class RunStart(uuid: UUID = UUID.randomUUID(), time: Double = currentTime)
+case class RunStart(
+  uuid: UUID = UUID.randomUUID(),
+  idx: Int = 0,
+  startTime: Double = currentTime
+)
+
 case class RunStop(duration: Double)

@@ -62,6 +62,7 @@ abstract class SIS3300(val vmeBus: VMEBus, val baseAddress: Int) extends EventSe
 
   case class DAQState (running: Boolean = false, startTime: Double = -1)
   var daqState = DAQState()
+  var runStart:Option[RunStart] = None
 
   /*protected*/ def acquireNext = sendAfter(100, srv, TimedAcquire)
   
@@ -313,7 +314,8 @@ abstract class SIS3300(val vmeBus: VMEBus, val baseAddress: Int) extends EventSe
     currentBankVar = 1
     
     daqState = daqState.copy(running = true, startTime = currentTime)
-    srvEmit(RunStart().copy(time = daqState.startTime))
+    runStart = Some(RunStart().copy(startTime = daqState.startTime))
+    srvEmit(runStart.get)
     acquireNext
   }
 
@@ -324,6 +326,7 @@ abstract class SIS3300(val vmeBus: VMEBus, val baseAddress: Int) extends EventSe
     import memory._
     
     srvEmit(RunStop(currentTime - daqState.startTime))
+    runStart = None
     daqState = daqState.copy(running = false, startTime = -1)
     
     run { for {
@@ -480,7 +483,13 @@ abstract class SIS3300(val vmeBus: VMEBus, val baseAddress: Int) extends EventSe
       
       val transients = Map(transSeq.flatten: _*) ++ userInMap
 
-      val ev = Event(nextEventNoVar + i, time, trig, transients)
+      val ev = Event(
+        idx = nextEventNoVar + i,
+        run = runStart.get.uuid,
+        time = time,
+        trig = trig,
+        trans = transients
+      )
       
       ev
     }
