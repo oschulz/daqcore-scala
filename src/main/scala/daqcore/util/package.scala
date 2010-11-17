@@ -79,10 +79,10 @@ def hex(v: AnyVal) : String = {
   def byteMF = classManifest[Byte]
 
   v match {
-    case x: Byte     =>  "%02X".format(x)
-    case x: Short    =>  "%04X".format(x)
-    case x: Int      =>  "%08X".format(x)
-    case x: Long     =>  "%016X".format(x)
+    case x: Byte     =>  "%02x".format(x)
+    case x: Short    =>  "%04x".format(x)
+    case x: Int      =>  "%08x".format(x)
+    case x: Long     =>  "%016x".format(x)
     case x: Boolean  =>  if (x) "1" else "0"
     case _ => throw new IllegalArgumentException("hex() does not support %s".format(classMF(v)))
   }
