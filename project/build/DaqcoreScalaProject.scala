@@ -12,7 +12,10 @@ class DaqcoreScalaProject(info: ProjectInfo) extends DefaultProject(info) with A
 
   val snapshotsRepo = ScalaToolsSnapshots
 
-  val jBossRepo = "jBoss" at "http://repository.jboss.org/maven2"
+  val jBossRepo = "jBoss" at "http://repository.jboss.org/nexus/content/groups/public/"
+  val multiverseRepo = "Multiverse Releases" at "http://multiverse.googlecode.com/svn/maven-repository/releases/"
+  val guiceyfruitRepo = "GuiceyFruit" at "http://guiceyfruit.googlecode.com/svn/repo/releases/"
+  val akkaRepo = "Akka Maven Repository" at "http://scalablesolutions.se/akka/repository"
 
   val scala_continuations = compilerPlugin("org.scala-lang.plugins" % "continuations" % "2.8.1")
 
