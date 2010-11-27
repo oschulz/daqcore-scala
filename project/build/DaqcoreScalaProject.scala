@@ -14,9 +14,9 @@ class DaqcoreScalaProject(info: ProjectInfo) extends DefaultProject(info) with A
 
   val jBossRepo = "jBoss" at "http://repository.jboss.org/maven2"
 
-  val scala_continuations = compilerPlugin("org.scala-lang.plugins" % "continuations" % "2.8.0")
+  val scala_continuations = compilerPlugin("org.scala-lang.plugins" % "continuations" % "2.8.1")
 
-  val scala_swing = "org.scala-lang" % "scala-swing" % "2.8.0"
+  val scala_swing = "org.scala-lang" % "scala-swing" % "2.8.1"
 
   val scalatest = "org.scalatest" % "scalatest" % "1.2" % "test"
 
