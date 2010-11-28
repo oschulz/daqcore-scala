@@ -23,9 +23,6 @@ class DaqcoreScalaProject(info: ProjectInfo) extends DefaultProject(info) with A
 
   val scalatest = "org.scalatest" % "scalatest" % "1.2" % "test"
 
-  val lift_common = "net.liftweb" % "lift-common_2.8.0" % "2.2-M1"
-  val lift_util = "net.liftweb" % "lift-util_2.8.0" % "2.2-M1"
-
   val akka_actor = "se.scalablesolutions.akka" % "akka-actor" % "1.0-RC1"
   val akka_remote = "se.scalablesolutions.akka" % "akka-remote" % "1.0-RC1"
   val akka_stm = "se.scalablesolutions.akka" % "akka-stm" % "1.0-RC1"

@@ -18,14 +18,16 @@
 package daqcore.util
 
 
-trait Logging extends net.liftweb.common.Logger {
-  require(Logging.configured)
-}
-
-
-object Logging {
-  lazy val configured = {
-    net.liftweb.util.LoggingAutoConfigurer()()
-    true
-  }
+trait Logging extends akka.util.Logging {
+  def trace(a: => Any): Unit = log.trace(a.toString)
+  def debug(a: => Any): Unit = log.debug(a.toString)
+  def info(a: => Any):  Unit = log.info(a.toString)
+  def warn(a: => Any):  Unit = log.warn(a.toString)
+  def error(a: => Any): Unit = log.error(a.toString)
+  
+  def isTraceEnabled = log.trace_?
+  def isDebugEnabled = log.debug_?
+  def isInfoEnabled  = log.info_?
+  def isWarnEnabled  = log.warning_?
+  def isErrorEnabled = log.error_?
 }

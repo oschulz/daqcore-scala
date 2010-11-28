@@ -991,7 +991,7 @@ object SIS3300 extends Logging {
   case class FIRTriggerMode (nGap: Int = 0x20, nPeak: Int = 0x20, p: Int = 0x8, test: Int = 0) extends TriggerMode
 
 
-  import math.{max,min,abs,log}
+  import math.{max,min,abs}
 
   type Address = Int
   type Word = Int
