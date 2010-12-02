@@ -20,12 +20,12 @@ package daqcore.actors
 import scala.actors._
 
 
-trait ActorRequest extends Product {}
+trait ActorRequest[R] extends Product
 
 
-abstract class ActorQuery[R: ClassManifest] extends ActorRequest {
+abstract class ActorQuery[R: ClassManifest] extends ActorRequest[R] {
   val replyMF = classManifest[R]
 }
 
 
-abstract class ActorCmd extends ActorRequest {}
+abstract class ActorCmd extends ActorRequest[Nothing]

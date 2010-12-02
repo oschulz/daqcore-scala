@@ -37,7 +37,7 @@ case class ContentSerCache() {
   }
 }
 
-sealed trait RootSysRequest extends ActorRequest {
+sealed trait RootSysRequest {
   import RootSysRequest._
   
   val shortClassNameExpr(_, requestName) = getClass.getName
