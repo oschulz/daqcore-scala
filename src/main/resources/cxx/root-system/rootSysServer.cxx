@@ -100,7 +100,10 @@ protected:
 	void read(void *buffer, size_t count, bool closeOnFail = false) {
 		trace(Form("Reading %i bytes from input", count));
 		m_in->read((char*)buffer, count);
-		if (closeOnFail) { if (!m_in->good()) exit(0); }
+		if (!m_in->good() && closeOnFail) {
+			debug("End of input, exiting");
+			exit(0);
+		}
 		else assert( m_in->good() );
 	}
 
