@@ -42,7 +42,7 @@ SBT_JAR="${PROJECT_DIR}/project/boot/sbt-launch-${SBT_VERSION}.jar"
 if [ ! -f "${SBT_JAR}" ] ; then
 	echo "SBT ${SBT_VERSION} launcher not found in project/boot, downloading it." 1>&2
 	
-	mkdir "${PROJECT_DIR}/project/boot"
+	mkdir -p "${PROJECT_DIR}/project/boot"
 	if [ "`which curl`" != "" ] ; then
 		curl "http://simple-build-tool.googlecode.com/files/sbt-launch-${SBT_VERSION}.jar" > "${SBT_JAR}"
 	elif [ "`which wget`" != "" ] ; then
