@@ -17,22 +17,26 @@
 
 package daqcore.servers
 
+import akka.actor._, akka.actor.Actor.actorOf
+
 import daqcore.actors._
 import daqcore.util._
 import daqcore.profiles._
 
 
-trait EventServer extends Server with EventSource {
-  @volatile protected var handlers = Set.empty[EventHandler]
+trait EventServer extends CascadableServer {
+  override def profiles = super.profiles.+[EventSource]
+
+  @volatile var handlers = Set.empty[EventHandler]
   
-  protected class ReplyingEventHandler[T](f: PartialFunction[Any, T], replyTo: MsgTarget) extends EventHandler {
+  class ReplyingEventHandler[T](f: PartialFunction[Any, T], replyTo: MsgTarget) extends EventHandler {
     def handle = { case msg if f.isDefinedAt(msg) => replyTo ! f(msg); false }
   }
   
-  protected def nHandlers: Int = handlers.size
-  protected def hasHandlers: Boolean = ! handlers.isEmpty
+  def nHandlers: Int = handlers.size
+  def hasHandlers: Boolean = ! handlers.isEmpty
   
-  protected def srvEmit(event: Any): Unit = {
+  def srvEmit(event: Any): Unit = {
       trace("Emitting event %s".format(loggable(event)))
       for { handler <- handlers } {
         try if (handler.handle isDefinedAt event) {
@@ -43,22 +47,17 @@ trait EventServer extends Server with EventSource {
       }
   }
   
-  protected def srvAddHandler(handler: EventHandler): Unit = {
+  def srvAddHandler(handler: EventHandler): Unit = {
     trace("Adding %s as as handler %s".format(handler, nHandlers+1))
     handlers = handlers + handler
   }
   
-  protected def srvRemoveHandler(handler: EventHandler): Unit = {
+  def srvRemoveHandler(handler: EventHandler): Unit = {
     trace("Removing handler %s".format(handler))
     handlers = handlers - handler
   }
   
-  override protected def init() = {
-    super.init()
-    trapExit = true
-  }
-
-  protected def serve = {
+  override def serve = super.serve orElse {
     case EventSource.AddHandler(handler) =>
       srvAddHandler(handler)
     case EventSource.GetEvent(f) =>
@@ -70,8 +69,10 @@ trait EventServer extends Server with EventSource {
 
 
 
-class EventSenderServer extends EventServer with EventSender {
-  override protected def serve = super.serve orElse {
+class EventSenderServer extends EventServer {
+  override def profiles = super.profiles.+[EventSender]
+
+  override def serve = super.serve orElse {
     case EventSender.Emit(event) =>
       srvEmit(event)
   }
@@ -79,5 +80,6 @@ class EventSenderServer extends EventServer with EventSender {
 
 
 object EventSenderServer {
-  def apply(): EventSenderServer = start(new EventSenderServer())
+  def apply(sv: Supervising = defaultSupervisor): EventSource =
+    new ServerProxy(sv.linkStart(actorOf(new EventSenderServer()))) with EventSource
 }

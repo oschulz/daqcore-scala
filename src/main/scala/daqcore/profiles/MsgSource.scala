@@ -17,6 +17,8 @@
 
 package daqcore.profiles
 
+import akka.dispatch.Future
+
 import daqcore.actors._
 
 
@@ -24,14 +26,14 @@ trait MsgSource extends Profile {
   def setReceiver(receiver: MsgTarget, repeat: Boolean = true): Unit =
     srv ! MsgSource.SetReceiver(receiver, repeat)
   
-  def getMsgF()(implicit timeout: TimeoutSpec): Ft[Any] =
-    srv.!!?(MsgSource.GetMsg())(timeout)
+  def getMsgF(timeout: Long = defaultTimeout): Future[Any] =
+    srv.!!>(MsgSource.GetMsg(), timeout)
 }
 
 
 object MsgSource {
-  case class SetReceiver(receiver: MsgTarget, repeat: Boolean = true)
-  case class GetMsg()
+  case class SetReceiver(receiver: MsgTarget, repeat: Boolean = true) extends ActorCmd
+  case class GetMsg() extends ActorQuery[Any]
 }
 
 

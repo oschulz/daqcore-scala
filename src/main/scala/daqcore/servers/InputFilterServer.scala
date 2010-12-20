@@ -19,12 +19,17 @@ package daqcore.servers
 
 import java.io.{File}
 
+import akka.actor._, akka.actor.Actor._, akka.dispatch.Future
+
 import daqcore.actors._
 import daqcore.profiles._
 import daqcore.util._
 
 
-trait InputFilterServer extends CloseableServer with QueueingServer with GenericInput {
+trait InputFilterServer extends CloseableServer with QueueingServer {
+  override def profiles = super.profiles.+[GenericInput]
+
+  val inputCompanion: GenericInputCompanion
   import inputCompanion._
 
   def source: GenericInput
@@ -34,13 +39,19 @@ trait InputFilterServer extends CloseableServer with QueueingServer with Generic
   
   def needMoreInput: Boolean = false
 
-  override protected def init() = {
+  override def init() = {
     super.init()
-    addResource(source)
+    clientLinkTo(source.srv)
+    atShutdown { source.close() }
     if (needMoreInput) source.triggerRecv()
   }
   
-  protected def srvProcessInput(data: sourceCompanion.InputData): Seq[InputData]
+  override def onServerExit(server: ActorRef, reason: Option[Throwable]) = {
+    if ((server == source.srv) && (reason == None)) self.stop()
+    else super.onServerExit(server, reason)
+  }
+
+  def srvProcessInput(data: sourceCompanion.InputData): Seq[InputData]
   
   override def serve = super.serve orElse {
     case RawMsgInput.Recv() => {
@@ -56,10 +67,6 @@ trait InputFilterServer extends CloseableServer with QueueingServer with Generic
         recvQueue.addReply(Received(msg)){}
       }
       if ((recvQueue.pendingRequests > 0) || needMoreInput) source.triggerRecv()
-    }
-
-    case sourceCompanion.Closed => {
-      recvQueue.addReply(Closed){srvClose()}
     }
   }
 }

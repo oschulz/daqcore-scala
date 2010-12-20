@@ -21,18 +21,24 @@ import scala.reflect.ClassManifest
 import scala.collection.mutable.{Queue => MQueue}
 
 import java.io.IOException
+import akka.actor._, akka.actor.Actor._, akka.dispatch.Future
+import akka.config.Supervision.{LifeCycle, UndefinedLifeCycle, Temporary, OneForOneStrategy, AllForOneStrategy}
 
 import daqcore.actors._
 import daqcore.profiles._
 import daqcore.prot.rootsys._
 
 
-class RootSystemServer(val io: RawMsgIO) extends CloseableServer {
+class RootSystemServer() extends Server with KeepAlive with PostInit with CloseableServer {
   import RootSystemServer._
+
+  override def profiles = super.profiles.+[Closeable]
 
   val msgBuffer = BufferIO()
 
   case class ActiveQuery(id: Int, readResp: BasicInput => Any, replyTo: MsgTarget)
+  
+  var io: RawMsgIO = _
   
   var msgId = 0
   var queries: MQueue[ActiveQuery] = null
@@ -41,11 +47,17 @@ class RootSystemServer(val io: RawMsgIO) extends CloseableServer {
   override def init() = {
     super.init()
     
-    addResource(io)
     queries = MQueue[ActiveQuery]()
     serCache = ContentSerCache()
+  }
+
+  override def postInit() = {
+    super.postInit()
+    
+    io = RootSystemProcess(srv, Temporary)
     io.triggerRecv()
     io.triggerRecv()
+    atShutdown { io.close() }
   }
 
   def sendRequest(request: RootSysRequest): Int = {
@@ -94,5 +106,7 @@ object RootSystemServer extends {
   val requestMsgType = 0x52455155
   val responseMsgType = 0x52455350
 
-  def apply(): Server = (new RootIOServer(RootSystemProcess()) start).asInstanceOf[Server]
+  def apply(sv: Supervising = defaultSupervisor, lc: LifeCycle = UndefinedLifeCycle): Closeable = {
+    new ServerProxy(sv.linkStart(actorOf(new RootSystemServer()), lc)) with Closeable
+  }
 }

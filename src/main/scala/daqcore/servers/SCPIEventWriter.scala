@@ -20,8 +20,8 @@ package daqcore.servers
 import scala.collection.immutable.{IntMap, SortedMap}
 import scala.collection.MapLike
 
-import java.io.{OutputStream, File}
-import java.util.UUID
+import akka.actor._, akka.actor.Actor._
+import akka.config.Supervision.{LifeCycle, UndefinedLifeCycle}
 
 import daqcore.util._
 import daqcore.util.fileops._
@@ -31,9 +31,11 @@ import daqcore.monads._
 import daqcore.data._
 
 
-class EventWriter(val source: EventSource, val output: SCPIRequestOutput) extends CloseableServer {
+class SCPIEventWriter(val source: EventSource, val output: SCPIRequestOutput) extends CloseableServer {
   import daqcore.prot.scpi._
-  import EventWriter.headers._
+  import SCPIEventWriter.headers._
+
+  override def profiles = super.profiles.+[Closeable]
   
   val handler = EventHandler {
     case ev: RunStart => srv ! ev; true
@@ -41,15 +43,15 @@ class EventWriter(val source: EventSource, val output: SCPIRequestOutput) extend
     case ev: raw.Event => srv ! ev; true
   }
   
-  protected var startState = RunStart()
+  var startState = RunStart()
   
-  protected def write(request: Request): Unit =
+  def write(request: Request): Unit =
     output.send(request)
 
-  protected def write(instr: Instruction): Unit =
+  def write(instr: Instruction): Unit =
     write(Request(instr))
 
-  protected def flush(): Unit = output.flush()
+  def flush(): Unit = output.flush()
 
   {
     import daqcore.prot.scpi.mnemonics._
@@ -58,10 +60,16 @@ class EventWriter(val source: EventSource, val output: SCPIRequestOutput) extend
 
   override def init() = {
     super.init()
+    clientLinkTo(source.srv)
     withCleanup {source.addHandler(handler)} {source.removeHandler(handler)}
-    addResource(output)
+    clientLinkTo(output.srv)
+    atCleanup { output.close() }
   }
 
+  override def onServerExit(server: ActorRef, reason: Option[Throwable]) = {
+    if ((server == source.srv) && (reason == None)) self.stop()
+    else super.onServerExit(server, reason)
+  }
 
   override def serve = super.serve orElse {
     case event: raw.Event => {
@@ -87,30 +95,11 @@ class EventWriter(val source: EventSource, val output: SCPIRequestOutput) extend
       write(H_RUN_STOP!(NRf(duration)))
       flush()
     }
-
-    case op @ Sync() => {
-      debug(op)
-      reply(Ok(true))
-    }
-    case op @ GetStartInfo() => {
-      trace(op)
-      reply(startState)
-    }
-    case Closeable.Close => {
-      exit('closed)
-    }
   }
-
-  case class Sync()
-  case class GetStartInfo()
-  
-  def write(event: raw.Event): Unit = srv ! event
-  
-  def sync(): Unit = srv.!?>(Sync()) { case r: MaybeFail[_] => r() }
 }
 
 
-object EventWriter {
+object SCPIEventWriter {
   object mnemonics {
     import daqcore.prot.scpi._
     val CHANnel = Mnemonic("CHANnel")
@@ -122,7 +111,7 @@ object EventWriter {
   
   object headers {
     import daqcore.prot.scpi.mnemonics._
-    import EventWriter.mnemonics._
+    import SCPIEventWriter.mnemonics._
     
     val H_FORMat = ~FORMat
 
@@ -138,9 +127,6 @@ object EventWriter {
     val H_RUN_STOP = ~RUN~STOP
   }
   
-  def apply(source: EventSource, output: SCPIRequestOutput): EventWriter =
-    start(new EventWriter(source, output))
-    
-  def apply(source: EventSource, file: File, compression: Compression = Uncompressed): EventWriter =
-    EventWriter(source, SCPIRequestOutputFilter(file, compression))
+  def apply(source: EventSource, output: SCPIRequestOutput, sv: Supervising = defaultSupervisor, lc: LifeCycle = UndefinedLifeCycle): Closeable =
+    new ServerProxy(sv.linkStart(actorOf(new SCPIEventWriter(source, output)), lc)) with Closeable
 }

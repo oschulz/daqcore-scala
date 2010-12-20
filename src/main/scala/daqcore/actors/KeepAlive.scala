@@ -15,25 +15,28 @@
 // Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 
-package daqcore.profiles
+package daqcore.actors
 
-import akka.actor._
-
-import daqcore.util._
-import daqcore.actors._
+import akka.actor._, akka.actor.Actor._
 
 
-trait Closeable extends Profile {
-  def close(): Unit = srv.stop
+// Workaround to make sure a supervising actor get's restarted even
+// if all children are temporary - for some reason it get's shut
+// down instead on restart
+trait KeepAlive extends Actor {
+  protected[actors] class KeepAliveDummy extends Actor {
+    def receive = { case null => }
+  }
+
+  override def preStart = {
+    log.trace("Starting permanent dummy child to stay alive")
   
-  def notifyOnClose(implicit receiver: ActorRef) =
-    srv ! Closeable.NotifyOnClose(receiver)
-}
+    if (! self.isBeingRestarted) {
+      val keepAlive = actorOf(new KeepAliveDummy)
+      self.link(keepAlive)
+      keepAlive.start()
+    }
 
-
-object Closeable {
-  case object Closed
-
-  // case object Close extends ActorCmd
-  case class NotifyOnClose(receiver: ActorRef) extends ActorCmd
+    super.preStart
+  }
 }

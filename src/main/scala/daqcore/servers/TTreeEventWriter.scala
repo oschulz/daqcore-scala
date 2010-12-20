@@ -23,62 +23,99 @@ import scala.collection.MapLike
 import java.io.{File}
 import java.util.UUID
 
+import akka.actor._, akka.actor.Actor._, akka.dispatch.Future
+import akka.config.Supervision.{LifeCycle, UndefinedLifeCycle, Temporary, OneForOneStrategy, AllForOneStrategy}
+
 import daqcore.util._
 import daqcore.actors._
 import daqcore.profiles._
 import daqcore.data._
 
 
-class TTreeEventWriter(val source: EventSource, val target: File)(implicit timeout: TimeoutSpec) extends CloseableServer {
+class TTreeEventWriter(val source: EventSource, val target: File, timeout: Long = 10000) extends PostInit with CloseableServer {
+  override def profiles = super.profiles.+[Closeable]
+  
   val handler = EventHandler {
     case ev: RunStart => srv ! ev; true
     case ev: RunStop => srv ! ev; true
     case ev: raw.Event => srv ! ev; true
   }
   
-  var rio: RootIO = null
-  var outFile: TFile = null
-  var events: TTree[raw.FlatEvent] = null
-  var runs: TTree[RunInfo] = null
+  var rio: RootIO = _
+  var outFile: Option[TFile] = None
+  var events: Option[TTree[raw.FlatEvent]] = None
+  var runs: Option[TTree[RunInfo]] = None
   var runStart: Option[RunStart] = None
   
+  def dateString(unixTime: Double) = {
+    import java.util.{Date,TimeZone}, java.text.SimpleDateFormat
+    // val dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ")
+    val dateFormat = new SimpleDateFormat("yyyyMMdd_HHmmss")
+    dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"))
+    val unixMillis = (unixTime * 1e3).toLong
+    dateFormat.format(new Date(unixMillis))
+  }
 
   override def init() = {
     super.init()
+    
+    self.lifeCycle = Temporary // Restarting would be problematic with unfinished TFile
+    
+    clientLinkTo(source.srv)
     withCleanup {source.addHandler(handler)} {source.removeHandler(handler)}
-    
-    rio = RootIO(); link(rio.srv); addResource(rio)
-    
-    outFile = rio.openTFile(target, filemode.recreate)(timeout)
-    addResource(outFile)
-    events = outFile.createTTree[raw.FlatEvent]("events", "Events")
-    runs = outFile.createTTree[RunInfo]("runs", "Run Information")
   }
 
+  override def postInit() = {
+    super.postInit()
+    
+    rio = RootIO(srv, Temporary)
+  }
+
+  override def onServerExit(server: ActorRef, reason: Option[Throwable]) = {
+    if ((server == source.srv) && (reason == None) && (runStart == None)) self.stop()
+    else super.onServerExit(server, reason)
+  }
 
   override def serve = super.serve orElse {
     case event: raw.Event => {
       trace(loggable(event))
       for { start <- runStart } require(event.run == start.uuid)
-      events += raw.FlatEvent(event)
+      events match {
+        case Some(events) => events += raw.FlatEvent(event)
+        case None => log.warn("No output open, can't write event")
+      }
     }
     case start: RunStart => {
       debug(start)
       runStart = Some(start)
+      val uuidStamp = start.uuid.toString.take(8)
+      val timeStamp = dateString(start.startTime)
+      val file = new java.io.File(target.getPath + "_%s_%s.root".format(timeStamp, uuidStamp))
+      outFile = Some(rio.openTFile(file, filemode.recreate, timeout))
+      events = Some(outFile.get.createTTree[raw.FlatEvent]("events", "Events"))
+      runs = Some(outFile.get.createTTree[RunInfo]("runs", "Run Information"))
     }
     case stop: RunStop => {
       debug(stop)
-      runs += new RunInfo(runStart.get, stop)
+      runStart match {
+        case Some(start) => runs.get += new RunInfo(start, stop)
+        case None => log.warn("No run start info available")
+      }
       runStart = None
-    }
-    case Closeable.Close => {
-      exit('closed)
+
+      outFile match {
+        case Some(file) => {      
+          log.debug("Closing output file")
+          file.close()
+        }
+        case None => log.debug("No open file to close")
+      }
     }
   }
 }
 
 
 object TTreeEventWriter {
-  def apply(source: EventSource, output: File)(implicit timeout: TimeoutSpec): TTreeEventWriter =
-    start(new TTreeEventWriter(source, output)(timeout))
+  def apply(source: EventSource, output: File, timeout: Long = 10000, sv: Supervising = defaultSupervisor): Closeable =
+    new ServerProxy(sv.linkStart(actorOf(new TTreeEventWriter(source, output, timeout)))) with Closeable
 }

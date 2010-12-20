@@ -20,30 +20,4 @@ package daqcore
 package object servers {
   import daqcore.profiles._
 
-  implicit object DefaultMinaInetAcceptorBuilder extends InetAcceptorBuilder {
-    import daqcore.servers._
-    
-    def apply (port: Int) (body: ByteStreamIO => Unit) = {
-      val ma = new MinaAcceptor(port,body)
-      ma.start()
-      ma
-    }
-  }
-
-  
-  implicit lazy val DefaultMinaInetConnector = {
-    import daqcore.servers._
-    val mc = new MinaConnector
-    mc.start
-    mc
-  }
-
-  def defaultInetAcceptorBuilder = DefaultMinaInetAcceptorBuilder
-  def defaultInetConnector = DefaultMinaInetConnector
-
-  implicit val defaultVXI11Connector : VXI11Connector = {
-    val connector = new RTVXI11Connector
-    connector.start
-    connector
-  }
 }

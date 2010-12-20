@@ -19,13 +19,19 @@ package daqcore.servers
 
 import java.io.{File}
 
+import akka.actor.Actor.actorOf
+import akka.config.Supervision.{LifeCycle, UndefinedLifeCycle}
+
 import daqcore.actors._
 import daqcore.profiles._
 import daqcore.util._
 import daqcore.prot.scpi.{GPIBStreamExtractor}
 
 
-trait GPIBStreamInput extends InputFilterServer with RawMsgInput {
+trait GPIBStreamInput extends InputFilterServer {
+  override def profiles = super.profiles.+[RawMsgInput]
+  val inputCompanion = RawMsgInput
+
   override def source: ByteStreamInput
   val sourceCompanion = ByteStreamInput
   
@@ -33,7 +39,7 @@ trait GPIBStreamInput extends InputFilterServer with RawMsgInput {
   
   override def needMoreInput = extractor.unfinished
   
-  protected def srvProcessInput(data: Seq[Byte]) = {
+  def srvProcessInput(data: Seq[Byte]) = {
     trace("doHandleInput(%s)".format(loggable(data)))
     val extracted = extractor(data)
     for (msg <- extracted) {
@@ -45,11 +51,9 @@ trait GPIBStreamInput extends InputFilterServer with RawMsgInput {
 
 
 object GPIBStreamInput {
-  def apply(stream: ByteStreamInput): GPIBStreamInput = {
-    start(new GPIBStreamInput { val source = stream })
-  }
-
-  def apply(file: File, compression: Compression = Uncompressed): GPIBStreamInput = {
-    start(new GPIBStreamInput { val source = InputStreamReader(file, compression) })
+  class DefaultGPIBStreamInput(val source: ByteStreamInput) extends GPIBStreamInput
+  
+  def apply(stream: ByteStreamInput, sv: Supervising = defaultSupervisor, lc: LifeCycle = UndefinedLifeCycle): RawMsgInput = {
+    new ServerProxy(sv.linkStart(actorOf(new DefaultGPIBStreamInput(stream)), lc)) with RawMsgInput
   }
 }

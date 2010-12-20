@@ -15,25 +15,26 @@
 // Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 
-package daqcore.profiles
-
-import akka.actor._
-
-import daqcore.util._
-import daqcore.actors._
+package daqcore
 
 
-trait Closeable extends Profile {
-  def close(): Unit = srv.stop
-  
-  def notifyOnClose(implicit receiver: ActorRef) =
-    srv ! Closeable.NotifyOnClose(receiver)
-}
+package object profiles {
+  type InetAddr = java.net.InetAddress
+
+  object InetAddr {
+    def apply(host: String): InetAddr = java.net.InetAddress.getByName(host)
+  }
+
+  implicit def inetAddr(host: String): InetAddr = InetAddr(host)
 
 
-object Closeable {
-  case object Closed
+  type InetSockAddr = java.net.InetSocketAddress
 
-  // case object Close extends ActorCmd
-  case class NotifyOnClose(receiver: ActorRef) extends ActorCmd
+  object InetSockAddr {
+    def apply(host: String, port: Int): InetSockAddr = new InetSockAddr(host, port)
+    def apply(port: Int): InetSockAddr = new InetSockAddr(port)
+  }
+
+  implicit def inetSockAddr(hostPort: (String, Int)): InetSockAddr = InetSockAddr(hostPort._1, hostPort._2)
+  implicit def inetSockAddr(port: Int): InetSockAddr = InetSockAddr(port)
 }

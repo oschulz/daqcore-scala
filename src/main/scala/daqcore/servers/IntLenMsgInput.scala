@@ -17,19 +17,23 @@
 
 package daqcore.servers
 
-import java.io.{File}
+import akka.actor.Actor.actorOf
+import akka.config.Supervision.{LifeCycle, UndefinedLifeCycle}
 
 import daqcore.actors._
 import daqcore.profiles._
 import daqcore.util._
 
 
-trait IntLenMsgInput extends InputFilterServer with RawMsgInput {
+trait IntLenMsgInput extends InputFilterServer {
+  override def profiles = super.profiles.+[RawMsgInput]
+  val inputCompanion = RawMsgInput
+
   override def source: ByteStreamInput
   val sourceCompanion = ByteStreamInput
 
   object extractor extends GenericByteSeqExtractor {
-    protected def parseStart(input: Array[Byte], pos: Int): ParseReturn =
+    def parseStart(input: Array[Byte], pos: Int): ParseReturn =
       (false, pos, parseMsgSize(0, 4) _)
 
     def parseMsgSize(acc: Int, remLen: Int)(input: Array[Byte], pos: Int): ParseReturn = {
@@ -54,7 +58,7 @@ trait IntLenMsgInput extends InputFilterServer with RawMsgInput {
   
   override def needMoreInput = extractor.unfinished
   
-  protected def srvProcessInput(data: Seq[Byte]) = {
+  def srvProcessInput(data: Seq[Byte]) = {
     trace("doHandleInput(%s)".format(loggable(data)))
     val extracted = extractor(data) map { _.toArray.drop(4).toIISeq }
     for (msg <- extracted) trace("Complete message of length %s available: [%s]".format(msg.length, loggable(ByteCharSeq(msg: _*))))
@@ -64,11 +68,8 @@ trait IntLenMsgInput extends InputFilterServer with RawMsgInput {
 
 
 object IntLenMsgInput {
-  def apply(stream: ByteStreamInput): IntLenMsgInput = {
-    start(new IntLenMsgInput { val source = stream })
-  }
-
-  def apply(file: File, compression: Compression = Uncompressed): IntLenMsgInput = {
-    start(new IntLenMsgInput { val source = InputStreamReader(file, compression) })
-  }
+  class DefaultIntLenMsgInput(val source: ByteStreamInput) extends IntLenMsgInput
+  
+  def apply(stream: ByteStreamInput, sv: Supervising = defaultSupervisor, lc: LifeCycle = UndefinedLifeCycle): RawMsgInput =
+    new ServerProxy(sv.linkStart(actorOf(new DefaultIntLenMsgInput(stream)), lc)) with RawMsgInput
 }

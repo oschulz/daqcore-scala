@@ -18,26 +18,29 @@
 package daqcore.servers
 
 import java.io.{File, InputStream, FileInputStream}
+import akka.actor.Actor.actorOf
 
 import daqcore.actors._
 import daqcore.profiles._
 import daqcore.util._
 
 
-class DoEvery(interval: Int, action: => Unit) extends Server with Repeated with Closeable {
+class DoEvery(interval: Int, action: => Unit) extends CloseableServer {
+  override def profiles = super.profiles.+[Repeated]
+
   val maxChunkSize = 512 * 1024
   
   var paused = false
   var count = 0
   
-  override protected def init(): Unit = {
+  override def init(): Unit = {
     super.init()
     srv ! RunAction
   }
   
   protected case object RunAction
   
-  override protected def serve = {
+  override def serve = super.serve orElse {
     case Repeated.Pause =>
       paused = true
 
@@ -53,13 +56,11 @@ class DoEvery(interval: Int, action: => Unit) extends Server with Repeated with 
       action
       count = count + 1
     }
-
-    case Closeable.Close => exit('closed)
   }
 }
 
 
 object DoEvery {
-  def apply(interval: Int)(action: => Unit): Repeated =
-    start(new DoEvery(interval, action))
+  def apply(interval: Int, sv: Supervising = defaultSupervisor)(action: => Unit): Repeated =
+    new ServerProxy(sv.linkStart(actorOf(new DoEvery(interval, action)))) with Repeated
 }

@@ -17,34 +17,42 @@
 
 package daqcore.servers
 
+import scala.collection.immutable.Queue
+
+import akka.actor.ActorRef
+
 import daqcore.actors._
 import daqcore.profiles._
 
 
-trait CloseableServer extends Server with Closeable {
-  type SupportsClose = { def close(): Unit }
+trait CloseableServer extends CascadableServer {
+  override def profiles = super.profiles.+[Closeable]
+  
+  var closeListeners: Queue[ActorRef] = Queue[ActorRef]()
 
-  protected var resources: List[SupportsClose] = Nil
-
-  protected def addResource[T <: SupportsClose](res: T): T = {
-    resources = res :: resources
-    res
-  }
+  override def init() = {
+    super.init()
     
-  protected def srvClose(): Unit = {
-    while (resources != Nil) {
-      val r::rest = resources
-      resources = rest
-      r.close()
-    }
-    exit('closed)
-  }
-
-  def serve = {
-    case Closeable.Close => {
-      debug("Closing.")
-      srvClose()
+    atCleanup {
+      while (! closeListeners.isEmpty) {
+        val (listener, rest) = closeListeners.dequeue
+        closeListeners = rest
+        try { listener ! Closeable.Closed } catch { case _ => }
+      }
     }
   }
 
+  /*def srvClose(): Unit = {
+    log.debug("Closing.")
+    self.stop()
+  }*/
+  
+  def srvNotifyOnClose(receiver: ActorRef): Unit = {
+    closeListeners = closeListeners enqueue receiver
+  }
+
+  override def serve = super.serve orElse {
+    // case Closeable.Close => { srvClose() }
+    case Closeable.NotifyOnClose(receiver) => { srvNotifyOnClose(receiver) }
+  }
 }

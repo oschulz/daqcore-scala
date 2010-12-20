@@ -17,18 +17,22 @@
 
 package daqcore.servers
 
-import java.io.{File}
+import akka.actor.Actor.actorOf
+import akka.config.Supervision.{LifeCycle, UndefinedLifeCycle}
 
 import daqcore.actors._
 import daqcore.profiles._
 import daqcore.util._
 
 
-trait IntLenMsgOutput extends OutputFilterServer with RawMsgOutput {
+trait IntLenMsgOutput extends OutputFilterServer {
+  override def profiles = super.profiles.+[RawMsgOutput]
+  val outputCompanion = RawMsgOutput
+
   override def target: ByteStreamOutput
   val targetCompanion = ByteStreamOutput
 
-  protected def srvSend(data: Seq[Byte]): Unit = if (!data.isEmpty) {
+  def srvSend(data: Seq[Byte]): Unit = if (!data.isEmpty) {
     target.send(BigEndian.toBytes(Seq(data.size.toInt)))
     target.send(data)
   }
@@ -36,11 +40,8 @@ trait IntLenMsgOutput extends OutputFilterServer with RawMsgOutput {
 
 
 object IntLenMsgOutput {
-  def apply(stream: ByteStreamOutput): IntLenMsgOutput = {
-    start(new IntLenMsgOutput { val target = stream})
-  }
-
-  def apply(file: File, compression: Compression = Uncompressed): IntLenMsgOutput = {
-    start(new IntLenMsgOutput { val target = OutputStreamWriter(file, compression) })
-  }
+  class DefaultIntLenMsgOutput(val target: ByteStreamOutput) extends IntLenMsgOutput
+  
+  def apply(stream: ByteStreamOutput, sv: Supervising = defaultSupervisor, lc: LifeCycle = UndefinedLifeCycle): RawMsgOutput =
+    new ServerProxy(sv.linkStart(actorOf(new DefaultIntLenMsgOutput(stream)), lc)) with RawMsgOutput
 }

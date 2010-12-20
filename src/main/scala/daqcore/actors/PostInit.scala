@@ -17,36 +17,38 @@
 
 package daqcore.actors
 
-
-case object Timeout
-
+import akka.actor._
 
 
-sealed abstract class TimeoutSpec {
-  def isDefined: Boolean
-  def get: Long
-  def max(that: TimeoutSpec): TimeoutSpec
-  def min(that: TimeoutSpec): TimeoutSpec
-}
+trait PostInit extends Server {
+  case object RunPostInit
 
-
-case class SomeTimeout(ms: Long) extends TimeoutSpec {
-  def isDefined = true
-  def get = ms
+  protected[actors] var postInitDone = false
   
-  def max(that: TimeoutSpec) =
-    if (that.isDefined) SomeTimeout(this.get max that.get)
-    else that
+  def postInit(): Unit = {
+    log.debug("postInit")
+  }
+  
+  protected[actors] def runPostInitOnce() = {
+    if (!postInitDone) {
+      postInitDone = true
+      postInit()
+    }
+  }
 
-  def min(that: TimeoutSpec) = 
-    if (that.isDefined) SomeTimeout(this.get min that.get)
-    else this
-}
+  override def receive = {
+    case RunPostInit => {
+      log.trace("received RunPostInit")
+      runPostInitOnce()
+    }
+    case msg if (super.receive isDefinedAt msg) => {
+      runPostInitOnce()
+      super.receive(msg)
+    }
+  }
 
-
-case object NoTimeout extends TimeoutSpec {
-  def isDefined = false
-  def get = throw new java.util.NoSuchElementException("NoTimeout.get")
-  def max(that: TimeoutSpec) = this
-  def min(that: TimeoutSpec) = that
+  override def preStart = {
+    super.preStart
+    self ! RunPostInit
+  }
 }

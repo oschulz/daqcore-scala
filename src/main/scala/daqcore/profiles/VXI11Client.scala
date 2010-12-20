@@ -17,10 +17,26 @@
 
 package daqcore.profiles
 
-import java.net.InetAddress
+import akka.actor._, akka.dispatch.Future
 
-import daqcore.util._
-import daqcore.actors._
+import daqcore.util._, daqcore.actors._
+import daqcore.servers._
+
+
+trait VXI11Client extends Closeable {
+  def openLink(device:String, timeout: Long = defaultTimeout): Future[VXI11ClientLink] = {
+    val ft: Future[ActorRef] = srv.!!>(VXI11Client.OpenLink(device, timeout), timeout)
+    ft map { aref => (new ServerProxy(aref) with VXI11ClientLink) }
+  }
+}
+
+object VXI11Client {
+  case class OpenLink(device:String, timeout: Long) extends ActorQuery[ActorRef]
+  
+  def apply(address: InetAddr, timeout: Long = 10000, sv: Supervising = defaultSupervisor): VXI11Client =
+    RTVXI11Client(address, timeout, sv)
+}
+
 
 
 trait VXI11ClientLink extends RawMsgIO {
@@ -34,18 +50,6 @@ trait VXI11ClientLink extends RawMsgIO {
 
 
 object VXI11ClientLink {
-  def apply(host: String, device:String)(implicit connector: VXI11Connector): VXI11ClientLink =
-    connector.connectF(host, device)()
-
-  def apply(host: String, device:String, timeout: Long)(implicit connector: VXI11Connector): VXI11ClientLink =
-    connector.connectF(host, device, timeout)()
-  
-  def apply(to: InetAddress, device:String)(implicit connector: VXI11Connector): VXI11ClientLink =
-    connector.connectF(to, device)()
-
-  def apply(to: InetAddress, device:String, timeout: Long)(implicit connector: VXI11Connector): VXI11ClientLink =
-    connector.connectF(to, device, timeout)()
-
   // Not supported yet: case class Lock(flags: Int = 0, timeout: Long = -1) // Reply: Boolean
   // Not supported yet: case object Unlock // No Reply
   // Not supported yet: case object Clear // Reply: Unit

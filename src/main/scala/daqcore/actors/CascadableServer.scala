@@ -15,25 +15,11 @@
 // Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 
-package daqcore.profiles
-
-import akka.actor._
-
-import daqcore.util._
-import daqcore.actors._
+package daqcore.actors
 
 
-trait Closeable extends Profile {
-  def close(): Unit = srv.stop
-  
-  def notifyOnClose(implicit receiver: ActorRef) =
-    srv ! Closeable.NotifyOnClose(receiver)
-}
+abstract trait CascadableServer extends Server {
+  object NoMatch
 
-
-object Closeable {
-  case object Closed
-
-  // case object Close extends ActorCmd
-  case class NotifyOnClose(receiver: ActorRef) extends ActorCmd
+  def serve: PartialFunction[Any, Unit] = { case NoMatch => }
 }

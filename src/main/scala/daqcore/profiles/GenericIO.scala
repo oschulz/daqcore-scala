@@ -18,25 +18,30 @@
 package daqcore.profiles
 
 import scala.annotation._
+import akka.actor._, akka.dispatch.Future
 
 import daqcore.util._
 import daqcore.actors._
 
 
-trait GenericInput extends Profile with Closeable {
+trait GenericInput extends Profile with Closeable with Logging {
   val inputCompanion: GenericInputCompanion
   import inputCompanion._
   
-  def toIterator(implicit timeout: TimeoutSpec): Iterator[InputData] = new Iterator[InputData] {
+  protected def tryIn[T](body: => T) = try (body) catch {
+    case e: ActorInitializationException => {
+      if (srv.isShutdown) throw new java.io.IOException("Input closed")
+      else throw e
+    }
+  }
+  
+  def toIterator(timeout: Long = defaultTimeout): Iterator[InputData] = new Iterator[InputData] {
     protected var atEnd = false
 
     protected var nextElem: Option[InputData] = None
     
-    protected def recvNext(): Unit = if (!atEnd && (nextElem == None)) {
-      srv.!!?(Recv())(timeout).apply() match {
-        case Received(data) => nextElem = Some(data)
-        case Closed => atEnd = true; None
-      }
+    protected def recvNext(): Unit = if (!atEnd && (nextElem == None)) tryIn {
+      srv.!>(Recv(), timeout)
     }
     
     def hasNext = {
@@ -55,18 +60,18 @@ trait GenericInput extends Profile with Closeable {
     }
   }
 
-  def recv()(implicit timeout: TimeoutSpec): InputData = recvF()(timeout).apply()
+  def recv(timeout: Long = defaultTimeout): InputData = recvF(timeout).apply()
   
-  def recvF()(implicit timeout: TimeoutSpec): Ft[InputData] =
-    srv.!!?(Recv())(timeout) map
-      {case Received(data) => data}
+  def recvF(timeout: Long = defaultTimeout): Future[InputData] =
+    tryIn { srv.!!>(Recv(), timeout) map { _.data } }
   
-  def triggerRecv(): Unit = srv ! Recv()
+  def triggerRecv()(implicit sender: Option[ActorRef]): Unit =
+    tryIn { srv.!(Recv())(sender) }
 
-  def clearInput(timeout: Long): Unit = {
+  def clearInput(timeout: Long = defaultTimeout): Unit = {
     @tailrec def clearInputImpl(): Unit = {
-      trace("Clearing input")
-      recvF()(SomeTimeout(timeout)).get match {
+      log.trace("Clearing input")
+      recvF(timeout).get match {
         case Some(data) => clearInputImpl()
         case None =>
       }
@@ -79,9 +84,8 @@ trait GenericInput extends Profile with Closeable {
 trait GenericInputCompanion {
   type InputData
 
-  case class Recv()
+  case class Recv() extends ActorQuery[Received]
   case class Received(data: InputData)
-  case object Closed
 }
 
 
@@ -90,17 +94,24 @@ trait GenericOutput extends Profile with Closeable {
   val outputCompanion: GenericOutputCompanion
   import outputCompanion._
 
+  protected def tryOut[T](body: => T) = try (body) catch {
+    case e: ActorInitializationException => {
+      if (srv.isShutdown) throw new java.io.IOException("Output closed")
+      else throw e
+    }
+  }
+
   def send(data: OutputData) : Unit =
-    srv ! Send(data)
+    tryOut { srv ! Send(data) }
     
-  def flush() : Unit = srv ! Flush()
+  def flush() : Unit = tryOut { srv ! Flush() }
 }
 
 
 trait GenericOutputCompanion {
   type OutputData
 
-  case class Send(data: OutputData)
+  case class Send(data: OutputData) extends ActorCmd
   
-  case class Flush()
+  case class Flush() extends ActorCmd
 }

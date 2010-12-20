@@ -17,19 +17,18 @@
 
 package daqcore.profiles
 
+import akka.dispatch.Future
+
 import daqcore.util._
 import daqcore.actors._
-import daqcore.monads._
 
 
 trait MemoryReader extends Profile with Closeable {
-  def read(address: Long, count: Long): Seq[Byte] =
-    readF(address, count)()
+  def read(address: Long, count: Long, timeout: Long = defaultTimeout): Seq[Byte] =
+    readF(address, count, timeout).apply()
 
-  def readF(address: Long, count: Long): Ft[IndexedSeq[Byte]] =
-    srv.!!?>(MemoryLink.Read(address, count)) {
-      case x: IndexedSeq[_] => x.asInstanceOf[IndexedSeq[Byte]]
-    }
+  def readF(address: Long, count: Long, timeout: Long = defaultTimeout): Future[IndexedSeq[Byte]] =
+    srv.!!>(MemoryLink.Read(address, count), timeout)
 }
 
 
@@ -38,18 +37,22 @@ trait MemoryWriter extends Profile with Closeable {
     srv ! MemoryLink.Write(address: Long, data)
   
   def pause(): Unit = srv ! MemoryLink.Pause()
-  def sync(): Unit = srv.!?>(MemoryLink.Sync()) { case r: MaybeFail[_] => r() }
+
+  def sync(timeout: Long = defaultTimeout): Unit = syncF(timeout).apply
+
+  def syncF(timeout: Long = defaultTimeout): Future[Unit] =
+    srv.!!>(MemoryLink.Sync(), timeout)
 }
 
 
 trait MemoryLink extends MemoryReader with MemoryWriter
 
 object MemoryLink {
-  case class Read(address: Long, count: Long)
+  case class Read(address: Long, count: Long) extends ActorQuery[IndexedSeq[Byte]]
 
-  case class Write(address: Long, data: Seq[Byte])
+  case class Write(address: Long, data: Seq[Byte]) extends ActorCmd
 
-  case class Pause()
+  case class Pause() extends ActorCmd
 
-  case class Sync()
+  case class Sync() extends ActorQuery[Unit]
 }

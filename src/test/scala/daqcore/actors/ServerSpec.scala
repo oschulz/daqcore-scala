@@ -19,37 +19,40 @@ package daqcore.actors
 
 import org.scalatest.WordSpec
 import org.scalatest.matchers.MustMatchers
+import akka.actor.Actor.actorOf
 
 
 class ServerSpec extends WordSpec with MustMatchers {
   "A Server" should {
-    object testenv {
+     object testenv {
       trait FooDevice extends Profile {
         import FooDevice._
-        def foo(v: Int) = as[Int] {srv !? Foo(v)}
+        def foo(v: Int): Int = srv !> Foo(v)
       }
 
       object FooDevice {
-        case class Foo(v: Int)
+        case class Foo(v: Int) extends ActorQuery[Int]
       }
 
 
       trait BarDevice extends Profile {
         import BarDevice._
-        def bar(v: Int) = as[Int] {srv !? Bar(v)}
+        def bar(v: Int): Int = srv !> Bar(v)
       }
 
       object BarDevice {
-        case class Bar(v: Int)
+        case class Bar(v: Int) extends ActorQuery[Int]
       }
 
 
       trait BazDevice extends Profile {
-        def baz(v: Int) = as[Int] {srv !? None }
+        def baz(v: Int): Int = srv.!>>[Int](None)
       }
 
 
-      class FooBarActor extends Server with FooDevice with BarDevice {
+      class FooBarActor extends Server {
+        override def profiles = super.profiles.+[FooDevice].+[BarDevice]
+      
         import FooDevice._, BarDevice._
 
         var i = 0
@@ -66,11 +69,7 @@ class ServerSpec extends WordSpec with MustMatchers {
     "behave correctly" in {
       import testenv._
       
-      val a = new FooBarActor
-      a.start
-      
-      assert( a.foo(4) === 8 )
-      assert( a.bar(4) === 6 )
+      val a = actorOf(new FooBarActor).start
       
       val p = new ServerProxy(a) with FooDevice with BarDevice
       assert( p.foo(4) === 8 )

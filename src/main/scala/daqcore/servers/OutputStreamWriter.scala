@@ -19,15 +19,21 @@ package daqcore.servers
 
 import java.io.{File, OutputStream, FileOutputStream}
 
+import akka.actor.Actor.actorOf
+import akka.config.Supervision.{LifeCycle, Temporary}
+
 import daqcore.actors._
 import daqcore.profiles._
 import daqcore.util._
 
 
-class OutputStreamWriter(output: OutputStream) extends CloseableServer with ByteStreamOutput with Closeable {
+class OutputStreamWriter(output: OutputStream) extends CloseableServer {
+  override def profiles = super.profiles.+[ByteStreamOutput]
+
   override def init() = {
     super.init()
-    addResource(output)
+    self. lifeCycle = Temporary // Restart strategy unclear - how to handle input?
+    atCleanup { output.flush(); output.close() }
   }
 
   
@@ -40,13 +46,6 @@ class OutputStreamWriter(output: OutputStream) extends CloseableServer with Byte
     output.flush()
   }
  
-
-  override protected def srvClose() = {
-    output.flush()
-    super.srvClose()
-  }
-  
-  
   override def serve = super.serve orElse {
     case ByteStreamOutput.Send(data) => srvSend(data)
     case ByteStreamOutput.Flush() => srvFlush()
@@ -55,9 +54,6 @@ class OutputStreamWriter(output: OutputStream) extends CloseableServer with Byte
 
 
 object OutputStreamWriter {
-  def apply(output: OutputStream): OutputStreamWriter =
-    start(new OutputStreamWriter(output))
-    
-  def apply(file: File, compression: Compression = Uncompressed): OutputStreamWriter =
-    OutputStreamWriter(compression.outputStream(file))
+  def apply(output: OutputStream, sv: Supervising = defaultSupervisor): ByteStreamOutput =
+    new ServerProxy(sv.linkStart(actorOf(new OutputStreamWriter(output)))) with ByteStreamOutput
 }

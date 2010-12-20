@@ -19,12 +19,17 @@ package daqcore.servers
 
 import java.io.{File}
 
+import akka.actor._, akka.actor.Actor._, akka.dispatch.Future
+
 import daqcore.actors._
 import daqcore.profiles._
 import daqcore.util._
 
 
-trait OutputFilterServer extends CloseableServer with QueueingServer with GenericOutput {
+trait OutputFilterServer extends CloseableServer {
+  override def profiles = super.profiles.+[GenericOutput]
+
+  val outputCompanion: GenericOutputCompanion
   import outputCompanion._
 
   def target: GenericOutput
@@ -32,7 +37,13 @@ trait OutputFilterServer extends CloseableServer with QueueingServer with Generi
 
   override def init() = {
     super.init()
-    addResource(target)
+    clientLinkTo(target.srv)
+    atShutdown { target.close() }
+  }
+  
+  override def onServerExit(server: ActorRef, reason: Option[Throwable]) = {
+    if ((server == target.srv) && (reason == None)) self.stop()
+    else super.onServerExit(server, reason)
   }
 
   protected def srvSend(data: OutputData): Unit

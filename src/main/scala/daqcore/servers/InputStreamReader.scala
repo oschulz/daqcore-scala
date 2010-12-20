@@ -19,17 +19,23 @@ package daqcore.servers
 
 import java.io.{File, InputStream, FileInputStream}
 
+import akka.actor.Actor.actorOf
+import akka.config.Supervision.{LifeCycle, Temporary}
+
 import daqcore.actors._
 import daqcore.profiles._
 import daqcore.util._
 
 
-class InputStreamReader(input: InputStream) extends CloseableServer with ByteStreamInput with Closeable {
+class InputStreamReader(input: InputStream) extends CloseableServer {
+  override def profiles = super.profiles.+[ByteStreamInput]
+
   val maxChunkSize = 512 * 1024
 
   override def init() = {
     super.init()
-    addResource(input)
+    self. lifeCycle = Temporary // Restart strategy unclear - how to handle input?
+    atCleanup { input.close() }
   }
   
   protected def srvRecv(): Unit = {
@@ -40,8 +46,7 @@ class InputStreamReader(input: InputStream) extends CloseableServer with ByteStr
       val bytes = if (count < a.size) a.take(count) else a
       reply(ByteStreamInput.Received(bytes))
     } else {
-      reply(ByteStreamInput.Closed)
-      srvClose()
+      self.stop()
     }
   }
   
@@ -52,9 +57,6 @@ class InputStreamReader(input: InputStream) extends CloseableServer with ByteStr
 
 
 object InputStreamReader {
-  def apply(input: InputStream): InputStreamReader =
-    start(new InputStreamReader(input))
-    
-  def apply(file: File, compression: Compression = Uncompressed): InputStreamReader =
-    InputStreamReader(compression.inputStream(file))
+  def apply(input: InputStream, sv: Supervising = defaultSupervisor): ByteStreamInput =
+    new ServerProxy(sv.linkStart(actorOf(new InputStreamReader(input)))) with ByteStreamInput
 }

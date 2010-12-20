@@ -19,8 +19,12 @@ package daqcore.gui
 
 import scala.swing._
 
+import akka.actor._, akka.actor.Actor._
+import akka.config.Supervision.{LifeCycle, UndefinedLifeCycle}
+
 import daqcore.util._
 import daqcore.actors._
+import daqcore.servers._
 import daqcore.profiles._
 import daqcore.monads._
 import daqcore.data._
@@ -28,7 +32,9 @@ import daqcore.data._
 import org.jfree.chart.{event => jfcEvent}
 
 
-class Scope(source: EventSource) extends Server with Closeable {
+class Scope(source: EventSource) extends CloseableServer {
+  override def profiles = super.profiles.+[Closeable]
+
   object DrawingFinished
   case class Draw(ev: raw.Event)
 
@@ -87,13 +93,14 @@ class Scope(source: EventSource) extends Server with Closeable {
     }
   }
   
-  override protected def init() = {
+  override def init() = {
     super.init()
+    clientLinkTo(source.srv)
     frame.show()
     srv ! DrawingFinished
   }
 
-  protected def serve = {
+  override def serve = super.serve orElse {
     case DrawingFinished => {
       trace("Drawing finished")
       source addHandlerFunc { case ev:raw.Event => srv ! Draw(ev); false }
@@ -102,9 +109,11 @@ class Scope(source: EventSource) extends Server with Closeable {
       frame.draw(ev)
       drawProgressListener.enableOnce()
     }
-    case Closeable.Close => {
-      debug("Closing")
-      frame.close()
-    }
   }
+}
+
+
+object Scope {
+  def apply(source: EventSource, sv: Supervising = defaultSupervisor, lc: LifeCycle = UndefinedLifeCycle): Closeable =
+    new ServerProxy(sv.linkStart(actorOf(new Scope(source)), lc)) with Closeable
 }

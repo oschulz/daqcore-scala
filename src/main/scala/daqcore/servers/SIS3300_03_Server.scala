@@ -20,6 +20,9 @@ package daqcore.servers
 import scala.collection.immutable.{IntMap, SortedMap}
 import scala.collection.MapLike
 
+import akka.actor._, akka.actor.Actor._
+import akka.config.Supervision.{LifeCycle, UndefinedLifeCycle, Temporary}
+
 import daqcore.util._
 import daqcore.actors._
 import daqcore.profiles._
@@ -27,18 +30,18 @@ import daqcore.monads._
 
 
 // SIS3300, default Firmware, major version 03
-class SIS3300_11(vmeBus: VMEBus, baseAddress: Int) extends SIS3300(vmeBus, baseAddress) {
+class SIS3300_03_Server(vmeBus: VMEBus, baseAddress: Int) extends SIS3300Server(vmeBus, baseAddress) {
   import SIS3300._
+  import SIS3300Server._
+  import SIS3300_03_Server._
 
-  val memory = new SISMemory11
+  override def profiles = super.profiles.+[SIS3300_03]
+
+  val memory = new SISMemory03(vmeBus, baseAddress)
 
 
-  def set(thresholds: (Int, TriggerThreshold)*) {
+  def setTrigThresh(thresholds: (Int, TriggerThreshold)*) {
     import memory._
-    
-    val firLen = settings.trigger.mode.asInstanceOf[FIRTriggerMode].nPeak
-    val firSumShift = math.max(floorLog2(firLen) - 2, 0)
-    def firThresh(thresh: Int) = ((thresh * firLen) >> firSumShift) + 0x8000
 
     val threshMap =
       SortedMap(channels map {ch => ch -> TrigOff}: _*) ++
@@ -48,7 +51,7 @@ class SIS3300_11(vmeBus: VMEBus, baseAddress: Int) extends SIS3300(vmeBus, baseA
     val cfg = threshMap map { e =>
       val (ch, TriggerThreshold(threshold, pol)) = e
       ch -> TriggerThreshold(
-        findNearestInt(-0x1000 to 0xfff, threshold),
+        findNearestInt(sampleRange, threshold),
         pol
       )
     }
@@ -56,34 +59,25 @@ class SIS3300_11(vmeBus: VMEBus, baseAddress: Int) extends SIS3300(vmeBus, baseA
     debug("Setting: " + cfg)
 
     run { for {
-      _ <- TRIGGER_THRESHOLD_ADC12.THRESHODD set firThresh(cfg(1).threshold)
-      _ <- TRIGGER_SETUP_ADC12.LTODD set (if (cfg(1).polarity) 0 else 1)
-      _ <- TRIGGER_SETUP_ADC12.GTODD set (if (cfg(1).polarity) 1 else 0)
-      _ <- TRIGGER_THRESHOLD_ADC12.THRESHEVEN set firThresh(cfg(2).threshold)
-      _ <- TRIGGER_SETUP_ADC12.LTEVEN set (if (cfg(2).polarity) 0 else 1)
-      _ <- TRIGGER_SETUP_ADC12.GTEVEN set (if (cfg(2).polarity) 1 else 0)
+      _ <- TRIGGER_THRESHOLD_ADC12.THRESHODD set cfg(1).threshold
+      _ <- TRIGGER_THRESHOLD_ADC12.GTLEODD set (if (cfg(1).polarity) 0 else 1)
+      _ <- TRIGGER_THRESHOLD_ADC12.THRESHEVEN set cfg(2).threshold
+      _ <- TRIGGER_THRESHOLD_ADC12.GTLEEVEN set (if (cfg(2).polarity) 0 else 1)
 
-      _ <- TRIGGER_THRESHOLD_ADC34.THRESHODD set firThresh(cfg(3).threshold)
-      _ <- TRIGGER_SETUP_ADC34.LTODD set (if (cfg(3).polarity) 0 else 1)
-      _ <- TRIGGER_SETUP_ADC34.GTODD set (if (cfg(3).polarity) 1 else 0)
-      _ <- TRIGGER_THRESHOLD_ADC34.THRESHEVEN set firThresh(cfg(4).threshold)
-      _ <- TRIGGER_SETUP_ADC34.LTEVEN set (if (cfg(4).polarity) 0 else 1)
-      _ <- TRIGGER_SETUP_ADC34.GTEVEN set (if (cfg(4).polarity) 1 else 0)
+      _ <- TRIGGER_THRESHOLD_ADC34.THRESHODD set cfg(3).threshold
+      _ <- TRIGGER_THRESHOLD_ADC34.GTLEODD set (if (cfg(3).polarity) 0 else 1)
+      _ <- TRIGGER_THRESHOLD_ADC34.THRESHEVEN set cfg(4).threshold
+      _ <- TRIGGER_THRESHOLD_ADC34.GTLEEVEN set (if (cfg(4).polarity) 0 else 1)
 
-      _ <- TRIGGER_THRESHOLD_ADC56.THRESHODD set firThresh(cfg(5).threshold)
-      _ <- TRIGGER_SETUP_ADC56.LTODD set (if (cfg(5).polarity) 0 else 1)
-      _ <- TRIGGER_SETUP_ADC56.GTODD set (if (cfg(5).polarity) 1 else 0)
-      _ <- TRIGGER_THRESHOLD_ADC56.THRESHEVEN set firThresh(cfg(6).threshold)
-      _ <- TRIGGER_SETUP_ADC56.LTEVEN set (if (cfg(6).polarity) 0 else 1)
-      _ <- TRIGGER_SETUP_ADC56.GTEVEN set (if (cfg(6).polarity) 1 else 0)
+      _ <- TRIGGER_THRESHOLD_ADC56.THRESHODD set cfg(5).threshold
+      _ <- TRIGGER_THRESHOLD_ADC56.GTLEODD set (if (cfg(5).polarity) 0 else 1)
+      _ <- TRIGGER_THRESHOLD_ADC56.THRESHEVEN set cfg(6).threshold
+      _ <- TRIGGER_THRESHOLD_ADC56.GTLEEVEN set (if (cfg(6).polarity) 0 else 1)
 
-      _ <- TRIGGER_THRESHOLD_ADC78.THRESHODD set firThresh(cfg(7).threshold)
-      _ <- TRIGGER_SETUP_ADC78.LTODD set (if (cfg(7).polarity) 0 else 1)
-      _ <- TRIGGER_SETUP_ADC78.GTODD set (if (cfg(7).polarity) 1 else 0)
-      _ <- TRIGGER_THRESHOLD_ADC78.THRESHEVEN set firThresh(cfg(8).threshold)
-      _ <- TRIGGER_SETUP_ADC78.LTEVEN set (if (cfg(8).polarity) 0 else 1)
-      _ <- TRIGGER_SETUP_ADC78.GTEVEN set (if (cfg(8).polarity) 1 else 0)
-
+      _ <- TRIGGER_THRESHOLD_ADC78.THRESHODD set cfg(7).threshold
+      _ <- TRIGGER_THRESHOLD_ADC78.GTLEODD set (if (cfg(7).polarity) 0 else 1)
+      _ <- TRIGGER_THRESHOLD_ADC78.THRESHEVEN set cfg(8).threshold
+      _ <- TRIGGER_THRESHOLD_ADC78.GTLEEVEN set (if (cfg(8).polarity) 0 else 1)
       _ <- sync()
     } yield {} }
     
@@ -95,16 +89,15 @@ class SIS3300_11(vmeBus: VMEBus, baseAddress: Int) extends SIS3300(vmeBus, baseA
   }
 
 
-  def set(toSet: FIRTriggerMode) {
+  def setMNPTrigMode(toSet: MNPTriggerMode) {
     import memory._
 
     val clampedSettings = {
       import toSet._
-      FIRTriggerMode (
-        nPeak = findNearestInt((2 to 0xff), nPeak),
-        nGap = findNearestInt((2 to 0xff), nGap),
-        p = findNearestInt((0 to 0xf), p),
-        test = findNearestInt((0 to 2), test)
+      MNPTriggerMode (
+        m = findNearestInt((0 to 0xf), m),
+        n = findNearestInt((0 to 0xf), n),
+        p = findNearestInt((0 to 0xf), p)
       )
     }
 
@@ -113,16 +106,11 @@ class SIS3300_11(vmeBus: VMEBus, baseAddress: Int) extends SIS3300(vmeBus, baseA
     for (reg <- Seq(TRIGGER_SETUP_ADC12, TRIGGER_SETUP_ADC34, TRIGGER_SETUP_ADC56, TRIGGER_SETUP_ADC78)) {
       import clampedSettings._
       run { for {
-        _ <- reg.FIRON set 0
-        _ <- sync()
-        _ <- reg.NPEAK set nPeak
-        _ <- reg.NGAP set nGap
-        _ <- reg.FIRTEST set (if (test > 0) 1 else 0)
-        _ <- reg.TESTEVEN set (if (test == 2) 1 else 0)
-        _ <- reg.NPULSE set p
+        _ <- reg.M set m
+        _ <- reg.N set n
+        _ <- reg.P set p
+        _ <- reg.NM set 1
         _ <- reg.PULSE set (if (p > 0) 1 else 0)
-        _ <- sync()
-        _ <- reg.FIRON set 1
         _ <- sync()
       } yield {} }
     }
@@ -133,10 +121,22 @@ class SIS3300_11(vmeBus: VMEBus, baseAddress: Int) extends SIS3300(vmeBus, baseA
       )
     )
   }
+  
+  def srvSetTrigMode(toSet: TriggerMode) = toSet match {
+    case mode: MNPTriggerMode => setMNPTrigMode(mode)
+    case mode => throw new IllegalArgumentException("Trigger mode %s not supported".format(mode))
+  }
+}
 
 
-  class SISMemory11 extends SISMemory {
-    val majorFirmwareRevision = 0x11
+object SIS3300_03_Server {
+  import SIS3300Server._
+
+  def apply(vmeBus: VMEBus, baseAddress: Int, sv: Supervising = defaultSupervisor, lc: LifeCycle = UndefinedLifeCycle): SIS3300_03 =
+    new ServerProxy(sv.linkStart(actorOf(new SIS3300_03_Server(vmeBus, baseAddress)), lc)) with SIS3300_03
+
+  class SISMemory03(mem: MemoryLink, base: Address) extends SISMemory(mem, base) {
+    val majorFirmwareRevision = 0x03
   
     // /** Trigger Threshold Register, all ADCs (0x100004, write-only) */
     // val THRESHOLD_ALL_ADC = new WORegister(0x100004) ...
@@ -144,9 +144,13 @@ class SIS3300_11(vmeBus: VMEBus, baseAddress: Int) extends SIS3300(vmeBus, baseA
     /** Trigger Threshold Register, ADC group specific (read/write) */
     class TriggerThresholdRegister(addr: Address) extends RWRegister(addr) {
       /** Threshold value, even-numbered ADCs (2/4/6/8) */
-      def THRESHEVEN = RWBitRange(0, 15)
+      def THRESHEVEN = RWBitRange(0, 11)
       /** GT or LE, even-numbered ADCs (0: GT, 1: LE) */
-      def THRESHODD = RWBitRange(16, 31)
+      def GTLEEVEN = RWBit(15)
+      /** Threshold value, odd-numbered ADCs (1/3/5/7) */
+      def THRESHODD = RWBitRange(16, 27)
+      /** GT or LE, odd-numbered ADCs (0: GT, 1: LE) */
+      def GTLEODD = RWBit(31)
     }
 
     /** Trigger Threshold Register, ADC group 1/2 (0x200004, read/write) */
@@ -164,28 +168,16 @@ class SIS3300_11(vmeBus: VMEBus, baseAddress: Int) extends SIS3300(vmeBus, baseA
 
     /** Trigger setup register, ADC group specific (read/write) */
     class TriggerSetupRegister(addr: Address) extends RWRegister(addr) {
-     /** Peaking time P */
-      def NPEAK = RWBitRange(0, 7)
-      /** Gap time G */
-      def NGAP = RWBitRange(8, 15)
-      /** Pulse length P */
-      def NPULSE = RWBitRange(16, 19)
-      /** Test even/odd ADC channel in FIR test mode (0: odd ADC FIR -> even ADC mem, 1: even -> odd) */
-      def TESTEVEN = RWBit(20)
-      /** Enable FIR test mode */
-      def FIRTEST = RWBit(21)
-      /** Trigger mode of odd ADC LT */
-      def LTODD = RWBit(24)
-      /** Trigger mode of odd ADC GT */
-      def GTODD = RWBit(25)
-      /** Trigger mode of even ADC LT */
-      def LTEVEN = RWBit(26)
-      /** Trigger mode of even ADC GT */
-      def GTEVEN = RWBit(27)
-      /** Enable pulse mode */
+     /** M */
+      def M = RWBitRange(0, 3)
+      /** P */
+      def N = RWBitRange(8, 11)
+      /** P */
+      def P = RWBitRange(16, 19)
+      /** enable N M mode */
+      def NM = RWBit(24)
+      /** enable pulse mode */
       def PULSE = RWBit(28)
-      /** Enable FIR trigger */
-      def FIRON = RWBit(31)
     }
 
     /** Trigger setup register, ADC group 1/2 (0x200028, read/write) */
@@ -197,14 +189,4 @@ class SIS3300_11(vmeBus: VMEBus, baseAddress: Int) extends SIS3300(vmeBus, baseA
     /** Trigger setup register, ADC group 7/8 (0x380028, read/write) */
     val TRIGGER_SETUP_ADC78 = new TriggerSetupRegister(0x380028)
   }
-
-}
-
-
-object SIS3300_11 {  
-  def apply (vmeBus: VMEBus, baseAddress: Int) : SIS3300_11 =
-    start(new SIS3300_11(vmeBus, baseAddress))
-  
-  def apply (host: String, port: Int, baseAddress: Int) : SIS3300_11 =
-    SIS3300_11(VMESCPIClient(host, port), baseAddress)
 }

@@ -17,53 +17,48 @@
 
 package daqcore.actors
 
-import scala.actors.Future, scala.actors.Futures
-import java.lang.System.currentTimeMillis
+import akka.dispatch.{Future, FutureTimeoutException}
 
 import daqcore.monads._
 
 
-object FTTimeout extends java.util.concurrent.TimeoutException("Future timed out")
-
-
-trait Ft[+A] {
+trait Ft[A] {
   ft =>
 
   def get: Option[A]
 
-  def apply(): A = get.getOrElse(throw FTTimeout)
+  def apply(): A
 
   def foreach(k: A => Unit): Unit = k(apply())
   
-  def map[B](f: A => B): Ft[B] = new Ft[B] {
-    def get = ft.get map f
-  }
+  def map[B](f: A => B): Ft[B]
 
-  def flatMap[B](f: A => Ft[B]): Ft[B] = new Ft[B] {
+  /*def flatMap[B](f: A => Ft[B]): Ft[B] = new Ft[B] {
     def get = ft.get flatMap { f(_).get }
-  }
+  }*/
   
   override def toString = "Ft[]"
 }
 
 
-object Ft {
-  protected class WrappedFuture[+A](val future: Future[A], val timeout: TimeoutSpec) extends Ft[A] {
-    val creationTime = currentTimeMillis
-    
-    lazy val get: Option[A] = {
-      timeout match {
-        case NoTimeout => Some(future.apply())
-        case SomeTimeout(ms) => {
-          val waitTime = ms - (currentTimeMillis - creationTime)
-          if ((!future.isSet) && (waitTime > 0)) Futures.awaitAll(waitTime, future)
-          if (future.isSet) Some(future.apply())
-          else None
-        }
-      }
-    }
+class AkkaFt[A](future: Future[A]) extends Ft[A] {
+  ft =>
+
+  def get: Option[A] = {
+    try { future.await } 
+    catch { case e: FutureTimeoutException => None }
+    if (future.exception.isDefined) throw future.exception.get
+    else future.result
   }
 
-  def future[A](body: => A)(implicit timeout: TimeoutSpec) = new WrappedFuture(Futures.future(body), timeout)
-  def apply[A](future: Future[A])(implicit timeout: TimeoutSpec) = new WrappedFuture(future, timeout)
+  def apply(): A = {
+    try { future.await } 
+    catch { case e: FutureTimeoutException => throw e }
+    if (future.exception.isDefined) throw future.exception.get
+    else future.result.get
+  }
+  
+  def map[B](f: A => B): Ft[B] = new AkkaFt(future.map(f))
+
+  override def toString = "AkkaFt(%s)".format(future.toString)
 }

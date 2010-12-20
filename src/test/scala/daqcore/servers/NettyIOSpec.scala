@@ -21,44 +21,49 @@ import org.scalatest.WordSpec
 import org.scalatest.matchers.MustMatchers
 import daqcore.util._, daqcore.actors._, daqcore.profiles._, daqcore.servers._
 
+import akka.actor.Actor.actorOf
 
-class MinaIOSpec extends WordSpec with MustMatchers with Logging {
-  "MinaIO" should {
-    // Disabled until Mina shuts down correctly
+
+class NettyIOSpec extends WordSpec with MustMatchers with Logging {
+  "NettyIO" should {
+    // Disabled until Netty shuts down correctly
     "behave correctly" in {
-      // implicit def defaultInetAcceptorBuilder = MinaInetAcceptorBuilder
-      // implicit def defaultInetConnector = MinaInetConnector
+      // implicit def defaultInetAcceptorBuilder = NettyInetAcceptorBuilder
+      // implicit def defaultInetConnector = NettyInetConnector
     
       val ping = ByteCharSeq("ping\n")
       val pong = ByteCharSeq("pong\n")
       val quit = ByteCharSeq("quit\n")
+      val err = ByteCharSeq("error\n")
 
-
-      val acc = InetAcceptor (8002) { (conn: ByteStreamIO) =>
-        start(new Server {
+      val acc = NettyServer (8002) { (conn: ByteStreamIO) =>
+        actorOf(new Server {
           override def init = { conn.triggerRecv() }
           def serve = { case ByteStreamInput.Received(bytes) =>
             conn.triggerRecv()
             Thread.sleep(200)
-            val msg = bytes.toString.trim
+            val msg = ByteCharSeq(bytes: _*).toString.trim
             debug(msg)
             if (msg == quit.toString.trim) { conn.close(); exit() }
-            else conn send pong
+            else if (msg == ping.toString.trim) conn send pong
+            else conn send err
           }
-        } )
+        } ).start
       }
       
-      Thread.sleep(2000)
-
-      val conn = InetConnection("localhost", 8002)
+      val conn = NettyClientConnection(("localhost", 8002))
       
       for (i <- 1 to 10) {
         debug("ping %s".format(i))
         conn send ping
         val bytes = conn.recv()
-        debug(bytes.toString.trim)
+        val msg = ByteCharSeq(bytes: _*).toString.trim
+        debug(msg)
+        assert( msg == pong.toString.trim )
       }
-      conn send quit
+      //conn send quit
+      conn.close
+      acc.close
     }
   }
 }

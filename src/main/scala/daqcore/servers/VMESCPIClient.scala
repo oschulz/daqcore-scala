@@ -21,41 +21,37 @@ import java.io.IOException
 import java.net.InetAddress
 import java.util.concurrent.TimeoutException
 
-import org.acplt.oncrpc.OncRpcProtocols
+import akka.actor._, akka.actor.Actor._
+import akka.config.Supervision.{LifeCycle, UndefinedLifeCycle, Temporary}
 
-import daqcore.oncrpc.vxi11core
 import daqcore.actors._
 import daqcore.profiles._
 import daqcore.util._
-import daqcore.monads._
 
 import daqcore.prot.scpi._, daqcore.prot.scpi.mnemonics._
 
 
-class VMESCPIClient(dev: SCPIClientLink) extends Server with VMEBus {
+class VMESCPIClient(dev: SCPIClientLink, timeout: Long) extends CascadableServer with KeepAlive with PostInit {
+  override def profiles = super.profiles.+[VMEBus]
+
   val VME = Mnemonic("VME")
-  val defaultTimeout = SomeTimeout(60000)
   
-  protected case class Fwd[T](target: MsgTarget, op: T)
+  case class Fwd[T](target: MsgTarget, op: T)
+  
+  case class RQPause() extends ActorQuery[Unit]
   
   class ReadQueue extends Server {
-    protected def unexpectedResponse: PartialFunction[Response, Unit] = { case resp =>
-      error("Unexpected SCPI response: " + resp)
-      exit('unexpectedResponse)
+    def unexpectedResponse: PartialFunction[Response, Unit] = { case resp =>
+      throw new RuntimeException("Unexpected SCPI response: " + resp)
     }
   
-    protected def query(instr: Instruction*)(body: PartialFunction[Response, Unit]) = {
-      val response = dev.queryF(instr: _*)(defaultTimeout)()
+    def query(instr: Instruction*)(body: PartialFunction[Response, Unit]) = {
+      val response = (dev.queryF(instr: _*)(timeout)).apply()
       trace("Processing response: " + response)
       (body orElse unexpectedResponse)(response)
     }
 
-    override protected def init() = {
-      super.init()
-      link(dev.srv)
-    }
-    
-    protected def serve = {
+    def serve = {
       case op @ Fwd(repl, MemoryLink.Read(address, count)) => {
         trace(op)
         query(~VME~READ?(NR1(address.toInt), NR1(count.toInt))) {
@@ -66,43 +62,47 @@ class VMESCPIClient(dev: SCPIClientLink) extends Server with VMEBus {
               trace("Replied read result to sender")
             }
             case value => {
-              error("Block Data expected: " + value.toList)
-              exit('unexpectedResponse)
+              throw new RuntimeException("Block Data expected: " + loggable(value.toList))
             }
           }
         }
       }
-      case op @ MemoryLink.Pause() => {
+      case op @ RQPause() => {
         dev.cmd(WAI!)
         reply()
       }
       case op @ MemoryLink.Sync() => {
-        val repl = sender
+        val repl = replyTarget
         query(WAI!, ESR?) {
           case Response(Result(NR1(esr))) =>
             val esrErrorMask = 0x3c;
-            val result =
-              if ((esr & esrErrorMask) == 0) Ok(true)
-              else Fail(new RuntimeException("SCPI ESR returned " + esr))
-            repl ! result
+            if ((esr & esrErrorMask) == 0) reply()
+            else throw(new RuntimeException("SCPI ESR returned " + esr))
         }
       }
-      case _ => exit('unknownMessage)
     }
   }
-  val readQueue = new ReadQueue
+
+  var readQueue: ActorRef = _
+
 
   override def init() = {
-    link(dev.srv)
-    link(readQueue)
-    readQueue.startOrRestart()
+    super.init()
+    clientLinkTo(dev.srv)
+    atShutdown(dev.srv.stop())
   }
 
 
-  def serve = {
+  override def postInit() = {
+    super.postInit()
+    readQueue = srv.linkStart(actorOf(new ReadQueue), Temporary)
+  }
+
+
+  override def serve = super.serve orElse {
     case op: MemoryLink.Read => {
       trace(op)
-      readQueue.forward(Fwd(sender, op))
+      readQueue.forward(Fwd(replyTarget, op))
     }
     case op @ MemoryLink.Write(address, bytes) => {
       trace(op)
@@ -110,30 +110,26 @@ class VMESCPIClient(dev: SCPIClientLink) extends Server with VMEBus {
     }
     case op @ MemoryLink.Pause() => {
       trace(op)
-      readQueue.!?>(op) { case _ =>
-        trace("%s executed" format op)
-      }
+      readQueue.!>(RQPause())
+      trace("%s executed" format op)
     }
     case op @ MemoryLink.Sync() => {
       trace(op)
-      val repl = sender
-      val a = readQueue.!?>(op) { case a =>
-        trace("%s returning %s".format(op, a))
-        repl ! a 
-      }
-    }
-    case Closeable.Close => {
-      dev.close()
-      exit('closed)
+      val repl = replyTarget
+      val a = readQueue.!>(op)
+      trace("%s returning %s".format(op, a))
+      repl ! a 
     }
   }
 }
 
 
 object VMESCPIClient {
-  def apply (dev: SCPIClientLink) : VMESCPIClient =
-    start(new VMESCPIClient(dev))
+  def apply(dev: SCPIClientLink, timeout: Long = 10000, sv: Supervising = defaultSupervisor, lc: LifeCycle = UndefinedLifeCycle): VMEBus =
+    new ServerProxy(sv.linkStart(actorOf(new VMESCPIClient(dev, timeout)), lc)) with VMEBus
   
-  def apply (host: String, port: Int) : VMESCPIClient =
-    VMESCPIClient(SCPIClientLink(host, port))
+  def overInetStream(addr: InetSockAddr, timeout: Long = 10000, sv: Supervising = defaultSupervisor, lc: LifeCycle = UndefinedLifeCycle): VMEBus = {
+    val dev = SCPIClientLink.overInetStream(addr, timeout, sv, lc)
+    VMESCPIClient(dev, timeout, sv, lc)
+  }
 }

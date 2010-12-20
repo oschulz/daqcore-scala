@@ -23,6 +23,9 @@ import java.io.IOException
 import java.net.InetAddress
 import java.util.concurrent.TimeoutException
 
+import akka.actor._, akka.actor.Actor._
+import akka.config.Supervision.{LifeCycle, UndefinedLifeCycle, Temporary}
+
 import org.acplt.oncrpc.OncRpcProtocols
 
 import daqcore.oncrpc.vxi11core
@@ -33,20 +36,21 @@ import daqcore.util._
 import daqcore.prot.scpi._
 
 
-class SCPIMsgClient(msgLnk: RawMsgIO) extends Server with SCPIClientLink {
-  var parser: SCPIParser = null
+class SCPIMsgClient(msgLnk: RawMsgIO) extends Server with KeepAlive with PostInit with CloseableServer {
+  override def profiles = super.profiles.+[SCPIClientLink]
 
-  protected case class ReadResponse()
+  case class ReadResponse()
   
   class SCPIResponseInput(msgLnk: RawMsgIO) extends QueueingServer {
     val recvQueue = new ReplyQueue
+    val parser: SCPIParser = new SCPIParser
 
-    protected override def init() = {
+    override def init() = {
       super.init()
       // msgLnk.clearInput(100) //!! Doesn't work here currently, will result in receiving "!(..., Received)" later
     }
-
-    protected def serve = {
+  
+    def serve = {
       case ReadResponse() => {
         msgLnk.triggerRecv()
         recvQueue.addTarget(replyTarget)
@@ -58,44 +62,44 @@ class SCPIMsgClient(msgLnk: RawMsgIO) extends Server with SCPIClientLink {
           trace("Received response: %s".format(loggable(response.toString)))
           recvQueue.addReply(response){}
       }
-      case ByteStreamInput.Closed => {
-        exit('closed)
-      }
     }
   }
-  val responseInput = new SCPIResponseInput(msgLnk)
+
+  var responseInput: ActorRef = _
 
   override def init() = {
-    parser = new SCPIParser
-    link(responseInput)
-    responseInput.startOrRestart()
+    clientLinkTo(msgLnk.srv)
+    atShutdown{ msgLnk.close() }
   }
 
-  def serve = {
+  override def postInit() = {
+    super.postInit()
+    responseInput = srv.linkStart(actorOf(new SCPIResponseInput(msgLnk)), Temporary)
+  }
+
+  override def onServerExit(server: ActorRef, reason: Option[Throwable]) = {
+    if ((msgLnk == msgLnk.srv) && (reason == None)) self.stop()
+    else super.onServerExit(server, reason)
+  }
+
+  override def serve = super.serve orElse {
     case cmd: SCPIClientLink.CmdOnly => {
       val request = cmd.request
       msgLnk.send(request.getBytes) // Append CR-LF?
       trace("Sent: %s".format(request.toString))
     }
     case cmdqry: SCPIClientLink.CmdQuery => {
-      val repl = sender
+      val repl = replyTarget
       val request = cmdqry.request
       msgLnk.send(request.getBytes) // Append CR-LF?
       trace("Sent: %s".format(request.toString))
       responseInput forward ReadResponse()
-    }
-    case Closeable.Close => {
-      msgLnk.close()
-      exit('closed)
     }
   }
 }
 
 
 object SCPIMsgClient {
-  def apply (msgLnk: RawMsgIO): SCPIMsgClient =
-    start(new SCPIMsgClient(msgLnk))
-  
-  def apply (streamLnk: ByteStreamIO): SCPIMsgClient =
-    SCPIMsgClient(GPIBStreamIO(streamLnk))
+  def apply(msgLnk: RawMsgIO, sv: Supervising = defaultSupervisor, lc: LifeCycle = UndefinedLifeCycle): SCPIClientLink =
+    new ServerProxy(sv.linkStart(actorOf(new SCPIMsgClient(msgLnk)), lc)) with SCPIClientLink
 }

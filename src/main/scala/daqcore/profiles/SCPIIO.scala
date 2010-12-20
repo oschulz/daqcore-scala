@@ -17,7 +17,7 @@
 
 package daqcore.profiles
 
-import scala.annotation._
+import akka.dispatch.Future
 
 import daqcore.util._
 import daqcore.actors._
@@ -41,11 +41,10 @@ object SCPIResponseInput extends GenericInputCompanion { type InputData = Respon
 // will automatically reply if the Request has a response. If you want to
 // pull the response yourself, use Send(Request) / Recv() messages.
 trait SCPIClientIO extends SCPIRequestOutput with SCPIResponseInput {
-  def queryF(instr: Instruction*)(implicit timeout: TimeoutSpec): Ft[Response] = {
+  def queryF(instr: Instruction*)(timeout: Long = defaultTimeout): Future[Response] = {
     val request = Request(instr: _*)
     require(request.hasResponse)
-    srv.!!? (Request)(timeout) map
-      { case x: Response => x }
+    srv.!!>>[Response](Request, timeout)
   }
   
   def cmd(instr: Instruction*) : Unit = {

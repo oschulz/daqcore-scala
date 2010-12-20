@@ -17,15 +17,45 @@
 
 package daqcore
 
+import akka.actor.{ActorRef, Supervisor}
+import akka.dispatch.Future
+import akka.config.Supervision._
+
+import daqcore.util._
+
 
 package object actors {
+  type MsgTarget = akka.actor.Channel[Any]
 
-  @volatile implicit var defaultTimeout: TimeoutSpec = NoTimeout
+  implicit def supervising(wrapped: ActorRef) = Supervising(wrapped)
+  implicit def supervising(wrapped: Supervisor) = Supervising(wrapped)
 
-  type MsgTarget = { def !(msg: Any): Unit }
+  implicit def ActorRefOps(ref: ActorRef) =
+    new ActorRefOps(ref)
 
-  def profileOf[T <: Profile : ClassManifest] =
-    ProfileInfo.apply[T]
+  implicit def ft[T](future: Future[T]) =
+    new AkkaFt(future)
+
+  def sendAfter(time: Long, dest: ActorRef, msg: Any) = {
+    import akka.actor.Scheduler 
+    import java.util.concurrent.TimeUnit._
+    
+    Scheduler.scheduleOnce(dest, msg.asInstanceOf[AnyRef], time, MILLISECONDS)
+  }
+
+  val defaultSupervisor = {
+    val sv = Supervisor(SupervisorConfig(OneForOneStrategy(List(classOf[Throwable]), 3, 1000), Nil))
+    object ShutdownHook extends Thread with Logging {
+      override def run() = {
+        log.info("Shutting down default supervisor")
+        sv.shutdown()
+      }
+    }
+    Runtime.getRuntime.addShutdownHook(ShutdownHook)
+    sv
+  }
+
+  /*
 
   /** execute code in an actor, then wait for it to exit.
   Useful to execute code that relies on react magic (like Future.respond)
@@ -39,7 +69,7 @@ package object actors {
       }
     }
     a.start
-    a.!?>() {
+    ActorRef(a).!?>() {
       case e: Throwable => throw e
       case _ =>
     }
@@ -50,24 +80,9 @@ package object actors {
   
   def startLinked[A <: scala.actors.Actor](a: A) : A =
     { scala.actors.Actor.link(a); a.start(); a }
-  
+
   def kill(a: scala.actors.AbstractActor, reason: AnyRef) : Unit =
     start(new KillActor(a, reason))
-  
-  def sendAfter(time: Long, dest: scala.actors.AbstractActor, msg: Any) = {
-    import scala.actors._, scala.actors.Actor._
-    actor { reactWithin(time) { case TIMEOUT => dest ! msg } }
-  }
-
-  implicit def abstractActorOps(actor: scala.actors.AbstractActor) =
-    new AbstractActorOps(actor)
-
-  implicit def actorOps(actor: scala.actors.Actor) =
-    new ActorOps(actor)
-
-  implicit def ft[T](future: scala.actors.Future[T]) =
-    Ft(future)
-
 
   def server(initBody: => Unit)(srvFkt: PartialFunction[Any, Unit]) = {
     start( new Server {
@@ -84,4 +99,5 @@ package object actors {
   }
   
   def spawn(body: => Unit): Unit = scala.actors.Actor.actor(body)
+  */
 }

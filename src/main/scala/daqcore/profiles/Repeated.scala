@@ -17,7 +17,7 @@
 
 package daqcore.profiles
 
-import scala.actors._
+import akka.dispatch.Future
 
 import daqcore.util._
 import daqcore.actors._
@@ -28,17 +28,15 @@ trait Repeated extends Profile with Closeable {
 
   def resume(): Unit = srv ! Repeated.Resume
 
-  def isRunningF(): Ft[Boolean] =
-    srv.!!?>(Repeated.IsRunning) { case x: Boolean => x }
+  def isRunningF(): Future[Boolean] = srv.!!>(Repeated.IsRunning)
 
-  def getCountF(): Ft[Int] =
-    srv.!!?>(Repeated.GetCount) { case x: Int => x }
+  def getCountF(): Future[Int] = srv.!!>(Repeated.GetCount)
 }
 
 
 object Repeated {
-  case object Pause
-  case object Resume
-  case object IsRunning
-  case object GetCount
+  case object Pause extends ActorCmd
+  case object Resume extends ActorCmd
+  case object IsRunning extends ActorQuery[Boolean]
+  case object GetCount extends ActorQuery[Int]
 }

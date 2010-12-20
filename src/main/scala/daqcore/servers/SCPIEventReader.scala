@@ -20,6 +20,9 @@ package daqcore.servers
 import java.io.{OutputStream, File}
 import java.util.UUID
 
+import akka.actor._, akka.actor.Actor._
+import akka.config.Supervision.{LifeCycle, UndefinedLifeCycle}
+
 import daqcore.util._
 import daqcore.util.fileops._
 import daqcore.actors._
@@ -29,13 +32,12 @@ import daqcore.data._
 import daqcore.math._
 
 
-trait EventInput extends GenericInput { val inputCompanion = EventInput }
-object EventInput extends GenericInputCompanion { type InputData = AnyRef }
-
-
-class EventReader(val source: SCPIRequestInput) extends InputFilterServer with EventInput {
+class SCPIEventReader(val source: SCPIRequestInput) extends InputFilterServer {
   import daqcore.prot.scpi._
-  
+
+  override def profiles = super.profiles.+[EventInput]
+  val inputCompanion = EventInput
+ 
   val sourceCompanion = SCPIRequestInput
   
   var runUUID = UUID.randomUUID()
@@ -47,9 +49,9 @@ class EventReader(val source: SCPIRequestInput) extends InputFilterServer with E
   var transTrigPos: Seq[Int] = Nil
   var transNSamples: Seq[Int] = Nil
   
-  protected def srvProcessInput(data: Request) = {
+  def srvProcessInput(data: Request) = {
     import daqcore.prot.scpi._
-    import EventWriter.headers._
+    import SCPIEventWriter.headers._
     
     trace("srvProcessInput(%s)".format(loggable(data)))
 
@@ -135,10 +137,7 @@ class EventReader(val source: SCPIRequestInput) extends InputFilterServer with E
 }
 
 
-object EventReader {
-  def apply(input: SCPIRequestInput): EventReader =
-    start(new EventReader(input))
-    
-  def apply(file: File, compression: Compression = Uncompressed): EventReader =
-    EventReader(SCPIRequestInputFilter(file, compression))
+object SCPIEventReader {
+  def apply(input: SCPIRequestInput, sv: Supervising = defaultSupervisor, lc: LifeCycle = UndefinedLifeCycle): EventInput =
+    new ServerProxy(sv.linkStart(actorOf(new SCPIEventReader(input)), lc)) with EventInput
 }

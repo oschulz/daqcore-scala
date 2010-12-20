@@ -17,20 +17,31 @@
 
 package daqcore.servers
 
+import akka.actor._, akka.actor.Actor._, akka.dispatch.Future
+import akka.config.Supervision.{LifeCycle, UndefinedLifeCycle, Temporary, OneForOneStrategy, AllForOneStrategy}
+
+import daqcore.util._
 import daqcore.actors._
 import daqcore.profiles._
 import daqcore.prot.rootsys._
 
 
-class RootIOServer(io: RawMsgIO) extends RootSystemServer(io) with RootIO {
+class RootIOServer() extends RootSystemServer() {
+  override def profiles = super.profiles.+[RootIO]
+ 
   var nextId = 0
-  
+
   override def serve = super.serve orElse {
     case RootIO.GetNextId => { nextId += 1; reply(nextId) }
   }
 }
 
 
-object RootIOServer {
-  def apply(): RootIO = (new RootIOServer(RootSystemProcess()) start).asInstanceOf[RootIO]
+object RootIOServer extends Logging {
+  def apply(sv: Supervising = defaultSupervisor, lc: LifeCycle = UndefinedLifeCycle): RootIO = {
+    val rio = new ServerProxy(sv.linkStart(actorOf(new RootIOServer()), lc)) with RootIO
+    val idn = rio.getIdn(60000)
+    log.info("Started ROOT-System session: " + idn)
+    rio
+  }
 }

@@ -19,6 +19,9 @@ package daqcore.profiles
 
 import java.net.InetAddress
 
+import akka.config.Supervision.{LifeCycle, UndefinedLifeCycle}
+import akka.config.Supervision.{OneForOneStrategy, AllForOneStrategy}
+
 import daqcore.util._
 import daqcore.actors._
 import daqcore.servers._
@@ -26,32 +29,30 @@ import daqcore.prot.scpi._
 
 
 trait SCPIClientLink extends Profile with Closeable {
-  def queryF(instr: Instruction*)(implicit timeout: TimeoutSpec): Ft[Response] =
-    srv.!!? (SCPIClientLink.CmdQuery(instr: _*))(timeout) map
-      { case x: Response => x }
+  def queryF(instr: Instruction*)(timeout: Long = defaultTimeout): Ft[Response] =
+    srv.!!>(SCPIClientLink.CmdQuery(instr: _*), timeout)
 
-  def cmd(instr: Instruction*) : Unit = {
+  def cmd(instr: Instruction*) : Unit =
     srv ! SCPIClientLink.CmdOnly(instr: _*)
-  }
 }
 
 
 object SCPIClientLink {
-  case class CmdQuery(instr: Instruction*) {
+  case class CmdQuery(instr: Instruction*) extends ActorQuery[Response] {
     val request = Request(instr: _*)
     require (request.hasResponse)
   }
 
-  case class CmdOnly(instr: Instruction*) {
+  case class CmdOnly(instr: Instruction*) extends ActorCmd {
     val request = Request(instr: _*)
     require (!request.hasResponse)
   }
 
-  def apply(lnk: RawMsgIO) = SCPIMsgClient(lnk)
-
-  def apply(host: String, device: String) = SCPIMsgClient(VXI11ClientLink(host, device))
-
-  def apply(lnk: ByteStreamIO) = SCPIMsgClient(lnk)
-
-  def apply(host: String, port: Int) = SCPIMsgClient(GPIBStreamIO(InetConnection(host, port)))
+  def apply(msgLnk: RawMsgIO, sv: Supervising = defaultSupervisor, lc: LifeCycle = UndefinedLifeCycle): SCPIClientLink =
+    SCPIMsgClient(msgLnk, sv, lc)
+  
+  def overInetStream(addr: InetSockAddr, timeout: Long = 10000, sv: Supervising = defaultSupervisor, lc: LifeCycle = UndefinedLifeCycle): SCPIClientLink = {
+    val msgLnk = GPIBStreamIO.overInetStream(addr, timeout, sv, lc)
+    SCPIClientLink(msgLnk, sv, lc)
+  }
 }

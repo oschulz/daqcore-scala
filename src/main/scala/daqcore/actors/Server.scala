@@ -18,160 +18,195 @@
 package daqcore.actors
 
 
-import scala.actors._, scala.actors.Actor._
+import akka.actor._
 
 import daqcore.util._
 
 
-trait ServerAccess extends Logging {
-  def srv: AbstractActor
+trait Profile {
+  def srv: ActorRef
+  def defaultTimeout: Long = srv.timeout
 
-  val profiles: Set[ProfileInfo]
+  lazy val profiles: ProfileSet = srv !> Server.GetProfiles
 
-  protected def supports(profile: ProfileInfo) = profiles.contains(profile)
-  
-  def requireProfile(p: ProfileInfo): Unit =
-    if (!supports(p)) throw new IllegalArgumentException("Proxy target actor does not support profile " + p)
-
-  def as[T](body: => Any) = (body).asInstanceOf[T]
+  protected def supports(cl: Class[_]) = profiles covers cl
 }
 
 
-
-trait Profile extends ServerAccess
-
-
-
-trait Server extends ServerAccess with DaemonActor with Profile with Profiling {
+trait Server extends Actor with Logging with Profiling {
+  import scala.actors.Actor._
   import Server._
   
-  def srv: AbstractActor = this
+  final def srv: ActorRef = self
   
-  def replyTarget: MsgTarget = sender
+  def profiles = ProfileSet(classOf[Profile])
+ 
+  def replyTarget: MsgTarget = self.channel
   
-  val profiles: Set[ProfileInfo] =
-    ProfileInfo.profilesOf(this.getClass)
+  def reply(msg: Any): Unit = self.reply(msg)
+  
+  protected[actors] var restarted = false
 
-  private[actors] var restarted = false
+
+  val instanceUuid = newUuid()
+  log.trace("New instance of %s, uuid %s, instance %s".format(this.getClass, self.uuid, instanceUuid))
+
+  protected[actors] var clientsLinked = Set[(ActorRef, Uuid)]()
+  protected[actors] var serversLinked = Set[ActorRef]()
+
 
   /** Servers may override this */
-  protected def onStart(): Unit =
-    { debug("Server %s started".format(srv)) }
-
-  /** Servers may override this */
-  protected def onRestart(): Unit =
-    { debug("Server %s restarted".format(srv)) }
-
-  /** Servers may override this */
-  protected def init(): Unit = {
+  def init(): Unit = {
     withCleanup
-      { trace("Server %s initializing".format(srv)) }
-      { trace("Server %s cleaned up".format(srv)) }
+      { log.debug("Server %s initializing".format(srv)) }
+      { log.debug("Server %s cleaned up".format(srv)) }
   }
+  
+
+  /** Servers may override this */
+  def onServerExit(server: ActorRef, reason: Option[Throwable]): Unit = reason match {
+    case Some(exception) =>
+      throw new RuntimeException("Linked server %s crashed with %s".format(server, exception))
+    case None =>
+      throw new RuntimeException("Linked server %s shut down unexpectedly".format(server))
+  }
+
+  
+  protected[actors] def runCleanupActions(): Unit = {
+    while (cleanupActions != Nil) {
+      val action::rest = cleanupActions
+      cleanupActions = rest
+      try { action() } catch { case e => log.error(e.toString) }
+    }
+  }
+
+  protected[actors] def runShutdownActions(): Unit = {
+    while (shutdownActions != Nil) {
+      val action::rest = shutdownActions
+      shutdownActions = rest
+      try { action() } catch { case e => log.error(e.toString) }
+    }
+  }
+
 
   /** Servers must implement this */
-  protected def serve: PartialFunction[Any, Unit]
+  def serve: PartialFunction[Any, Unit]
 
-  /** Servers may override this */
-  protected def onKill(reason: AnyRef): Unit =
-    { debug("Server %s killed: %s".format(srv, reason)) }
 
-  //** Servers may override this */
-  protected def onShutdown(): Unit =
-    { debug("Server %s shut down".format(srv)) }
-  
-  protected[actors] def handleGenericPre: PartialFunction[Any, Unit] = {
-    case GetProfiles => reply(profiles)
-  }
-
-  protected[actors] def handleGenericPost: PartialFunction[Any, Unit] = {
-    case x => throw new RuntimeException("unknown message: " + x.asInstanceOf[AnyRef].getClass.toString)
-  }
-
-  def act() = {
-    exitMonitor.startOrRestart()
-    exitMonitor !? 'ready
-    
-    if (!restarted) { restarted = true; onStart() } else onRestart()
-    init()
-    
-    eventloop ( profilingTimer("EventLoop") wrap {
-      handleGenericPre orElse
-      serve orElse
-      handleGenericPost
-    } )
-  }
-
+  def initOnce(body: => Unit): Unit = { if (!self.isBeingRestarted) body }
 
   protected[actors] var cleanupActions: List[() => Unit] = Nil
+
+  protected[actors] var shutdownActions: List[() => Unit] = Nil
+
+  def atCleanup(body: => Unit): Unit = { cleanupActions = { (() => body) :: cleanupActions } }
+
+  def atShutdown(body: => Unit): Unit = { shutdownActions = { (() => body) :: shutdownActions } }
   
   def withCleanup (initBody: => Unit)(cleanupBody: => Unit) {
-    cleanupActions = {() => cleanupBody} :: cleanupActions
+    atCleanup { cleanupBody }
     initBody
   }
 
-  protected[actors] def postExit(reason: AnyRef) {
-    for (action <- cleanupActions) try { action() } catch { case e => error(e) }
-    cleanupActions = Nil
+  type SupportsClose = { def close(): Unit }
 
-    reason match {
-      case 'normal | 'closed => try { onShutdown() } catch { case e => error(e) }
-      case reason => try { onKill(reason) } catch { case e => error(e) }
+  def closeAtCleanup[T <: SupportsClose](res: T): T = {
+    atCleanup { () => res.close() }
+    res
+  }
+
+
+  // client links are not restart-pesistant
+  final def clientLinkTo(server: ActorRef) = {
+    log.trace("Client-linking to %s".format(server))
+    server.!>(AddClientLink(self, instanceUuid))
+    serversLinked = serversLinked + server
+  }
+
+  final def clientUnlinkFrom(server: ActorRef) = {
+    log.trace("Client-unlinking from %s".format(server))
+    try { server.!(RemoveClientLink(self, instanceUuid)) }
+    catch { case _ => }
+    serversLinked = serversLinked - server
+  }
+
+  protected[actors] def processClientLinks(reason: Option[Throwable]) {
+    for { server <- serversLinked } clientUnlinkFrom(server)
+    serversLinked = Set[ActorRef]()
+    for { (actor, uuid) <- clientsLinked }
+      { try { actor ! ServerExit(self, reason) } catch { case _ => } }
+    clientsLinked = Set[(ActorRef, Uuid)]()
+  }
+
+
+  protected[actors] def handleDefaults: PartialFunction[Any, Unit] = {
+    case op @ GetProfiles => {
+      log.trace(op.toString)
+      reply(profiles)
+    }
+    
+    case op @ AddClientLink(client, instance) => {
+      log.trace(op.toString)
+      clientsLinked = clientsLinked + ((client, instance))
+      reply()
+    }
+    
+    case op @ RemoveClientLink(client, instance) => {
+      log.trace(op.toString)
+      try { clientsLinked = clientsLinked - ((client, instance)) }
+      catch { case _ => }
+    }
+    
+    case op @ ServerExit(server, reason) => {
+      log.trace(op.toString)
+      onServerExit(server, reason)
     }
   }
 
-  lazy val exitMonitor = new ExitMonitor
-  
-  protected class ExitMonitor extends DaemonActor with Logging {
-    trapExit = true
 
-    def act = {
-      link(srv)
-      ready()
-    }
+  def receive = profilingTimer("EventLoop") wrap { handleDefaults orElse serve }
 
-    protected def ready() = react {
-      case 'ready => {
-        reply()
-        waitForExit()
-      }
-      case _ => throw new RuntimeException("ExitMonitor: unexpexted message")
-    }
+  override def preStart = {
+    log.debug("preStart")
+    init()
+  }
+
+  override def preRestart(reason: Throwable) {
+    log.debug("preRestart(%s)".format(reason))
+
+    processClientLinks(Some(reason))
     
-    protected def waitForExit() = react {
-      case Exit(from, reason) if (from == srv) =>
-        postExit(reason)
-      case _ => throw new RuntimeException("ExitMonitor: unexpexted message")
-    }
+    runCleanupActions()
+  }
+
+  override def postRestart(reason: Throwable) {
+    log.debug("postRestart(%s)".format(reason))
+  }
+  
+  override def postStop = {
+    log.debug("postStop")
+    
+    processClientLinks(None)
+    
+    runCleanupActions()
+    runShutdownActions()
+    self.shutdownLinkedActors()
   }
 }
 
 
 object Server {
-  case object GetProfiles
+  case object GetProfiles extends ActorQuery[ProfileSet]
+  case class AddClientLink(client: ActorRef, instance: Uuid) extends ActorQuery[Unit]
+  case class RemoveClientLink(client: ActorRef, instance: Uuid) extends ActorCmd
+  case class ServerExit(server: ActorRef, reason: Option[Throwable]) extends ActorCmd
 }
 
 
 
-class ServerProxy(val srv: AbstractActor) extends ServerAccess with OutputChannel[Any] with CanReply[Any,Any] {
-  type Future[+P] = srv.Future[P]
+class ServerProxy(val srv: ActorRef) extends Profile {
+  def requireProfile(cl: Class[_]): Unit =
+    if (!supports(cl)) throw new IllegalArgumentException("Server does not support profile " + cl)
 
-  lazy val profiles = as[Set[ProfileInfo]] (srv !? Server.GetProfiles)
-  
-  def !(msg: Any) = srv.!(msg)
-  def !?(msec: Long, msg: Any) = srv.!?(msec, msg)
-  def !?(msg: Any) = srv.!?(msg)
-  def !![A](msg: Any, handler: PartialFunction[Any, A]) = srv.!!(msg, handler)
-  def !!(msg: Any) = srv.!!(msg)
-  
-  def forward(msg: Any) = srv.forward(msg)
-  def receiver = srv.receiver
-  def send(msg: Any, replyTo: OutputChannel[Any]) = srv.send(msg, replyTo)
-
-  def linkTo() = Actor.link(srv)
-  def unlinkFrom() = Actor.unlink(srv)
-
-  requireProfile(ProfileInfo.apply[Server])
-
-  ProfileInfo.profilesOf(this.getClass) foreach {requireProfile(_)}
+  for { cl <- this.getClass.getInterfaces; if (ProfileSet.isProfile(cl)) } { requireProfile(cl) }
 }

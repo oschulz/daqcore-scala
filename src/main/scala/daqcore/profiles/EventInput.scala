@@ -17,23 +17,11 @@
 
 package daqcore.profiles
 
-import akka.actor._
+import scala.annotation._
 
 import daqcore.util._
 import daqcore.actors._
 
 
-trait Closeable extends Profile {
-  def close(): Unit = srv.stop
-  
-  def notifyOnClose(implicit receiver: ActorRef) =
-    srv ! Closeable.NotifyOnClose(receiver)
-}
-
-
-object Closeable {
-  case object Closed
-
-  // case object Close extends ActorCmd
-  case class NotifyOnClose(receiver: ActorRef) extends ActorCmd
-}
+trait EventInput extends GenericInput { val inputCompanion = EventInput }
+object EventInput extends GenericInputCompanion { type InputData = AnyRef }

@@ -15,25 +15,33 @@
 // Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 
-package daqcore.profiles
+package daqcore.actors
 
-import akka.actor._
+
+import akka.actor.{Actor, Supervisor, ActorRef}
+import akka.config.Supervision.{LifeCycle, UndefinedLifeCycle}
 
 import daqcore.util._
-import daqcore.actors._
 
 
-trait Closeable extends Profile {
-  def close(): Unit = srv.stop
+
+trait Supervising {
+  def link(actorRef: ActorRef): Unit
   
-  def notifyOnClose(implicit receiver: ActorRef) =
-    srv ! Closeable.NotifyOnClose(receiver)
+  def linkStart(actorRef: ActorRef, lifeCycle: LifeCycle = UndefinedLifeCycle): ActorRef = {
+    if (lifeCycle != UndefinedLifeCycle) actorRef.lifeCycle = lifeCycle
+    link(actorRef)
+    actorRef.start
+  }
 }
 
 
-object Closeable {
-  case object Closed
+object Supervising {
+  def apply(wrapped: ActorRef) = new Supervising {
+    def link(target: ActorRef) = wrapped.link(target)
+  }
 
-  // case object Close extends ActorCmd
-  case class NotifyOnClose(receiver: ActorRef) extends ActorCmd
+  def apply(wrapped: Supervisor) = new Supervising {
+    def link(target: ActorRef) = wrapped.link(target)
+  }
 }

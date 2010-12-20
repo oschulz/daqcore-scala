@@ -80,6 +80,8 @@ const UChar_t msgHeader[2] = {UChar_t(0x10), UChar_t(0x9B)}; // DLE CSI
 const UInt_t MSG_REQUEST = 0x52455155;
 const UInt_t MSG_RESPONSE = 0x52455350;
 
+void shutdown();
+
 
 class Messaging {
 public:
@@ -102,7 +104,7 @@ protected:
 		m_in->read((char*)buffer, count);
 		if (!m_in->good() && closeOnFail) {
 			debug("End of input, exiting");
-			exit(0);
+			shutdown();
 		}
 		else assert( m_in->good() );
 	}
@@ -588,6 +590,13 @@ TTreeMap m_trees;
 class TFileMap {
 protected:
 	PtrMap m_map;
+	
+	void closeFile(TFile* file) {
+		debug(Form("Closing TFile \"%s\"", file->GetName()));
+		file->Write();
+		file->Close();
+		delete file;
+	}
 
 public:
 	bool validId(Int_t id)
@@ -607,9 +616,13 @@ public:
 		TFile *file = (*this)[id];
 		m_map.erase(id);
 		m_trees.delAllInFile(file);
-		file->Write();
-		file->Close();
-		delete file;
+		closeFile(file);
+	}
+	
+	void clear() {
+		for (PtrMap::iterator it = m_map.begin(); it != m_map.end(); ++it)
+			closeFile(this->operator[](it->first));
+		m_map.clear();
 	}
 	
 	virtual ~TFileMap() {}
@@ -765,6 +778,13 @@ void processInstruction(TMessage &req, TMessage &resp) {
 	else if (header == "AddTreeEntry") srvAddTreeEntry(req);
 	else if (header == "GetTreeEntry") srvGetTreeEntry(req, resp);
 	else assert(false);
+}
+
+
+void shutdown() {
+	info("Shutting down");
+	m_tfiles.clear();
+	exit(0);
 }
 
 

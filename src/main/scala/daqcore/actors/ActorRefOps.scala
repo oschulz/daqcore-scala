@@ -15,24 +15,22 @@
 // Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 
-package daqcore.profiles
+package daqcore.actors
 
-import daqcore.util._
-import daqcore.actors._
-
-import java.net.InetSocketAddress
+import akka.actor.ActorRef
+import akka.dispatch.Future
 
 
-trait InetAcceptor extends Profile with Closeable
+class ActorRefOps(aref: ActorRef) {
+  def !>>[R](msg: Any, timeout: Long = aref.timeout)(implicit sender: Option[ActorRef] = None): R = 
+    aref.!!![R](msg, timeout)(sender).apply()
 
+  def !!>>[R](msg: Any, timeout: Long = aref.timeout)(implicit sender: Option[ActorRef] = None): Future[R] =
+    aref.!!![R](msg, timeout)(sender)
 
-object InetAcceptor {
-  def apply (port: Int) (body: ByteStreamIO => Unit) (implicit builder: InetAcceptorBuilder) : InetAcceptor = {
-    builder(port) (body)
-  }
-}
+  def !>[R](msg: ActorQuery[R], timeout: Long = aref.timeout)(implicit sender: Option[ActorRef] = None): R = 
+    aref.!!![R](msg, timeout)(sender).apply()
 
-
-abstract class InetAcceptorBuilder {
-  def apply (port: Int) (body: ByteStreamIO => Unit): InetAcceptor
+  def !!>[R](msg: ActorQuery[R], timeout: Long = aref.timeout)(implicit sender: Option[ActorRef] = None): Future[R] =
+    aref.!!![R](msg, timeout)(sender)
 }

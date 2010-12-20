@@ -15,25 +15,31 @@
 // Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 
-package daqcore.profiles
+package daqcore.servers
 
-import akka.actor._
+import scala.collection.immutable.Queue
 
-import daqcore.util._
+import akka.actor.ActorRef
+
 import daqcore.actors._
+import daqcore.profiles._
 
 
-trait Closeable extends Profile {
-  def close(): Unit = srv.stop
+trait SyncableServer extends CascadableServer {
+  override def profiles = super.profiles.+[Syncable]
   
-  def notifyOnClose(implicit receiver: ActorRef) =
-    srv ! Closeable.NotifyOnClose(receiver)
-}
-
-
-object Closeable {
-  case object Closed
-
-  // case object Close extends ActorCmd
-  case class NotifyOnClose(receiver: ActorRef) extends ActorCmd
+  def srvPause(): Unit = {}
+  
+  def srvSync(): Unit = {}
+  
+  override def serve = super.serve orElse {
+    case op @ Syncable.Pause() => {
+      trace(op)
+      srvPause()
+    }
+    case op @ Syncable.Sync() => {
+      trace(op)
+      reply(srvSync())
+    }
+  }
 }

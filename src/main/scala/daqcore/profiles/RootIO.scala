@@ -21,6 +21,8 @@ import java.net.InetAddress
 import java.io.{File => JFile}
 import java.util.concurrent.atomic.AtomicInteger
 
+import akka.config.Supervision.{LifeCycle, UndefinedLifeCycle}
+
 import daqcore.util._
 import daqcore.actors._
 import daqcore.servers._
@@ -31,20 +33,21 @@ trait RootIO extends Profile with Closeable {
   import RootIO._
   import RootIO.requests._
 
-  def getIdn(implicit timeout: TimeoutSpec): (String, String, String, String) = srv !> GetIdn()
+  def getIdn(timeout: Long = defaultTimeout): (String, String, String, String) = srv.!>(GetIdn(), timeout)
   
-  def openTFile(file: JFile, mode: filemode.Value = filemode.read)(implicit timeout: TimeoutSpec): TFile = {
-    val id = nextId
+  def openTFile(file: JFile, mode: filemode.Value = filemode.read, timeout: Long = defaultTimeout): TFile = {
+    val id = nextId(timeout)
     srv ! OpenTFile(id, file.getPath, mode.toString)
-    new TFile(file, this, id, mode)
+    new TFile(file, this, id, mode, timeout)
   }
   
-  def nextId(implicit timeout: TimeoutSpec): Int = srv !> GetNextId
+  def nextId(timeout: Long = defaultTimeout): Int = srv !> GetNextId
 }
 
 
 object RootIO {
-  def apply(): RootIO = RootIOServer()
+  def apply(sv: Supervising = defaultSupervisor, lc: LifeCycle = UndefinedLifeCycle): RootIO =
+    RootIOServer(sv, lc)
 
   case object GetNextId extends ActorQuery[Int]
 
@@ -86,10 +89,13 @@ object filemode extends Enumeration {
 }
 
 
-class TFile(val file: JFile, val io: RootIO, val id: Int, val mode: filemode.Value)(implicit val timeout: TimeoutSpec) {
+class TFile(val file: JFile, val io: RootIO, val id: Int, val mode: filemode.Value, val timeout: Long) {
   import RootIO.requests._
 
-  def close(): Unit = io.srv ! CloseTFile(id)
+  def close(): Unit = {
+    io.srv ! CloseTFile(id)
+    io.getIdn() // Make close operation synchronous
+  }
   
   def createTTree[T <: Product : ClassManifest](name: String, title: String): TTree[T] = {
     val treeId = io.nextId(timeout)
@@ -118,7 +124,7 @@ class TTree[T <: Product : ClassManifest](val file: TFile, val name: String, val
   import RootIO.requests._
 
   val io = file.io
-  implicit val timeout = file.timeout
+  val timeout = file.timeout
 
   def underlying = null
 
@@ -131,10 +137,10 @@ class TTree[T <: Product : ClassManifest](val file: TFile, val name: String, val
 
   def length = getSize()
 
-  def getSize(): Int = io.srv.!>(GetTreeSize(id))(timeout)
+  def getSize(): Int = io.srv.!>(GetTreeSize(id), timeout)
   
   def apply(index: Int): T = {
-    io.srv.!>(GetTreeEntry[T](id, index))(timeout)
+    io.srv.!>(GetTreeEntry[T](id, index), timeout)
   }
 
   def +=(element: T): TTree[T] = {

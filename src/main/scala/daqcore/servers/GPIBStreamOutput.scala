@@ -19,13 +19,19 @@ package daqcore.servers
 
 import java.io.{File}
 
+import akka.actor.Actor.actorOf
+import akka.config.Supervision.{LifeCycle, UndefinedLifeCycle}
+
 import daqcore.actors._
 import daqcore.profiles._
 import daqcore.util._
 import daqcore.prot.scpi.{StreamMsgTerm}
 
 
-trait GPIBStreamOutput extends OutputFilterServer with RawMsgOutput {
+trait GPIBStreamOutput extends OutputFilterServer {
+  override def profiles = super.profiles.+[RawMsgOutput]
+  val outputCompanion = RawMsgOutput
+
   override def target: ByteStreamOutput
   val targetCompanion = ByteStreamOutput
 
@@ -38,11 +44,9 @@ trait GPIBStreamOutput extends OutputFilterServer with RawMsgOutput {
 
 
 object GPIBStreamOutput {
-  def apply(stream: ByteStreamOutput): GPIBStreamOutput = {
-    start(new GPIBStreamOutput { val target = stream})
-  }
+  class DefaultGPIBStreamOutput(val target: ByteStreamOutput) extends GPIBStreamOutput
 
-  def apply(file: File, compression: Compression = Uncompressed): GPIBStreamOutput = {
-    start(new GPIBStreamOutput { val target = OutputStreamWriter(file, compression) })
+  def apply(stream: ByteStreamOutput, sv: Supervising = defaultSupervisor, lc: LifeCycle = UndefinedLifeCycle): RawMsgOutput = {
+    new ServerProxy(sv.linkStart(actorOf(new DefaultGPIBStreamOutput(stream)), lc)) with RawMsgOutput
   }
 }

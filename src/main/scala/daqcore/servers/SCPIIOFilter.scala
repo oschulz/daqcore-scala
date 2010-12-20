@@ -17,7 +17,8 @@
 
 package daqcore.servers
 
-import java.io.{File}
+import akka.actor.Actor.actorOf
+import akka.config.Supervision.{LifeCycle, UndefinedLifeCycle}
 
 import daqcore.actors._
 import daqcore.profiles._
@@ -25,39 +26,38 @@ import daqcore.util._
 import daqcore.prot.scpi.{Request, Response, SCPIParser}
 
 
-trait SCPIRequestOutputFilter extends OutputFilterServer with SCPIRequestOutput {
+trait SCPIRequestOutputFilter extends OutputFilterServer {
+  override def profiles = super.profiles.+[SCPIRequestOutput]
+  val outputCompanion = SCPIRequestOutput
+
   override def target: RawMsgOutput
   val targetCompanion = RawMsgOutput
 
-  protected def srvSend(request: Request): Unit = {
+  def srvSend(request: Request): Unit = {
     target.send(request.getBytes)
   }
 }
 
 
 object SCPIRequestOutputFilter {
-  def apply(output: RawMsgOutput): SCPIRequestOutputFilter = {
-    start(new SCPIRequestOutputFilter { val target = output })
-  }
+  class DefaultSCPIRequestOutputFilter(val target: RawMsgOutput) extends SCPIRequestOutputFilter
 
-  def apply(file: File, compression: Compression = Uncompressed): SCPIRequestOutputFilter =
-    SCPIRequestOutputFilter(GPIBStreamOutput(file, compression))
+  def apply(target: RawMsgOutput, sv: Supervising = defaultSupervisor, lc: LifeCycle = UndefinedLifeCycle): SCPIRequestOutput =
+    new ServerProxy(sv.linkStart(actorOf(new DefaultSCPIRequestOutputFilter(target)), lc)) with SCPIRequestOutput
 }
 
 
 
-trait SCPIRequestInputFilter extends InputFilterServer with SCPIRequestInput {
+trait SCPIRequestInputFilter extends InputFilterServer {
+  override def profiles = super.profiles.+[SCPIRequestInput]
+  val inputCompanion = SCPIRequestInput
+
   override def source: RawMsgInput
   val sourceCompanion = RawMsgInput
 
-  var parser: SCPIParser = null
+  val parser: SCPIParser = new SCPIParser
   
-  override def init() = {
-    parser = new SCPIParser
-    super.init
-  }
-  
-  protected def srvProcessInput(data: Seq[Byte]) = {
+  def srvProcessInput(data: Seq[Byte]) = {
     trace("Received %s bytes: %s".format(data.size, loggable(data)))
     
     val request = parser.parseRequest(ByteCharSeq(data: _*))
@@ -68,28 +68,24 @@ trait SCPIRequestInputFilter extends InputFilterServer with SCPIRequestInput {
 
 
 object SCPIRequestInputFilter {
-  def apply(output: RawMsgInput): SCPIRequestInputFilter = {
-    start(new SCPIRequestInputFilter { val source = output })
-  }
+  class DefaultSCPIRequestInputFilter(val source: RawMsgInput) extends SCPIRequestInputFilter
 
-  def apply(file: File, compression: Compression = Uncompressed): SCPIRequestInputFilter =
-    SCPIRequestInputFilter(GPIBStreamInput(file, compression))
+  def apply(source: RawMsgInput, sv: Supervising = defaultSupervisor, lc: LifeCycle = UndefinedLifeCycle): SCPIRequestInput =
+    new ServerProxy(sv.linkStart(actorOf(new DefaultSCPIRequestInputFilter(source)), lc)) with SCPIRequestInput
 }
 
 
 
-trait SCPIResponseInputFilter extends InputFilterServer with SCPIResponseInput {
+trait SCPIResponseInputFilter extends InputFilterServer {
+  override def profiles = super.profiles.+[SCPIResponseInput]
+  val inputCompanion = SCPIResponseInput
+
   override def source: RawMsgInput
   val sourceCompanion = RawMsgInput
 
-  var parser: SCPIParser = null
+  val parser: SCPIParser = new SCPIParser
   
-  override def init() = {
-    parser = new SCPIParser
-    super.init
-  }
-  
-  protected def srvProcessInput(data: Seq[Byte]) = {
+  def srvProcessInput(data: Seq[Byte]) = {
     trace("Received %s bytes: %s".format(data.size, loggable(data)))
     
     val response = parser.parseResponse(ByteCharSeq(data: _*))
@@ -100,10 +96,8 @@ trait SCPIResponseInputFilter extends InputFilterServer with SCPIResponseInput {
 
 
 object SCPIResponseInputFilter {
-  def apply(output: RawMsgInput): SCPIResponseInputFilter = {
-    start(new SCPIResponseInputFilter { val source = output })
-  }
+  class DefaultSCPIResponseInputFilter(val source: RawMsgInput) extends SCPIResponseInputFilter
 
-  def apply(file: File, compression: Compression = Uncompressed): SCPIResponseInputFilter =
-    SCPIResponseInputFilter(GPIBStreamInput(file, compression))
+  def apply(source: RawMsgInput, sv: Supervising = defaultSupervisor, lc: LifeCycle = UndefinedLifeCycle): SCPIResponseInput =
+    new ServerProxy(sv.linkStart(actorOf(new DefaultSCPIResponseInputFilter(source)), lc)) with SCPIResponseInput
 }

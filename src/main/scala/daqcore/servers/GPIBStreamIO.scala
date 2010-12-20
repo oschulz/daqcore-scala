@@ -17,19 +17,29 @@
 
 package daqcore.servers
 
+import akka.actor.Actor.actorOf
+import akka.config.Supervision.{LifeCycle, UndefinedLifeCycle}
+
 import daqcore.actors._
 import daqcore.profiles._
 import daqcore.util._
 
 
-class GPIBStreamIO(val stream: ByteStreamIO) extends RawMsgIO with GPIBStreamInput with GPIBStreamOutput {
+class GPIBStreamIO(val stream: ByteStreamIO) extends GPIBStreamInput with GPIBStreamOutput {
+  override def profiles = super.profiles.+[RawMsgIO]
+
   val source = stream
   val target = stream
 }
 
 
 object GPIBStreamIO {
-  def apply(stream: ByteStreamIO): GPIBStreamIO = {
-    start(new GPIBStreamIO(stream))
+  def apply(stream: ByteStreamIO, sv: Supervising = defaultSupervisor, lc: LifeCycle = UndefinedLifeCycle): RawMsgIO = {
+    new ServerProxy(sv.linkStart(actorOf(new GPIBStreamIO(stream)), lc)) with RawMsgIO
+  }
+  
+  def overInetStream(addr: InetSockAddr, timeout: Long = 10000, sv: Supervising = defaultSupervisor, lc: LifeCycle = UndefinedLifeCycle): RawMsgIO = {
+    val stream = InetConnection(addr, timeout, sv, lc)
+    GPIBStreamIO(stream, sv, lc)
   }
 }

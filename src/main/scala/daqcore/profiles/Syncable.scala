@@ -17,28 +17,24 @@
 
 package daqcore.profiles
 
-import daqcore.util._
+import akka.actor._, akka.dispatch.Future
+
 import daqcore.actors._
 
-import java.net.InetAddress
 
+trait Syncable extends Profile {
+  import Syncable._
 
-trait VXI11Connector extends Profile with Closeable {
-  def connectF(host: String, device: String): Ft[VXI11ClientLink] =
-    connectF(InetAddress.getByName(host), device, -1)
+  def pause(): Unit = srv ! Pause()
 
-  def connectF(host: String, device: String, timeout: Long): Ft[VXI11ClientLink] =
-    connectF(InetAddress.getByName(host), device, timeout)
-  
-  def connectF(to: InetAddress, device:String): Ft[VXI11ClientLink] =
-    connectF(to, device, -1)
+  def sync(timeout: Long = defaultTimeout): Unit = syncF(timeout).apply()
 
-  def connectF(to: InetAddress, device:String, timeout: Long): Ft[VXI11ClientLink] =
-    srv.!!?> (VXI11Connector.Connect(to, device, timeout))
-      { case a: Server with VXI11ClientLink => a }
+  def syncF(timeout: Long = defaultTimeout): Future[Unit] =
+    srv.!!>(Sync(), timeout)
 }
 
 
-object VXI11Connector {
-  case class Connect(to: InetAddress, device:String, timeout: Long = -1)
+object Syncable {
+  case class Pause() extends ActorCmd
+  case class Sync() extends ActorQuery[Unit]
 }

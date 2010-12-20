@@ -18,22 +18,24 @@
 package daqcore.profiles
 
 import akka.actor._
+import akka.dispatch.Future
+import akka.config.Supervision.{LifeCycle, UndefinedLifeCycle}
 
 import daqcore.util._
+import daqcore.servers._
 import daqcore.actors._
 
 
-trait Closeable extends Profile {
-  def close(): Unit = srv.stop
-  
-  def notifyOnClose(implicit receiver: ActorRef) =
-    srv ! Closeable.NotifyOnClose(receiver)
+trait InetConnection extends ByteStreamIO
+
+
+object InetConnection {
+  def apply(to: InetSockAddr, timeout: Long = 10000, sv: Supervising = defaultSupervisor, lc: LifeCycle = UndefinedLifeCycle): ByteStreamIO =
+    NettyClientConnection(to, timeout, sv)
 }
 
 
-object Closeable {
-  case object Closed
-
-  // case object Close extends ActorCmd
-  case class NotifyOnClose(receiver: ActorRef) extends ActorCmd
+object InetServer {
+  def apply(addr: InetSockAddr, sv: Supervising = defaultSupervisor)(body: ByteStreamIO => Unit): Closeable =
+    NettyServer(addr, sv){body}
 }

@@ -17,6 +17,8 @@
 
 package daqcore.profiles
 
+import akka.dispatch.Future
+
 import daqcore.actors._
 
 
@@ -30,7 +32,7 @@ object EventHandler {
 }
 
 
-trait EventSource extends Profile {
+trait EventSource extends Closeable {
   def addHandler(handler: EventHandler): EventHandler = {
     srv ! EventSource.AddHandler(handler)
     handler
@@ -42,17 +44,17 @@ trait EventSource extends Profile {
   def removeHandler(handler: EventHandler): Unit =
     srv ! EventSource.RemoveHandler(handler)
   
-  def getEventF[T](f: PartialFunction[Any, T]): Ft[T] =
-    srv.!!?(EventSource.GetEvent(f)).asInstanceOf[Ft[T]]
+  def getEventF[T: ClassManifest](f: PartialFunction[Any, T]): Future[T] =
+    srv.!!>(EventSource.GetEvent(f), defaultTimeout)
 }
 
 
 object EventSource {
   val Identity: PartialFunction[Any, Any] = { case a => a }
 
-  case class AddHandler(handler: EventHandler)
-  case class GetEvent[T](f: PartialFunction[Any, T])
-  case class RemoveHandler(handler: EventHandler)
+  case class AddHandler(handler: EventHandler) extends ActorCmd
+  case class GetEvent[T: ClassManifest](f: PartialFunction[Any, T]) extends ActorQuery[T]
+  case class RemoveHandler(handler: EventHandler) extends ActorCmd
 }
 
 

@@ -18,6 +18,7 @@
 package daqcore.servers
 
 import java.io.{File}
+import akka.actor._, akka.actor.Actor.actorOf
 
 import daqcore.actors._
 import daqcore.profiles._
@@ -25,14 +26,23 @@ import daqcore.util._
 
 
 class EventBroadcaster(val source: EventInput) extends CloseableServer with EventServer {
+  override def profiles = super.profiles.+[EventSource]
+
   val sourceCompanion = EventInput
 
   def needMoreInput: Boolean = false
 
-  override protected def init() = {
+  override def init() = {
     super.init()
-    addResource(source)
+
+    clientLinkTo(source.srv)
+    atShutdown{ source.srv.stop() }
     source.triggerRecv()
+  }
+  
+  override def onServerExit(server: ActorRef, reason: Option[Throwable]) = {
+    if ((server == source.srv) && (reason == None)) self.stop()
+    else super.onServerExit(server, reason)
   }
   
   override def serve = super.serve orElse {
@@ -40,14 +50,12 @@ class EventBroadcaster(val source: EventInput) extends CloseableServer with Even
       source.triggerRecv()
       srvEmit(data)
     }
-
-    case sourceCompanion.Closed => srvClose()
   }
 }
 
 
 object EventBroadcaster {
-  def apply(source: EventInput): EventBroadcaster = {
-    start(new EventBroadcaster(source))
+  def apply(source: EventInput, sv: Supervising = defaultSupervisor): EventSource = {
+    new ServerProxy(sv.linkStart(actorOf(new EventBroadcaster(source)))) with EventSource
   }
 }
