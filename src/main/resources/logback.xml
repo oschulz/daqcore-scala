@@ -1,0 +1,30 @@
+<!-- logback configuration -->
+
+<configuration scan="false" debug="false">
+	<appender name="stderr" class="ch.qos.logback.core.ConsoleAppender">
+		<encoder>
+			<target>System.err</target>
+			<pattern>%date{HH:mm:ss.SSSS,UTC} [%-5level] [%thread] %logger{8}: %msg%n%ex</pattern>
+		</encoder>
+	</appender>
+
+	<!-- <appender name="R" class="ch.qos.logback.core.rolling.RollingFileAppender"> -->
+	<appender name="file" class="ch.qos.logback.core.FileAppender">
+		<!-- <file>${log.dir}/daqcore.log</file> -->
+		<file>./daqcore.log</file>
+		<encoder>
+			<pattern>%date{yyyy-MM-dd,UTC}T%date{HH:mm:ss,UTC}Z [%-5level] %logger{8}: %msg%n%ex</pattern>
+		</encoder>
+		<!-- <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<fileNamePattern>./daqcore.log.%d{yyyy-MM-dd-HH}</fileNamePattern>
+		</rollingPolicy> -->
+	</appender>
+
+	<logger name="daqcore" level="DEBUG"/>
+	<logger name="akka" level="DEBUG"/>
+
+	<root level="INFO">
+		<!-- <appender-ref ref="stderr"/> -->
+		<appender-ref ref="file" />
+	</root>
+</configuration>
