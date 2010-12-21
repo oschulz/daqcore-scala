@@ -42,10 +42,21 @@ trait RootIO extends Profile with Closeable {
   }
   
   def nextId(timeout: Long = defaultTimeout): Int = srv !> GetNextId
+
+  def writeSeq[T <: Product : ClassManifest](file: java.io.File, treeName: String, treeTitle: String, data: Seq[T], mode: filemode.Value = filemode.recreate, timeout: Long = defaultTimeout) = {
+    using (openTFile(file, mode)) { tfile =>
+      val ttree = tfile.createTTree[T](treeName, treeTitle)
+      for { value <- data } {
+        ttree += value
+      }
+    }
+  }
 }
 
 
 object RootIO {
+  lazy val defaultIO = RootIO()
+
   def apply(sv: Supervising = defaultSupervisor, lc: LifeCycle = UndefinedLifeCycle): RootIO =
     RootIOServer(sv, lc)
 
@@ -89,6 +100,7 @@ object filemode extends Enumeration {
 }
 
 
+
 class TFile(val file: JFile, val io: RootIO, val id: Int, val mode: filemode.Value, val timeout: Long) {
   import RootIO.requests._
 
@@ -115,6 +127,13 @@ class TFile(val file: JFile, val io: RootIO, val id: Int, val mode: filemode.Val
   
   override def toString = "TFile(%s)".format(file.getPath)
 }
+
+
+object TFile {
+  def apply(file: JFile, mode: filemode.Value = filemode.read)(implicit io:RootIO = RootIO.defaultIO): TFile =
+    io.openTFile(file, mode)
+}
+
 
 
 class TTree[T <: Product : ClassManifest](val file: TFile, val name: String, val id: Int) extends
