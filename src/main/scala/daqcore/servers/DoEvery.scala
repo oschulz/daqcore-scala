@@ -25,7 +25,7 @@ import daqcore.profiles._
 import daqcore.util._
 
 
-class DoEvery(interval: Int, action: => Unit) extends CloseableServer {
+class DoEvery(action: => Unit, interval: Int, after: Int) extends CloseableServer {
   override def profiles = super.profiles.+[Repeated]
 
   val maxChunkSize = 512 * 1024
@@ -35,7 +35,7 @@ class DoEvery(interval: Int, action: => Unit) extends CloseableServer {
   
   override def init(): Unit = {
     super.init()
-    srv ! RunAction
+    sendAfter(after, srv, RunAction)
   }
   
   protected case object RunAction
@@ -61,6 +61,6 @@ class DoEvery(interval: Int, action: => Unit) extends CloseableServer {
 
 
 object DoEvery {
-  def apply(interval: Int, sv: Supervising = defaultSupervisor)(action: => Unit): Repeated =
-    new ServerProxy(sv.linkStart(actorOf(new DoEvery(interval, action)))) with Repeated
+  def apply(interval: Int, after: Int = 0, sv: Supervising = defaultSupervisor)(action: => Unit): Repeated =
+    new ServerProxy(sv.linkStart(actorOf(new DoEvery(action, interval, after)))) with Repeated
 }
