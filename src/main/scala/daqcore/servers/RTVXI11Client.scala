@@ -83,9 +83,7 @@ class RTVXI11Client(val address: InetAddress, timeout: Long) extends CloseableSe
         clnt = new vxi11core.Client(address, OncRpcProtocols.ONCRPC_TCP)
       }
       catch { case e =>
-        val msg = "Could not open VXI11 client connection to " + address
-        log.error(msg)
-        throw new java.io.IOException(msg)
+        throw new java.io.IOException("Could not open VXI11 client connection to " + address, e)
       }
     } {
       clnt.close(); clnt = null;
