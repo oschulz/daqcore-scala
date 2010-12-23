@@ -174,9 +174,11 @@ trait Server extends Actor with Logging with Profiling {
   override def preRestart(reason: Throwable) {
     log.debug("preRestart(%s)".format(reason))
 
-    processClientLinks(Some(reason))
-    
-    runCleanupActions()
+    try {
+      runCleanupActions()
+    } finally {
+      processClientLinks(Some(reason))
+    }
   }
 
   override def postRestart(reason: Throwable) {
@@ -186,11 +188,13 @@ trait Server extends Actor with Logging with Profiling {
   override def postStop = {
     log.debug("postStop")
     
-    processClientLinks(None)
-    
-    runCleanupActions()
-    runShutdownActions()
-    self.shutdownLinkedActors()
+    try {
+      runCleanupActions()
+      runShutdownActions()
+    } finally {
+      processClientLinks(None)
+      self.shutdownLinkedActors()
+    }
   }
 }
 
