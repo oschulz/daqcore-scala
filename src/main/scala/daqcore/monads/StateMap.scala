@@ -22,7 +22,7 @@ case class StateMap(states: Map[Any, Any] = Map.empty[Any, Any]) {
   def apply[T](key: Any): T = states.get(key) match {
     case Some(value) =>
       try { value.asInstanceOf[T] }
-      catch { case e: ClassCastException => throw new RuntimeException("StateMap: Type mismatch") }
+      catch { case e: ClassCastException => throw new RuntimeException("StateMap: Type mismatch", e) }
     case None => throw new RuntimeException("StateMap: No such key: " + key.toString)
   }
   
