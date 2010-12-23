@@ -106,7 +106,7 @@ class TFile(val file: JFile, val io: RootIO, val id: Int, val mode: filemode.Val
 
   def close(): Unit = {
     io.srv ! CloseTFile(id)
-    io.getIdn() // Make close operation synchronous
+    io.getIdn(timeout) // Make close operation synchronous
   }
   
   def createTTree[T <: Product : ClassManifest](name: String, title: String): TTree[T] = {
