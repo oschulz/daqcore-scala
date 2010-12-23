@@ -55,7 +55,10 @@ abstract class SIS3300Server(val vmeBus: VMEBus, val baseAddress: Int) extends E
     clientLinkTo(vmeBus.srv)
     atShutdown { vmeBus.srv.stop() }
 
-    atShutdown { srvStopCapture }
+    atCleanup {
+      try { srvStopCapture }
+      catch { case reason => throw new RuntimeException("Failed to cleanly stop capture at cleanup: " + reason) }
+    }
   }
 
 
@@ -347,9 +350,9 @@ abstract class SIS3300Server(val vmeBus: VMEBus, val baseAddress: Int) extends E
   }
   
   def srvStartCapture() = startCapture()
-  
 
-  def stopCapture(): Unit = {
+  
+  def stopCapture(): Unit = if (daqState.running) {
     debug("Stopping acquisition")
 
     import memory._
