@@ -57,7 +57,7 @@ abstract class SIS3300Server(val vmeBus: VMEBus, val baseAddress: Int) extends E
 
     atCleanup {
       try { srvStopCapture }
-      catch { case reason => throw new RuntimeException("Failed to cleanly stop capture at cleanup: " + reason) }
+      catch { case reason => throw new RuntimeException("Failed to cleanly stop capture at cleanup.", reason) }
     }
   }
 
