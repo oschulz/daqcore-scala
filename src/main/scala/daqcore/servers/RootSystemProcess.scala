@@ -88,9 +88,15 @@ class RootSystemProcess extends Server with KeepAlive with PostInit with Closeab
       
       def read(trg: Array[Byte]): Unit = {
         log.trace("srvRecv(): reading %s bytes.".format(trg.length))
-        val count = input.read(trg)
-        if (count == -1) throw new EOIException
-        else assert { count == trg.length }
+        var pos = 0;
+        while (pos < trg.length) {
+          val count = input.read(trg, pos, trg.length - pos)
+          if (count == -1) throw new EOIException
+          else {
+            assert(count > 0)
+            pos += count
+          }
+        }
       }
 
       def readByte = { val a = Array.ofDim[Byte](1); read(a); a(0) }
