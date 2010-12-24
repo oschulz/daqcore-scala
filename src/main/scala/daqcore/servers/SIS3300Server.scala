@@ -822,21 +822,29 @@ object SIS3300Server extends Logging {
 
     
   class MemRegion(val op: MemOperator, val base: Address) {
-    region =>
+    thisRegion =>
 
     // SIS3300 registers 0x00 and 0x10 are implemented as J/K registers.
     protected def isJK(addr: Address) = ((addr) == 0x00 || (addr) == 0x10)
     protected val jkSet = BitRange(0, 15)
     protected val jkClear = BitRange(16, 31)
     
-    trait ReadableRegister extends Register { register =>
+    trait MemRegister extends Register { thisRegister =>
+      def region = thisRegion
+      
+      trait MemBits extends BitSelection {
+        def register = thisRegister
+      }
+    }
+    
+    trait ReadableRegister extends MemRegister { thisRegister =>
       def r = new {
         def fields = for {
-          method <- register.getClass.getDeclaredMethods.toList
+          method <- thisRegister.getClass.getDeclaredMethods.toList
           if method.getParameterTypes.isEmpty
           if classOf[ReadableBits].isAssignableFrom(method.getReturnType)
         } yield {
-          method.getName -> method.invoke(register).asInstanceOf[ReadableBits]
+          method.getName -> method.invoke(thisRegister).asInstanceOf[ReadableBits]
         }
         
         def apply(value: Word) =
@@ -844,24 +852,24 @@ object SIS3300Server extends Logging {
       }
 
       def addr: Address
-      def get() = region.read(addr)
-      def get(bitSel: BitSelection) = region.read(addr, bitSel)
+      def get() = thisRegion.read(addr)
+      def get(bitSel: BitSelection) = thisRegion.read(addr, bitSel)
 
-      trait ReadableBits extends BitSelection {
-          def get() = register.get(this)
+      trait ReadableBits extends MemBits {
+          def get() = thisRegister.get(this)
       }
       case class ROBit(n: Int) extends BitLike with ReadableBits
       case class ROBitRange(from: Int, to: Int) extends BitRangeLike with ReadableBits
     }
 
-    trait WriteableRegister extends Register { register =>
+    trait WriteableRegister extends MemRegister { thisRegister =>
       def w = new {
         def fields = for {
-          method <- register.getClass.getDeclaredMethods.toList
+          method <- thisRegister.getClass.getDeclaredMethods.toList
           if method.getParameterTypes.isEmpty
           if classOf[WriteableBits].isAssignableFrom(method.getReturnType)
         } yield {
-          method.getName -> method.invoke(register).asInstanceOf[WriteableBits]
+          method.getName -> method.invoke(thisRegister).asInstanceOf[WriteableBits]
         }
         
         def apply(value: Word) =
@@ -869,18 +877,18 @@ object SIS3300Server extends Logging {
       }
 
       def addr: Address
-      def set(value: Word) = region.write(addr, value)
-      def set(bitSel: BitSelection, value: Word) = region.write(addr, bitSel, value)
+      def set(value: Word) = thisRegion.write(addr, value)
+      def set(bitSel: BitSelection, value: Word) = thisRegion.write(addr, bitSel, value)
 
-      trait WriteableBits extends BitSelection {
-        def set(value: Word) = register.set(this, value)
+      trait WriteableBits extends MemBits {
+        def set(value: Word) = thisRegister.set(this, value)
       }
       case class WOBit(n: Int) extends BitLike with WriteableBits
       case class WOBitRange(from: Int, to: Int) extends BitRangeLike with WriteableBits
-      case class COBit(n: Int) extends BitLike with BitSelection
-        { def clear() = register.set(this, 0) }
-      case class SOBit(n: Int) extends BitLike with BitSelection
-        { def set() = register.set(this, 1) }
+      case class COBit(n: Int) extends BitLike with MemBits
+        { def clear() = thisRegister.set(this, 0) }
+      case class SOBit(n: Int) extends BitLike with MemBits
+        { def set() = thisRegister.set(this, 1) }
     }
     
     
@@ -900,19 +908,19 @@ object SIS3300Server extends Logging {
       override def set(value: Word) = {
         val jkSet(jBits) = value
         val jkClear(kBits) = ~value & jkClear.valueMask
-        region.jkWrite(addr, jBits | kBits)
+        thisRegion.jkWrite(addr, jBits | kBits)
       }
       
       override def set(bitSel: BitSelection, value: Word) = {
         val bitSel(jkSet(jBits)) = value
         val bitSel(jkClear(kBits)) = ~value & bitSel.valueMask
         val toWrite = jBits | kBits
-        region.jkWrite(addr, toWrite)
+        thisRegion.jkWrite(addr, toWrite)
       }
     }
     
     class KeyRegister(val addr: Address) {
-       def set() = region.write(addr, 0)
+       def set() = thisRegion.write(addr, 0)
     }
     
     def read(addr: Address) = op.read(addr + base)
