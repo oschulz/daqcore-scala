@@ -752,7 +752,7 @@ object SIS3300Server extends Logging {
   }
 
 
-  case class MemOperator(mem: MemoryLink) extends Logging {
+  case class MemOperator(mem: MemoryLink, timeout: Long = 10000) extends Logging {
     protected def transform[R](f: DoOnMemory => (DoOnMemory, R)) = RespStates.transform[StateMap, R] { s =>
       val ops = s.get[DoOnMemory](mem) getOrElse DoOnMemoryNothing
       val (newOps, result) = f(ops)
@@ -761,14 +761,14 @@ object SIS3300Server extends Logging {
     
     def read(addr: Address) = transform[DelayedVal[Word]] { ops =>
       trace("read(0x%s)".format(hex(addr)))
-      val result = new DelayedResult[Word](10000)
+      val result = new DelayedResult[Word](timeout)
       val newOps = ops.copy(reads = ops.reads.enqueue(addr, {word => result.set(Ok(word)); trace("read(%s) set".format(addr))} ) )
       (newOps, result)
     }
 
     def read(addr: Address, bitSel: BitSelection) = transform[DelayedVal[Word]] { ops =>
       trace("read(0x%s, %s)".format(hex(addr), bitSel))
-      val result = new DelayedResult[Word](10000)
+      val result = new DelayedResult[Word](timeout)
       val newOps = ops.copy(reads = ops.reads.enqueue(addr, {word =>
         val bits = bitSel(word)
         result.set(Ok(bits))
@@ -937,7 +937,7 @@ object SIS3300Server extends Logging {
   }
 
 
-  abstract class SISMemory(val mem: MemoryLink, base: Address) extends MemRegion(MemOperator(mem), base) {
+  abstract class SISMemory(val mem: MemoryLink, base: Address, timeout: Long = 10000) extends MemRegion(MemOperator(mem, timeout), base) {
     def majorFirmwareRevision: Int
 
     def read(range: Range): Seq[Word] = {
