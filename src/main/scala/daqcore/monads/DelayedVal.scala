@@ -54,7 +54,7 @@ trait DelayedOutput[A] {
 
 class DelayedResult[A](timeout: Option[Long]) extends DelayedVal[A] with DelayedOutput[A] {
   def this() = this(None)
-  def this(timeout: Int) = this(Some(timeout.toLong))
+  def this(timeout: Long) = this(Some(timeout.toLong))
 
   protected def milliTime = java.lang.System.nanoTime / 1000000
   protected def age = milliTime - tStart
