@@ -27,7 +27,7 @@ import daqcore.actors._
 import daqcore.servers._
 
 
-trait SIS3300 extends EventSource with Syncable {
+trait SIS3300 extends EventSource with Device {
   import SIS3300._
 
   def resetModule() = srv ! ResetModule()

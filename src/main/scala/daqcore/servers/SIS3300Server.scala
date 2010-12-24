@@ -65,6 +65,10 @@ abstract class SIS3300Server(val vmeBus: VMEBus, val baseAddress: Int) extends E
   override def serve = super.serve orElse {
     case op @ TimedAcquire => if (daqState.running) {trace(""+op+": "+daqState);acquireNext; trace("sent acquireNext");onAcquireNext}
     
+    
+    case op @ Device.GetSubDevs() => debug(op); reply(srvGetSubDevs())
+
+
     case op @ ResetModule() => debug(op); srvResetModule()
     case op @ InitModule() => debug(op); srvInitModule()
 
@@ -150,6 +154,10 @@ abstract class SIS3300Server(val vmeBus: VMEBus, val baseAddress: Int) extends E
     
     currentBankVar = 1
   }
+  
+  
+  def srvGetSubDevs() = Map ('vmeBus -> vmeBus.srv)
+  
 
   def srvInitModule(): Unit = {
     import memory._
