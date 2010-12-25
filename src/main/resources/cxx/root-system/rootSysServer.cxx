@@ -233,7 +233,7 @@ class BoolValue: public AtomicValue {
 public:
 	Bool_t value;
 	void createBranch(TTree &tree, const TString &name) { tree.Branch(name.Data(), &value); }
-	void openBranch(TTree &tree, const TString &name) { tree.SetBranchAddress(name.Data(), &value); }
+	void openBranch(TTree &tree, const TString &name) { if (tree.FindBranch(name.Data()) == 0 ) debug(Form("Branch %s does not exist, using default values", name.Data())); else tree.SetBranchAddress(name.Data(), &value); }
 	void writeTo(TMessage &msg) const { msg.WriteBool(value); }
 	void readFrom(TMessage &msg) { msg.ReadBool(value); }
 	TString toString() const { return TString(value ? "true" : "false"); }
@@ -245,7 +245,7 @@ class Int8Value: public AtomicValue {
 public:
 	Char_t value;
 	void createBranch(TTree &tree, const TString &name) { tree.Branch(name.Data(), &value); }
-	void openBranch(TTree &tree, const TString &name) { tree.SetBranchAddress(name.Data(), &value); }
+	void openBranch(TTree &tree, const TString &name) { if (tree.FindBranch(name.Data()) == 0 ) debug(Form("Branch %s does not exist, using default values", name.Data())); else tree.SetBranchAddress(name.Data(), &value); }
 	void writeTo(TMessage &msg) const { msg.WriteChar(value); }
 	void readFrom(TMessage &msg) { msg.ReadChar(value); }
 	TString toString() const { return TString(Form("%i", (int)(value))); }
@@ -257,7 +257,7 @@ class Int16Value: public AtomicValue {
 public:
 	Short_t value;
 	void createBranch(TTree &tree, const TString &name) { tree.Branch(name.Data(), &value); }
-	void openBranch(TTree &tree, const TString &name) { tree.SetBranchAddress(name.Data(), &value); }
+	void openBranch(TTree &tree, const TString &name) { if (tree.FindBranch(name.Data()) == 0 ) debug(Form("Branch %s does not exist, using default values", name.Data())); else tree.SetBranchAddress(name.Data(), &value); }
 	void writeTo(TMessage &msg) const { msg.WriteShort(value); }
 	void readFrom(TMessage &msg) { msg.ReadShort(value); }
 	TString toString() const { return TString(Form("%i", (int)(value))); }
@@ -269,7 +269,7 @@ class Int32Value: public AtomicValue {
 public:
 	Int_t value;
 	void createBranch(TTree &tree, const TString &name) { tree.Branch(name.Data(), &value); }
-	void openBranch(TTree &tree, const TString &name) { tree.SetBranchAddress(name.Data(), &value); }
+	void openBranch(TTree &tree, const TString &name) { if (tree.FindBranch(name.Data()) == 0 ) debug(Form("Branch %s does not exist, using default values", name.Data())); else tree.SetBranchAddress(name.Data(), &value); }
 	void writeTo(TMessage &msg) const { msg.WriteInt(value); }
 	void readFrom(TMessage &msg) { msg.ReadInt(value); }
 	TString toString() const { return TString(Form("%li", (long)(value))); }
@@ -281,7 +281,7 @@ class Int64Value: public AtomicValue {
 public:
 	Long_t value;
 	void createBranch(TTree &tree, const TString &name) { tree.Branch(name.Data(), &value); }
-	void openBranch(TTree &tree, const TString &name) { tree.SetBranchAddress(name.Data(), &value); }
+	void openBranch(TTree &tree, const TString &name) { if (tree.FindBranch(name.Data()) == 0 ) debug(Form("Branch %s does not exist, using default values", name.Data())); else tree.SetBranchAddress(name.Data(), &value); }
 	void writeTo(TMessage &msg) const { msg.WriteLong(value); }
 	void readFrom(TMessage &msg) { msg.ReadLong(value); }
 	TString toString() const { return TString(Form("%lli", (long long)(value))); }
@@ -293,7 +293,7 @@ class FloatValue: public AtomicValue {
 public:
 	Float_t value;
 	void createBranch(TTree &tree, const TString &name) { tree.Branch(name.Data(), &value); }
-	void openBranch(TTree &tree, const TString &name) { tree.SetBranchAddress(name.Data(), &value); }
+	void openBranch(TTree &tree, const TString &name) { if (tree.FindBranch(name.Data()) == 0 ) debug(Form("Branch %s does not exist, using default values", name.Data())); else tree.SetBranchAddress(name.Data(), &value); }
 	void writeTo(TMessage &msg) const { msg.WriteFloat(value); }
 	void readFrom(TMessage &msg) { msg.ReadFloat(value); }
 	TString toString() const { return TString(Form("%f", float(value))); }
@@ -305,7 +305,7 @@ class DoubleValue: public AtomicValue {
 public:
 	Double_t value;
 	void createBranch(TTree &tree, const TString &name) { tree.Branch(name.Data(), &value); }
-	void openBranch(TTree &tree, const TString &name) { tree.SetBranchAddress(name.Data(), &value); }
+	void openBranch(TTree &tree, const TString &name) { if (tree.FindBranch(name.Data()) == 0 ) debug(Form("Branch %s does not exist, using default values", name.Data())); else tree.SetBranchAddress(name.Data(), &value); }
 	void writeTo(TMessage &msg) const { msg.WriteDouble(value); }
 	void readFrom(TMessage &msg) { msg.ReadDouble(value); }
 	TString toString() const { return TString(Form("%lf", double(value))); }
@@ -317,7 +317,7 @@ class StringValue: public AtomicValue {
 public:
 	TString *value;
 	void createBranch(TTree &tree, const TString &name) { tree.Branch(name.Data(), &value, 32000, 0); }
-	void openBranch(TTree &tree, const TString &name) { tree.SetBranchAddress(name.Data(), &value); }
+	void openBranch(TTree &tree, const TString &name) { if (tree.FindBranch(name.Data()) == 0 ) debug(Form("Branch %s does not exist, using default values", name.Data())); else tree.SetBranchAddress(name.Data(), &value); }
 	void writeTo(TMessage &msg) const { msg.WriteTString(*value); }
 	void readFrom(TMessage &msg) { msg.ReadTString(*value); }
 	TString toString() const { return TString(*value); }
@@ -330,7 +330,7 @@ class UUIDValue: public AtomicValue {
 public:
 	TUUID *value;
 	void createBranch(TTree &tree, const TString &name) { tree.Branch(name.Data(), &value, 32000, 0); }
-	void openBranch(TTree &tree, const TString &name) { tree.SetBranchAddress(name.Data(), &value); }
+	void openBranch(TTree &tree, const TString &name) { if (tree.FindBranch(name.Data()) == 0 ) debug(Form("Branch %s does not exist, using default values", name.Data())); else tree.SetBranchAddress(name.Data(), &value); }
 	void writeTo(TMessage &msg) const {
 		unsigned long f1; unsigned int f2, f3, f4; unsigned long f5a; unsigned int f5b;
 		sscanf(value->AsString(), "%08lx-%04x-%04x-%04x-%08lx%04x", &f1, &f2, &f3, &f4, &f5a, &f5b);
@@ -367,7 +367,7 @@ class CharVectorValue: public AtomicValue {
 public:
 	vector<Char_t> *value;
 	void createBranch(TTree &tree, const TString &name) { tree.Branch(name.Data(), &value); }
-	void openBranch(TTree &tree, const TString &name) { tree.SetBranchAddress(name.Data(), &value); }
+	void openBranch(TTree &tree, const TString &name) { if (tree.FindBranch(name.Data()) == 0 ) debug(Form("Branch %s does not exist, using default values", name.Data())); else tree.SetBranchAddress(name.Data(), &value); }
 	void writeTo(TMessage &msg) const { msg.WriteInt(value->size()); if (value->size() > 0) msg.WriteFastArray(&(value->at(0)), value->size()); }
 	void readFrom(TMessage &msg) { Int_t size = 0; msg.ReadInt(size); if (size > Int_t(value->capacity())) value->reserve(size); value->resize(size); if (size > 0) msg.ReadFastArray(&(value->at(0)), size); }
 	TString toString() const { return TString(Form("vector<int8>(size = %li)", (long)(value->size()))); }
@@ -380,7 +380,7 @@ class ShortVectorValue: public AtomicValue {
 public:
 	vector<Short_t> *value;
 	void createBranch(TTree &tree, const TString &name) { tree.Branch(name.Data(), &value); }
-	void openBranch(TTree &tree, const TString &name) { tree.SetBranchAddress(name.Data(), &value); }
+	void openBranch(TTree &tree, const TString &name) { if (tree.FindBranch(name.Data()) == 0 ) debug(Form("Branch %s does not exist, using default values", name.Data())); else tree.SetBranchAddress(name.Data(), &value); }
 	void writeTo(TMessage &msg) const { msg.WriteInt(value->size()); if (value->size() > 0) msg.WriteFastArray(&(value->at(0)), value->size()); }
 	void readFrom(TMessage &msg) { Int_t size = 0; msg.ReadInt(size); if (size > Int_t(value->capacity())) value->reserve(size); value->resize(size); if (size > 0) msg.ReadFastArray(&(value->at(0)), size); }
 	TString toString() const { return TString(Form("vector<int16>(size = %li)", (long)(value->size()))); }
@@ -393,7 +393,7 @@ class IntVectorValue: public AtomicValue {
 public:
 	vector<Int_t> *value;
 	void createBranch(TTree &tree, const TString &name) { tree.Branch(name.Data(), &value); }
-	void openBranch(TTree &tree, const TString &name) { tree.SetBranchAddress(name.Data(), &value); }
+	void openBranch(TTree &tree, const TString &name) { if (tree.FindBranch(name.Data()) == 0 ) debug(Form("Branch %s does not exist, using default values", name.Data())); else tree.SetBranchAddress(name.Data(), &value); }
 	void writeTo(TMessage &msg) const { msg.WriteInt(value->size()); if (value->size() > 0) msg.WriteFastArray(&(value->at(0)), value->size()); }
 	void readFrom(TMessage &msg) { Int_t size = 0; msg.ReadInt(size); if (size > Int_t(value->capacity())) value->reserve(size); value->resize(size); if (size > 0) msg.ReadFastArray(&(value->at(0)), size); }
 	TString toString() const { return TString(Form("vector<int32>(size = %li)", (long)(value->size()))); }
@@ -406,7 +406,7 @@ class LongVectorValue: public AtomicValue {
 public:
 	vector<Long_t> *value;
 	void createBranch(TTree &tree, const TString &name) { tree.Branch(name.Data(), &value); }
-	void openBranch(TTree &tree, const TString &name) { tree.SetBranchAddress(name.Data(), &value); }
+	void openBranch(TTree &tree, const TString &name) { if (tree.FindBranch(name.Data()) == 0 ) debug(Form("Branch %s does not exist, using default values", name.Data())); else tree.SetBranchAddress(name.Data(), &value); }
 	void writeTo(TMessage &msg) const { msg.WriteInt(value->size()); if (value->size() > 0) msg.WriteFastArray(&(value->at(0)), value->size()); }
 	void readFrom(TMessage &msg) { Int_t size = 0; msg.ReadInt(size); if (size > Int_t(value->capacity())) value->reserve(size); value->resize(size); if (size > 0) msg.ReadFastArray(&(value->at(0)), size); }
 	TString toString() const { return TString(Form("vector<int64>(size = %li)", (long)(value->size()))); }
@@ -419,7 +419,7 @@ class FloatVectorValue: public AtomicValue {
 public:
 	vector<float> *value;
 	void createBranch(TTree &tree, const TString &name) { tree.Branch(name.Data(), &value); }
-	void openBranch(TTree &tree, const TString &name) { tree.SetBranchAddress(name.Data(), &value); }
+	void openBranch(TTree &tree, const TString &name) { if (tree.FindBranch(name.Data()) == 0 ) debug(Form("Branch %s does not exist, using default values", name.Data())); else tree.SetBranchAddress(name.Data(), &value); }
 	void writeTo(TMessage &msg) const { msg.WriteInt(value->size()); if (value->size() > 0) msg.WriteFastArray(&(value->at(0)), value->size()); }
 	void readFrom(TMessage &msg) { Int_t size = 0; msg.ReadInt(size); if (size > Int_t(value->capacity())) value->reserve(size); value->resize(size); if (size > 0) msg.ReadFastArray(&(value->at(0)), size); }
 	TString toString() const { return TString(Form("vector<float>(size = %li)", (long)(value->size()))); }
@@ -432,7 +432,7 @@ class DoubleVectorValue: public AtomicValue {
 public:
 	vector<double> *value;
 	void createBranch(TTree &tree, const TString &name) { tree.Branch(name.Data(), &value); }
-	void openBranch(TTree &tree, const TString &name) { tree.SetBranchAddress(name.Data(), &value); }
+	void openBranch(TTree &tree, const TString &name) { if (tree.FindBranch(name.Data()) == 0 ) debug(Form("Branch %s does not exist, using default values", name.Data())); else tree.SetBranchAddress(name.Data(), &value); }
 	void writeTo(TMessage &msg) const { msg.WriteInt(value->size()); if (value->size() > 0) msg.WriteFastArray(&(value->at(0)), value->size()); }
 	void readFrom(TMessage &msg) { Int_t size = 0; msg.ReadInt(size); if (size > Int_t(value->capacity())) value->reserve(size); value->resize(size); if (size > 0) msg.ReadFastArray(&(value->at(0)), size); }
 	TString toString() const { return TString(Form("vector<double>(size = %li)", (long)(value->size()))); }
