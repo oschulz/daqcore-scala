@@ -68,7 +68,7 @@ class SCPIEventReader(val source: SCPIRequestInput) extends InputFilterServer {
     
       case Command(`H_EVENt`, NR1(idx), NRf(time)) => {
         require(currentEvent == None)
-        currentEvent = Some(raw.Event(idx = idx, run = runUUID, time = time))
+        currentEvent = Some(raw.Event(idx = idx, run = runUUID, time = time, systime = 0))
       }
       case SeqCmd(`H_EVEN_TRIGger`, NR1Seq(channels @ _*)) => {
         val ev = currentEvent.get

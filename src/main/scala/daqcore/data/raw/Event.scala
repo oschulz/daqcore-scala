@@ -33,6 +33,7 @@ case class Event (
   idx: Int,
   run: UUID,
   time: Double,
+  systime: Double,
   trig: Seq[Int] = Vector.empty[Int],
   trans: Map[Int, Transient] = Map.empty[Int, Transient]
 )
@@ -60,6 +61,7 @@ object Event {
       idx = flat.idx,
       run = flat.run,
       time = flat.time,
+      systime = flat.systime,
       trig = flat.trig,
       trans = transients
     )

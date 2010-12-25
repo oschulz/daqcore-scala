@@ -437,6 +437,8 @@ abstract class SIS3300Server(val vmeBus: VMEBus, val baseAddress: Int) extends E
 
   def getEvents() = {
     import memory._
+    
+    val systime = currentTime
 
     case class ADCGroup(chOdd: Int, chEven: Int)
     
@@ -536,6 +538,7 @@ abstract class SIS3300Server(val vmeBus: VMEBus, val baseAddress: Int) extends E
         idx = nextEventNoVar + i,
         run = runStart.get.uuid,
         time = time,
+        systime = systime,
         trig = trig,
         trans = transients
       )
