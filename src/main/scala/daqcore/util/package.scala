@@ -116,6 +116,12 @@ def timedExecN[T](n: Int)(body: => T): (Double, Double) =
   timedExec{ for (i <- 1 to n) (body) }._2
 
 
+def timedExecMean[T](n: Int)(body: => T): (Double, Double) = {
+  val (total, user) = timedExecN(n)(body)
+  (total / n * 1E6, user / n * 1E6)
+}
+
+
 def loggable(a: Any) = {
   val s = a.toString
   val shortened = (if (s.size > 40) s.take(40) + " ..." else s)
