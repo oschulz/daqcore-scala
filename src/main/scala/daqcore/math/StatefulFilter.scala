@@ -27,8 +27,8 @@ trait StatefulFilter[@specialized(scala.Int, scala.Long, scala.Float, scala.Doub
 //                  - a(1) * y(n-1) - a(2) * y(n-2) - ... )
 
 abstract class IIRFilter extends StatefulFilter[Double, Double] {
-  def a: IndexedSeq[Double]
-  def b: IndexedSeq[Double]
+  def a: ArrayVec[Double]
+  def b: ArrayVec[Double]
 
   var initialized = false
   var x: RingBuffer[Double] = null
@@ -53,7 +53,7 @@ abstract class IIRFilter extends StatefulFilter[Double, Double] {
 
 
 object IIRFilter {
-  def apply(ca: IndexedSeq[Double], cb:IndexedSeq[Double]) = new IIRFilter {
+  def apply(ca: ArrayVec[Double], cb:ArrayVec[Double]) = new IIRFilter {
     def a = ca
     def b = cb
   }
@@ -62,8 +62,8 @@ object IIRFilter {
 
 case class RCFilter(c: Double) extends IIRFilter {
   val alpha = 1. / (1. + c)
-  val a = Vector(1., alpha-1)
-  val b = Vector(alpha)
+  val a = ArrayVec(1., alpha-1)
+  val b = ArrayVec(alpha)
 }
 
 
