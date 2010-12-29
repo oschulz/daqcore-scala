@@ -29,14 +29,14 @@ class IntArrayIteratorOpt(it: ArrayIterator[Int]) {
 
   def unsupported(reason: String) = throw new UnsupportedOperationException(reason)
 
-  def sum(): Long = { var acc = 0.toLong; foreach { x => acc += x}; acc }
+  def fsum(): Long = { var acc = 0.toLong; foreach { x => acc += x}; acc }
 
-  def product(): Long = { var acc = 1.toLong; foreach { x => acc *= x}; acc }
+  def fproduct(): Long = { var acc = 1.toLong; foreach { x => acc *= x}; acc }
 
-  def max(): Int = if (!hasNext) unsupported("empty.max()")
+  def fmax(): Int = if (!hasNext) unsupported("empty.max()")
     else { var acc = Int.MinValue; foreach { x => if (x > acc) {acc = x} }; acc }
 
-  def min(): Int = if (!hasNext) unsupported("empty.min()")
+  def fmin(): Int = if (!hasNext) unsupported("empty.min()")
     else { var acc = Int.MaxValue; foreach { x => if (x < acc) {acc = x} }; acc }
 
   def findMax(): (Int, Int) = if (!hasNext) unsupported("empty.findMax()")
@@ -46,7 +46,7 @@ class IntArrayIteratorOpt(it: ArrayIterator[Int]) {
     else { var (i, index, acc) = (-1, -1, Int.MaxValue); foreach { x => i += 1; if (x < acc) {index = i; acc = x} }; (index, acc) }
 
   def mean(): Double = if (!hasNext) unsupported("empty.meanVari()")
-    else { var len = length; (sum() / len) }
+    else { var len = length; (fsum() / len) }
 
   def meanVari(): (Double, Double) = {
     if (!hasNext) unsupported("empty.meanVari()")
@@ -77,14 +77,14 @@ class LongArrayIteratorOpt(it: ArrayIterator[Long]) {
 
   def unsupported(reason: String) = throw new UnsupportedOperationException(reason)
 
-  def sum(): Long = { var acc = 0.toLong; foreach { x => acc += x}; acc }
+  def fsum(): Long = { var acc = 0.toLong; foreach { x => acc += x}; acc }
 
-  def product(): Long = { var acc = 1.toLong; foreach { x => acc *= x}; acc }
+  def fproduct(): Long = { var acc = 1.toLong; foreach { x => acc *= x}; acc }
 
-  def max(): Long = if (!hasNext) unsupported("empty.max()")
+  def fmax(): Long = if (!hasNext) unsupported("empty.max()")
     else { var acc = Long.MinValue; foreach { x => if (x > acc) {acc = x} }; acc }
 
-  def min(): Long = if (!hasNext) unsupported("empty.min()")
+  def fmin(): Long = if (!hasNext) unsupported("empty.min()")
     else { var acc = Long.MaxValue; foreach { x => if (x < acc) {acc = x} }; acc }
 
   def findMax(): (Long, Long) = if (!hasNext) unsupported("empty.findMax()")
@@ -94,7 +94,7 @@ class LongArrayIteratorOpt(it: ArrayIterator[Long]) {
     else { var (i, index, acc) = (-1, -1, Long.MaxValue); foreach { x => i += 1; if (x < acc) {index = i; acc = x} }; (index, acc) }
 
   def mean(): Double = if (!hasNext) unsupported("empty.meanVari()")
-    else { var len = length; (sum() / len) }
+    else { var len = length; (fsum() / len) }
 
   def meanVari(): (Double, Double) = {
     if (!hasNext) unsupported("empty.meanVari()")
@@ -125,14 +125,14 @@ class FloatArrayIteratorOpt(it: ArrayIterator[Float]) {
 
   def unsupported(reason: String) = throw new UnsupportedOperationException(reason)
 
-  def sum(): Double = { var acc = 0.toDouble; foreach { x => acc += x}; acc }
+  def fsum(): Double = { var acc = 0.toDouble; foreach { x => acc += x}; acc }
 
-  def product(): Double = { var acc = 1.toDouble; foreach { x => acc *= x}; acc }
+  def fproduct(): Double = { var acc = 1.toDouble; foreach { x => acc *= x}; acc }
 
-  def max(): Float = if (!hasNext) unsupported("empty.max()")
+  def fmax(): Float = if (!hasNext) unsupported("empty.max()")
     else { var acc = Float.MinValue; foreach { x => if (x > acc) {acc = x} }; acc }
 
-  def min(): Float = if (!hasNext) unsupported("empty.min()")
+  def fmin(): Float = if (!hasNext) unsupported("empty.min()")
     else { var acc = Float.MaxValue; foreach { x => if (x < acc) {acc = x} }; acc }
 
   def findMax(): (Int, Float) = if (!hasNext) unsupported("empty.findMax()")
@@ -142,7 +142,7 @@ class FloatArrayIteratorOpt(it: ArrayIterator[Float]) {
     else { var (i, index, acc) = (-1, -1, Float.MaxValue); foreach { x => i += 1; if (x < acc) {index = i; acc = x} }; (index, acc) }
 
   def mean(): Double = if (!hasNext) unsupported("empty.meanVari()")
-    else { var len = length; (sum() / len) }
+    else { var len = length; (fsum() / len) }
 
   def meanVari(): (Double, Double) = {
     if (!hasNext) unsupported("empty.meanVari()")
@@ -173,14 +173,14 @@ class DoubleArrayIteratorOpt(it: ArrayIterator[Double]) {
 
   def unsupported(reason: String) = throw new UnsupportedOperationException(reason)
 
-  def sum(): Double = { var acc = 0.toDouble; foreach { x => acc += x}; acc }
+  def fsum(): Double = { var acc = 0.toDouble; foreach { x => acc += x}; acc }
 
-  def product(): Double = { var acc = 1.toDouble; foreach { x => acc *= x}; acc }
+  def fproduct(): Double = { var acc = 1.toDouble; foreach { x => acc *= x}; acc }
 
-  def max(): Double = if (!hasNext) unsupported("empty.max()")
+  def fmax(): Double = if (!hasNext) unsupported("empty.max()")
     else { var acc = Double.MinValue; foreach { x => if (x > acc) {acc = x} }; acc }
 
-  def min(): Double = if (!hasNext) unsupported("empty.min()")
+  def fmin(): Double = if (!hasNext) unsupported("empty.min()")
     else { var acc = Double.MaxValue; foreach { x => if (x < acc) {acc = x} }; acc }
 
   def findMax(): (Int, Double) = if (!hasNext) unsupported("empty.findMax()")
@@ -190,7 +190,7 @@ class DoubleArrayIteratorOpt(it: ArrayIterator[Double]) {
     else { var (i, index, acc) = (-1, -1, Double.MaxValue); foreach { x => i += 1; if (x < acc) {index = i; acc = x} }; (index, acc) }
 
   def mean(): Double = if (!hasNext) unsupported("empty.meanVari()")
-    else { var len = length; (sum() / len) }
+    else { var len = length; (fsum() / len) }
 
   def meanVari(): (Double, Double) = {
     if (!hasNext) unsupported("empty.meanVari()")

@@ -38,10 +38,10 @@ class IntArrayVecOpt(seq: ArrayVec[Int]) {
     var acc = 0.toLong; for { i <- Range(0, seq.length) } acc += seq(i) * that(i); acc
   }
 
-  def sum = iterator.opt.sum()
-  def product = iterator.opt.product()
-  def max = iterator.opt.max()
-  def min = iterator.opt.min()
+  def fsum = iterator.opt.fsum()
+  def fproduct = iterator.opt.fproduct()
+  def fmax = iterator.opt.fmax()
+  def fmin = iterator.opt.fmin()
   def findMax = iterator.opt.findMax()
   def findMin = iterator.opt.findMin()
   def mean = iterator.opt.mean()
@@ -105,10 +105,10 @@ class LongArrayVecOpt(seq: ArrayVec[Long]) {
     var acc = 0.toLong; for { i <- Range(0, seq.length) } acc += seq(i) * that(i); acc
   }
 
-  def sum = iterator.opt.sum()
-  def product = iterator.opt.product()
-  def max = iterator.opt.max()
-  def min = iterator.opt.min()
+  def fsum = iterator.opt.fsum()
+  def fproduct = iterator.opt.fproduct()
+  def fmax = iterator.opt.fmax()
+  def fmin = iterator.opt.fmin()
   def findMax = iterator.opt.findMax()
   def findMin = iterator.opt.findMin()
   def mean = iterator.opt.mean()
@@ -172,10 +172,10 @@ class FloatArrayVecOpt(seq: ArrayVec[Float]) {
     var acc = 0.toDouble; for { i <- Range(0, seq.length) } acc += seq(i) * that(i); acc
   }
 
-  def sum = iterator.opt.sum()
-  def product = iterator.opt.product()
-  def max = iterator.opt.max()
-  def min = iterator.opt.min()
+  def fsum = iterator.opt.fsum()
+  def fproduct = iterator.opt.fproduct()
+  def fmax = iterator.opt.fmax()
+  def fmin = iterator.opt.fmin()
   def findMax = iterator.opt.findMax()
   def findMin = iterator.opt.findMin()
   def mean = iterator.opt.mean()
@@ -239,10 +239,10 @@ class DoubleArrayVecOpt(seq: ArrayVec[Double]) {
     var acc = 0.toDouble; for { i <- Range(0, seq.length) } acc += seq(i) * that(i); acc
   }
 
-  def sum = iterator.opt.sum()
-  def product = iterator.opt.product()
-  def max = iterator.opt.max()
-  def min = iterator.opt.min()
+  def fsum = iterator.opt.fsum()
+  def fproduct = iterator.opt.fproduct()
+  def fmax = iterator.opt.fmax()
+  def fmin = iterator.opt.fmin()
   def findMax = iterator.opt.findMax()
   def findMin = iterator.opt.findMin()
   def mean = iterator.opt.mean()
