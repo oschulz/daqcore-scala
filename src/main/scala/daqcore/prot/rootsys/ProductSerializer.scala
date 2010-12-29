@@ -70,7 +70,7 @@ object ProductSerializer {
           if (cl.isArray) getTypeName(ReflectionOps.manifestFromClass(cl.getComponentType))
           else if (classOf[String] == cl) "string"
           else if (classOf[UUID] == cl) "uuid"
-          else if (classOf[Seq[_]].isAssignableFrom(cl) && cl.isAssignableFrom(classOf[IndexedSeq[_]]))
+          else if (classOf[Seq[_]].isAssignableFrom(cl) && cl.isAssignableFrom(classOf[ArrayVec[_]]))
             "vector<" + getTypeName(mf.typeArguments.head.asInstanceOf[ClassManifest[_]]) + ">"
           else throw unsupported
         }

@@ -63,13 +63,13 @@ object ContentSerializer {
         else throw unsupported
       }*/
       else if (classOf[Seq[_]].isAssignableFrom(mf.erasure)) {
-        if (mf >:> classManifest[IndexedSeq[Boolean]]) BooleanSeqIO
-        else if (mf >:> classManifest[IndexedSeq[Byte]]) ByteSeqIO
-        else if (mf >:> classManifest[IndexedSeq[Short]]) ShortSeqIO
-        else if (mf >:> classManifest[IndexedSeq[Int]]) IntSeqIO
-        else if (mf >:> classManifest[IndexedSeq[Long]]) LongSeqIO
-        else if (mf >:> classManifest[IndexedSeq[Float]]) FloatSeqIO
-        else if (mf >:> classManifest[IndexedSeq[Double]]) DoubleSeqIO
+        if (mf >:> classManifest[ArrayVec[Boolean]]) BooleanSeqIO
+        else if (mf >:> classManifest[ArrayVec[Byte]]) ByteSeqIO
+        else if (mf >:> classManifest[ArrayVec[Short]]) ShortSeqIO
+        else if (mf >:> classManifest[ArrayVec[Int]]) IntSeqIO
+        else if (mf >:> classManifest[ArrayVec[Long]]) LongSeqIO
+        else if (mf >:> classManifest[ArrayVec[Float]]) FloatSeqIO
+        else if (mf >:> classManifest[ArrayVec[Double]]) DoubleSeqIO
         else throw unsupported
       }
       else if (classOf[Product].isAssignableFrom(mf.erasure)) ProductSerializer.forType[Product](mf.asInstanceOf[ClassManifest[Product]])

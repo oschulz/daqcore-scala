@@ -39,7 +39,7 @@ abstract trait BasicInput {
 
   def readArray[@specialized A: ClassManifest](): Array[A]
   
-  def readSeq[A: ClassManifest](): IndexedSeq[A] = readArray[A].toIISeq
+  def readSeq[A: ClassManifest](): ArrayVec[A] = readArray[A].toArrayVec
 }
 
 
