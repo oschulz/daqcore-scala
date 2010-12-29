@@ -25,7 +25,7 @@ import daqcore.util._
 
 case class Transient (
   trigPos: Int,
-  samples: Seq[Int]
+  samples: ArrayVec[Int]
 )
 
 
@@ -52,7 +52,7 @@ object Event {
       val channel = channelIt.next
       val trigPos = trigPosIt.next
       val nSamples = nSamplesIt.next
-      val samples = (for {v <- flat.trans_samples_val.view.slice(offset, offset + nSamples)} yield v.toInt).toIISeq
+      val samples = (for {v <- flat.trans_samples_val.view.slice(offset, offset + nSamples)} yield v.toInt).toArrayVec
       transients = transients + (channel -> raw.Transient(trigPos, samples))
       offset = offset + nSamples
     }

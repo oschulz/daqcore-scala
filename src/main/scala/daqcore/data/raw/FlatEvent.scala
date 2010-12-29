@@ -32,7 +32,7 @@ case class FlatEvent (
   trans_trigPos: Seq[Int],
   trans_samples_ch: Seq[Int],
   trans_samples_val_n: Seq[Int],
-  trans_samples_val: Seq[Short]
+  trans_samples_val: ArrayVec[Short]
 )
 
 
@@ -49,7 +49,7 @@ object FlatEvent {
       trans_samples_ch = for (ch <- transCh) yield ch,
       trans_trigPos = for (ch <- transCh) yield event.trans(ch).trigPos,
       trans_samples_val_n = for (ch <- transCh) yield event.trans(ch).samples.size,
-      trans_samples_val = (for {ch <- transCh.view; s <-event.trans(ch).samples.view} yield s.toShort).toIISeq
+      trans_samples_val = (for {ch <- transCh.view; s <-event.trans(ch).samples.view} yield s.toShort).toArrayVec
     )
   }
 }
