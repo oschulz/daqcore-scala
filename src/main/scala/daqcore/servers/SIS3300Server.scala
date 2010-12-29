@@ -480,8 +480,8 @@ abstract class SIS3300Server(val vmeBus: VMEBus, val baseAddress: Int) extends E
     val evDir = read(evDirRegs take nEvents)
     val tsDir = read(tsDirRegs take nEvents)
     val rawGroupEvData = for {(group, mem) <- groupMem} yield {
-      val raw = read(mem take nEvents * nSamples).toArray.toIISeq
-      group -> fast(raw).grouped(nSamples).toArray.toIISeq
+      val raw = read(mem take nEvents * nSamples).toArrayVec
+      group -> raw.iterator.splitEvery(nSamples).map{_.toArrayVec}.toArrayVec
     }
  
     val events = for {i <- 0 to nEvents - 1} yield {
@@ -500,11 +500,11 @@ abstract class SIS3300Server(val vmeBus: VMEBus, val baseAddress: Int) extends E
       val trigInfo = TriggerEventDirEntry.TRIGGED(evDir(i))
       val trig = for { ch <- channels; if Bit(8-ch)(trigInfo) == 1 } yield ch
       
-      val fixedRawGroupEvData: Map[ADCGroup, IndexedSeq[Word]] =
+      val fixedRawGroupEvData: Map[ADCGroup, ArrayVec[Word]] =
         for {(group, raw) <- rawGroupEvData} yield {
           val fixedRaw =
-            if (wrapped == 1) { val(a,b) = fast(raw(i)).splitAt(end); b++a }
-            else fast(raw(i)) take end
+            if (wrapped == 1) { val(a,b) = raw(i).splitAt(end); b++a }
+            else raw(i) take end
           group -> fixedRaw
         }
 
@@ -513,8 +513,8 @@ abstract class SIS3300Server(val vmeBus: VMEBus, val baseAddress: Int) extends E
           val trigPos = fixedRaw.size - settings.daq.stopDelay / settings.daq.nAverage
           if (!settingsVar.daq.trigOnly || trig.contains(group.chOdd) || trig.contains(group.chEven)) {
             Seq(
-              group.chOdd -> Transient(trigPos, fast(fixedRaw) map {w => BankMemoryEntry.SAMODD(w)}),
-              group.chEven -> Transient(trigPos, fast(fixedRaw) map {w => BankMemoryEntry.SAMEVEN(w)})
+              group.chOdd -> Transient(trigPos, fixedRaw map {w => BankMemoryEntry.SAMODD(w)}),
+              group.chEven -> Transient(trigPos, fixedRaw map {w => BankMemoryEntry.SAMEVEN(w)})
             )
           } else {
             Seq()
@@ -524,7 +524,7 @@ abstract class SIS3300Server(val vmeBus: VMEBus, val baseAddress: Int) extends E
       val userIn: Transient = {
         val fixedRaw = fixedRawGroupEvData.head._2
         val trigPos = fixedRaw.size - settings.daq.stopDelay / settings.daq.nAverage
-        Transient(trigPos, fast(fixedRaw) map {w => BankMemoryEntry.USRIN(w)})
+        Transient(trigPos, fixedRaw map {w => BankMemoryEntry.USRIN(w)})
       }
       
       val userInMap =
@@ -943,12 +943,12 @@ object SIS3300Server extends Logging {
   abstract class SISMemory(val mem: MemoryLink, base: Address, timeout: Long = 10000) extends MemRegion(MemOperator(mem, timeout), base) {
     def majorFirmwareRevision: Int
 
-    def read(range: Range): Seq[Word] = {
+    def read(range: Range): ArrayVec[Word] = {
       val bytes = mem.read(range.head + base, range.last - range.head + sizeOf[Word])
       // Why does the endianess depend on read size here? Property of the VME interface or the
       // SIS3300?
-      if (range.size <= 8) LittleEndian.fromBytes[Word](bytes)
-      else BigEndian.fromBytes[Word](bytes)
+      if (range.size <= 8) LittleEndian.fromBytes[Word](bytes).toArrayVec
+      else BigEndian.fromBytes[Word](bytes).toArrayVec
     }
 
 
