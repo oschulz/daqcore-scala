@@ -84,10 +84,10 @@ class SCPIEventReader(val source: SCPIRequestInput) extends InputFilterServer {
         val allSamples = sampleArgs match {
           case Seq(BlockData(bytes)) => {
             val ZigZagVLEnc(diff) = bytes
-            val samples = fast(diff) map IntegrateFilter()
+            val samples = diff.toArrayVec map IntegrateFilter()
             samples
           }
-          case NR1Seq(samples @ _*) => samples
+          case NR1Seq(samples @ _*) => samples.toArrayVec
           case _ => throw new MatchError(loggable(sampleArgs))
         }
 
