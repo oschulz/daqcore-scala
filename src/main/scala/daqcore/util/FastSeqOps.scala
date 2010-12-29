@@ -46,7 +46,7 @@ case class FastSeqOps[T: ClassManifest](seq: Seq[T]) {
       val outArray = Array.ofDim[Double](n)
       for (i <- 0 to outArray.size - 1) outArray(i) = inArray(i)
       outArray.toSeq.asInstanceOf[IndexedSeq[T]]
-    } else throw new IllegalArgumentException("FastOps.take does not support (%s)".format(mfT))
+    } else throw new UnsupportedOperationException("FastOps.take does not support (%s)".format(mfT))
   }
 
   
@@ -73,7 +73,7 @@ case class FastSeqOps[T: ClassManifest](seq: Seq[T]) {
       val outArray = Array.ofDim[Double](inArray.size - n)
       for (i <- 0 to outArray.size - 1) outArray(i) = inArray(i + n)
       outArray.toSeq.asInstanceOf[IndexedSeq[T]]
-    } else throw new IllegalArgumentException("FastOps.drop does not support (%s)".format(mfT))
+    } else throw new UnsupportedOperationException("FastOps.drop does not support (%s)".format(mfT))
   }
   
   
@@ -120,7 +120,7 @@ case class FastSeqOps[T: ClassManifest](seq: Seq[T]) {
         outArrays(group) = outArray.toSeq.asInstanceOf[IndexedSeq[T]]
       }
       outArrays.toSeq.iterator
-    } else throw new IllegalArgumentException("FastOps.group does not support (%s)".format(mfT))
+    } else throw new UnsupportedOperationException("FastOps.group does not support (%s)".format(mfT))
   }
   
 
@@ -167,6 +167,6 @@ case class FastSeqOps[T: ClassManifest](seq: Seq[T]) {
       val outArray = Array.ofDim[Double](inArray.size)
       for (i <- 0 to inArray.size-1) outArray(i) = f.asInstanceOf[Function[Double, Int]](inArray(i))
       outArray.toSeq.asInstanceOf[IndexedSeq[U]]
-    } else throw new IllegalArgumentException("FastOps.map does not support (%s, %s)".format(mfT, mfU))
+    } else throw new UnsupportedOperationException("FastOps.map does not support (%s, %s)".format(mfT, mfU))
   }
 }
