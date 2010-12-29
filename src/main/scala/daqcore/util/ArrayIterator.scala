@@ -138,6 +138,11 @@ final class ArrayIterator[@specialized A: ClassManifest](private val array: Arra
     acc
   }
 
+  def splitEvery(n: Int): Stream[ArrayIterator[A]] = {
+    if (hasNext) { val (a,b) = duplicate; Stream.cons(a.take(n), b.drop(n).splitEvery(n)) }
+    else Stream.Empty
+  }
+
   def sharedWith(that: ArrayIterator[_]): Boolean = this.array == that.array
 }
 
