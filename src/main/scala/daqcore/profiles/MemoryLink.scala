@@ -24,16 +24,16 @@ import daqcore.actors._
 
 
 trait MemoryReader extends Profile with Closeable {
-  def read(address: Long, count: Long, timeout: Long = defaultTimeout): Seq[Byte] =
+  def read(address: Long, count: Long, timeout: Long = defaultTimeout): ByteSeq =
     readF(address, count, timeout).apply()
 
-  def readF(address: Long, count: Long, timeout: Long = defaultTimeout): Future[IndexedSeq[Byte]] =
+  def readF(address: Long, count: Long, timeout: Long = defaultTimeout): Future[ByteSeq] =
     srv.!!>(MemoryLink.Read(address, count), timeout)
 }
 
 
 trait MemoryWriter extends Profile with Closeable {
-  def write(address: Long, data: Seq[Byte]) : Unit =
+  def write(address: Long, data: ByteSeq) : Unit =
     srv ! MemoryLink.Write(address: Long, data)
   
   def pause(): Unit = srv ! MemoryLink.Pause()
@@ -48,9 +48,9 @@ trait MemoryWriter extends Profile with Closeable {
 trait MemoryLink extends MemoryReader with MemoryWriter
 
 object MemoryLink {
-  case class Read(address: Long, count: Long) extends ActorQuery[IndexedSeq[Byte]]
+  case class Read(address: Long, count: Long) extends ActorQuery[ByteSeq]
 
-  case class Write(address: Long, data: Seq[Byte]) extends ActorCmd
+  case class Write(address: Long, data: ByteSeq) extends ActorCmd
 
   case class Pause() extends ActorCmd
 
