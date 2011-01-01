@@ -19,7 +19,7 @@ package daqcore.util
 
 import java.nio.{ByteOrder => NIOByteOrder, ByteBuffer => NIOByteBuffer}
 
-sealed abstract class ByteOrder {
+sealed trait ByteOrder {
   def toNIO: NIOByteOrder
 
   def fromBytes[A <: AnyVal : ClassManifest](bytes: Seq[Byte]) : Seq[A] = {
@@ -117,11 +117,130 @@ object ByteOrder {
 }
 
 
-case object BigEndian extends ByteOrder {
-  def toNIO = NIOByteOrder.BIG_ENDIAN 
+
+case object BigEndian extends ByteOrder with ValEncoding {
+  def toNIO = NIOByteOrder.BIG_ENDIAN
+
+  def putByte(x: Byte)(implicit target: ByteSeqBuilder) = {
+    target += x
+  }
+
+  def putShort(x: Short)(implicit target: ByteSeqBuilder) = {
+     target += (x >>>  8).toByte
+     target += (x >>>  0).toByte
+  }
+
+  def putInt(x: Int)(implicit target: ByteSeqBuilder) = {
+     target += (x >>> 24).toByte
+     target += (x >>> 16).toByte
+     target += (x >>>  8).toByte
+     target += (x >>>  0).toByte
+  }
+
+  def putLong(x: Long)(implicit target: ByteSeqBuilder) = {
+     target += (x >>> 56).toByte
+     target += (x >>> 48).toByte
+     target += (x >>> 40).toByte
+     target += (x >>> 32).toByte
+     target += (x >>> 24).toByte
+     target += (x >>> 16).toByte
+     target += (x >>>  8).toByte
+     target += (x >>>  0).toByte
+  }
+
+
+  def getByte()(implicit source: ByteSeqIterator) = {
+    source.next()
+  }
+  
+  def getShort()(implicit source: ByteSeqIterator) = {
+     ( (source.next() & 0xff) <<  8
+     | (source.next() & 0xff) <<  0
+     ).toShort
+  }
+
+  def getInt()(implicit source: ByteSeqIterator) = {
+     ( (source.next() & 0xff) << 24
+     | (source.next() & 0xff) << 16
+     | (source.next() & 0xff) <<  8
+     | (source.next() & 0xff) <<  0
+     )
+  }
+
+  def getLong()(implicit source: ByteSeqIterator) = {
+     ( (source.next().toLong & 0xff) << 56
+     | (source.next().toLong & 0xff) << 48
+     | (source.next().toLong & 0xff) << 40
+     | (source.next().toLong & 0xff) << 32
+     | (source.next().toLong & 0xff) << 24
+     | (source.next().toLong & 0xff) << 16
+     | (source.next().toLong & 0xff) <<  8
+     | (source.next().toLong & 0xff) <<  0
+     )
+  }
 }
 
 
-case object LittleEndian extends ByteOrder {
+
+case object LittleEndian extends ByteOrder with ValEncoding {
   def toNIO = java.nio.ByteOrder.LITTLE_ENDIAN
+
+
+  def putByte(x: Byte)(implicit target: ByteSeqBuilder) = {
+    target += x
+  }
+
+  def putShort(x: Short)(implicit target: ByteSeqBuilder) = {
+     target += (x >>>  0).toByte
+     target += (x >>>  8).toByte
+  }
+
+  def putInt(x: Int)(implicit target: ByteSeqBuilder) = {
+     target += (x >>>  0).toByte
+     target += (x >>>  8).toByte
+     target += (x >>> 16).toByte
+     target += (x >>> 24).toByte
+  }
+
+  def putLong(x: Long)(implicit target: ByteSeqBuilder) = {
+     target += (x >>>  0).toByte
+     target += (x >>>  8).toByte
+     target += (x >>> 16).toByte
+     target += (x >>> 24).toByte
+     target += (x >>> 32).toByte
+     target += (x >>> 40).toByte
+     target += (x >>> 48).toByte
+     target += (x >>> 56).toByte
+  }
+
+
+  def getByte()(implicit source: ByteSeqIterator) = {
+    source.next()
+  }
+  
+  def getShort()(implicit source: ByteSeqIterator) = {
+     ( (source.next() & 0xff) <<  0
+     | (source.next() & 0xff) <<  8
+     ).toShort
+  }
+
+  def getInt()(implicit source: ByteSeqIterator) = {
+     ( (source.next() & 0xff) <<  0
+     | (source.next() & 0xff) <<  8
+     | (source.next() & 0xff) << 16
+     | (source.next() & 0xff) << 24
+     )
+  }
+
+  def getLong()(implicit source: ByteSeqIterator) = {
+     ( (source.next().toLong & 0xff) <<  0
+     | (source.next().toLong & 0xff) <<  8
+     | (source.next().toLong & 0xff) << 16
+     | (source.next().toLong & 0xff) << 24
+     | (source.next().toLong & 0xff) << 32
+     | (source.next().toLong & 0xff) << 40
+     | (source.next().toLong & 0xff) << 48
+     | (source.next().toLong & 0xff) << 56
+     )
+  }
 }
