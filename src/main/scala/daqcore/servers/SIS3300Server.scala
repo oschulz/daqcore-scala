@@ -745,7 +745,7 @@ object SIS3300Server extends Logging {
       
       for ((addr, word) <- allWrites) {
         trace("exec(): writing to 0x%s: 0x%s".format(hex(addr), hex(word)))
-        mem.write(addr, LittleEndian.toBytes(Seq(word)))
+        mem.write(addr, LittleEndian.toBytes(ArrayVec(word)))
       }
 
       for ((addr, reaction) <- reads) reaction(cache(addr))
