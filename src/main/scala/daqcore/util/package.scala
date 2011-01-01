@@ -46,6 +46,8 @@ implicit def longArrayVecOpt(seq: ArrayVec[Long]) = new LongArrayVecOpt(seq)
 implicit def floatArrayVecOpt(seq: ArrayVec[Float]) = new FloatArrayVecOpt(seq)
 implicit def doubleArrayVecOpt(seq: ArrayVec[Double]) = new DoubleArrayVecOpt(seq)
 
+implicit def byteSeqIteratorOps(it: ByteSeqIterator) = new ByteSeqIteratorOps(it)
+
 
 type ByteSeq = ArrayVec[Byte]
 object ByteSeq extends ByteSeqCompanion

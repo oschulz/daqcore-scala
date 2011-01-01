@@ -18,6 +18,18 @@
 package daqcore.util
 
 
+class ByteSeqIteratorOps(it: ByteSeqIterator) {
+  import it._
+
+  def getByte()(implicit enc: ValEncoding) = enc.getByte(it)
+  def getShort()(implicit enc: ValEncoding) = enc.getShort(it)
+  def getInt()(implicit enc: ValEncoding) = enc.getInt(it)
+  def getLong()(implicit enc: ValEncoding) = enc.getLong(it)
+  def getFloat()(implicit enc: ValEncoding) = enc.getFloat(it)
+  def getDouble()(implicit enc: ValEncoding) = enc.getDouble(it)
+}
+
+
 class ByteSeqIteratorCompanion {
   def forChunks(chunks: Seq[Array[Byte]]): ByteSeqIterator =
     ByteSeq.fromChunks(chunks).iterator
