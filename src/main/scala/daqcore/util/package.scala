@@ -47,6 +47,12 @@ implicit def floatArrayVecOpt(seq: ArrayVec[Float]) = new FloatArrayVecOpt(seq)
 implicit def doubleArrayVecOpt(seq: ArrayVec[Double]) = new DoubleArrayVecOpt(seq)
 
 
+type ByteSeq = ArrayVec[Byte]
+object ByteSeq extends ByteSeqCompanion
+type ByteSeqIterator = ArrayIterator[Byte]
+object ByteSeqIterator extends ByteSeqIteratorCompanion
+
+
 def fast[A: ClassManifest](seq: Seq[A]) = FastSeqOps[A](seq)
 
 implicit def idxSeq2subSeq[T](seq: IndexedSeq[T]) = new SubIdxSeq(seq, 0, seq.length)
