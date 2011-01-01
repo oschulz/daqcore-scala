@@ -42,42 +42,71 @@ class ByteSeqCompanion {
 
 
 
-final class ByteSeqBuilder(val chunkSize: Int) extends Builder[Byte, ByteSeq] {
+final class ByteSeqBuilder(val defaultChunkSize: Int) extends Builder[Byte, ByteSeq] {
   import ByteSeqBuilder._
-
-  def newChunk = Array.ofDim[Byte](chunkSize)
   
-  var chunk = newChunk
-  var chunks = emptyChunks
-  
-  protected var pos = 0
+  require(defaultChunkSize > 0)
 
-  private def pushChunk(): Unit = if (!chunk.isEmpty) {
-      val trimmedChunk =
-        if (pos < chunkSize) ArrayOps.copyOf(chunk, pos) else chunk
-      chunks = chunks enqueue trimmedChunk
-      chunk = newChunk
-      pos = 0
+  private var chunk = emptyChunk
+  private var chunkCapacity = 0
+  private var pos = 0
+  private var chunks = emptyChunks
+  
+  private def clearChunk(): Unit = {
+    chunk = emptyChunk
+    chunkCapacity = 0
+    pos = 0
+  }
+  
+  private def pushChunk(): Unit = if (pos > 0) {
+    val trimmedChunk =
+      if (pos < chunkCapacity) ArrayOps.copyOf(chunk, pos) else chunk
+    chunks = chunks enqueue trimmedChunk
+    clearChunk()
+  }
+
+  def newChunk(): Unit = {
+    pushChunk()
+    chunk = Array.ofDim[Byte](defaultChunkSize)
+    chunkCapacity = chunk.size
   }
 
   def +=(elem: Byte) = {
-    if (pos >= chunkSize) {
-      assert(pos == chunkSize)
-      pushChunk()
+    if (pos >= chunkCapacity) {
+      assert(pos == chunkCapacity)
+      newChunk()
     }
-    assert(pos < chunkSize)
     chunk(pos) = elem
     pos += 1
     this
   }
   
+  def ++= (xs: Array[Byte]) = {
+    pushChunk()
+    chunk = xs.toArray
+    pos = xs.length
+    pushChunk()
+  }
+
   override def ++= (xs: TraversableOnce[Byte]) = {
     xs match {
       case it: ArrayIterator[_] => {
         val xs = it.asInstanceOf[ArrayIterator[Byte]]
-        for (x <- it) this += x
+        if (xs.length <= chunkCapacity - pos) {
+          xs.copyToArray(chunk, pos)
+          pos += xs.length
+        }
+        else this.++=(xs.toArray)
       }
-      case xs: ArrayVec[_] => this.++=(xs.asInstanceOf[ArrayVec[Byte]].iterator)
+      case vec: ArrayVec[_] => this.++=(vec.asInstanceOf[ArrayVec[Byte]].iterator)
+      case seq: IndexedSeq[_] => {
+        val xs = seq.asInstanceOf[IndexedSeq[Byte]]
+        if (xs.length <= chunkCapacity - pos) {
+          xs.copyToArray(chunk, pos)
+          pos += xs.length
+        }
+        else this.++=(xs.toArray)
+      }
       case xs => for (x <- xs) this += x
     }
     this
@@ -89,9 +118,8 @@ final class ByteSeqBuilder(val chunkSize: Int) extends Builder[Byte, ByteSeq] {
   }
 
   def clear() = {
-    chunk = newChunk
+    clearChunk()
     chunks = emptyChunks
-    pos = 0
   }
 
   def result(): ByteSeq = {
@@ -111,7 +139,8 @@ final class ByteSeqBuilder(val chunkSize: Int) extends Builder[Byte, ByteSeq] {
 
 
 object ByteSeqBuilder {
+  private val emptyChunk = Array.empty[Byte]
   private val emptyChunks = Queue.empty[Array[Byte]]
 
-  def apply(initialCapacity: Int = 1478): ByteSeqBuilder = new ByteSeqBuilder(initialCapacity)
+  def apply(defaultChunkSize: Int = 1478): ByteSeqBuilder = new ByteSeqBuilder(defaultChunkSize)
 }
