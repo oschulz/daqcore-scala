@@ -56,7 +56,7 @@ class RootSystemProcess extends Server with KeepAlive with PostInit with Closeab
     protected def srvSend(data: Seq[Byte]): Unit = {
       log.trace("srvSend(%s)".format(loggable(data map hex)))
       val msgData = data.toArray
-      val msgLen = BigEndian.toBytes(Seq(msgData.length)).toArray
+      val msgLen = BigEndian.toBytes(ArrayVec(msgData.length)).toArray
       output.write(msgHeader.toArray)
       output.write(msgLen)
       output.write(msgData)
@@ -109,7 +109,7 @@ class RootSystemProcess extends Server with KeepAlive with PostInit with Closeab
         while (header.toList != msgHeader) header = { header.enqueue(readByte).drop(1) }
         log.trace("srvRecv(): Received valid message header")
         read(lenData)
-        val len = BigEndian.fromBytes[Int](lenData).head
+        val len = BigEndian.fromBytes[Int](lenData.toArrayVec).head
         val msgData = Array.ofDim[Byte](len)
         read(msgData)
         log.trace("received(%s byte(s): %s)".format(msgData.length, loggable(msgData.toSeq map hex)))
