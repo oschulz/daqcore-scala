@@ -35,7 +35,6 @@ class URLOps(val url: URL) {
             case nBytes: Int => false
           }
         ) {}
-        scala.io.Source.fromInputStream(src).mkString.getBytes("UTF-8").toIISeq
         trg.toByteArray
       }
       finally { if (trg != null) src.close() }
