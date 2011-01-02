@@ -21,13 +21,16 @@ import daqcore.util._
 
 
 abstract class Message extends HasByteRep {
-  def getBytes: ByteCharSeq
+  def getByteCharSeq: ByteCharSeq
+
+  override def getBytes = getByteCharSeq.getBytes
+  def putBytes(builder: ByteSeqBuilder) = getByteCharSeq.putBytes(builder)
 }
 
 
 case class Request(val commands: Command*) extends Message {
-  def getBytes = {
-    commands.map(_.getBytes).reduceLeft { _ ++ _ } ++
+  def getByteCharSeq = {
+    commands.map(_.getByteCharSeq).reduceLeft { _ ++ _ } ++
     ByteCharSeq('X')
   }
 
@@ -36,14 +39,14 @@ case class Request(val commands: Command*) extends Message {
 
 
 case class Output(data: ByteCharSeq) extends Message {
-  def getBytes = data
+  def getByteCharSeq = data
 }
 
 
 class Command(val code: Char, val params:ByteCharSeq*) extends Message {
   require( (code >= 'A') && (code <= 'Z') )
 
-  def getBytes = ByteCharSeq(code) ++
+  def getByteCharSeq = ByteCharSeq(code) ++
     params.reduceLeft {_ ++ ByteCharSeq(',') ++ _ }
 
   override def toString = getBytes.toString

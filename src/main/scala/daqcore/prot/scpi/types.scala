@@ -101,7 +101,7 @@ object SRD extends StringData
 
 
 abstract class CharacterData {
-  def apply(mnemonic: SpecMnemonic): ByteCharSeq = mnemonic.getBytes
+  def apply(mnemonic: SpecMnemonic): ByteCharSeq = mnemonic.getByteCharSeq
 
   def unapply(bs: ByteCharSeq) : Option[RecMnemonic] =
     try { Some(RecMnemonic(bs)) } catch { case _ => None }
@@ -132,7 +132,7 @@ object AARD {
   * protocols like RS232 or TCP/IP. */
 
 object BlockData {
-  def apply(data: IndexedSeq[Byte]) : ByteCharSeq = {
+  def apply(data: ByteSeq) : ByteCharSeq = {
     val tag = "#".getBytes
     val sizeStr = data.size.toString.getBytes
     val sizeSizeStr = sizeStr.size.toString.getBytes
@@ -140,7 +140,7 @@ object BlockData {
     ByteCharSeq(tag ++ sizeSizeStr ++ sizeStr ++ data)
   }
 
-  def unapply(bs: ByteCharSeq) : Option[IndexedSeq[Byte]] = {
+  def unapply(bs: ByteCharSeq) : Option[ByteSeq] = {
     val parser = SCPIParser()
     val result = parser.parseAll(parser.blockDataBytes, bs)
     if (result.successful) Some(result.get)

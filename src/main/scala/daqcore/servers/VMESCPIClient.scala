@@ -106,7 +106,7 @@ class VMESCPIClient(dev: SCPIClientLink, timeout: Long) extends CascadableServer
     }
     case op @ MemoryLink.Write(address, bytes) => {
       trace(op)
-      dev.cmd(~VME~WRITe!(NR1(address.toInt), BlockData(bytes.toIndexedSeq)))  //!! toIndexedSeq not optimal
+      dev.cmd(~VME~WRITe!(NR1(address.toInt), BlockData(bytes)))  //!! toIndexedSeq not optimal
     }
     case op @ MemoryLink.Pause() => {
       trace(op)

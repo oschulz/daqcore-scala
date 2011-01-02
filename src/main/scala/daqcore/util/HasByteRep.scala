@@ -19,5 +19,11 @@ package daqcore.util
 
 
 trait HasByteRep {
-  def getBytes: Seq[Byte]
+  def getBytes: ByteSeq = {
+    val builder = ByteSeqBuilder()
+    putBytes(builder)
+    builder.result()
+  }
+  
+  def putBytes(builder: ByteSeqBuilder): Unit
 }

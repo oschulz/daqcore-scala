@@ -21,6 +21,10 @@ import daqcore.util._
 
 
 sealed abstract class Header extends HasByteRep {
+  def getByteCharSeq: ByteCharSeq
+  override def getBytes = getByteCharSeq.getBytes
+  def putBytes(builder: ByteSeqBuilder) = getByteCharSeq.putBytes(builder)
+
   def ! = Command(this)
   def !(params: ByteCharSeq*) = Command(this, params: _*)
   def ? = Query(this)
@@ -30,7 +34,7 @@ sealed abstract class Header extends HasByteRep {
 
 case class CCQHeader(mnemonic: String) extends Header {
   require(mnemonic == mnemonic.toUpperCase)
-  def getBytes = ByteCharSeq('*') ++ ByteCharSeq(mnemonic)
+  def getByteCharSeq = ByteCharSeq('*') ++ ByteCharSeq(mnemonic)
   override def toString = "*" + mnemonic
 }
 
@@ -41,13 +45,13 @@ sealed abstract class ICHeader extends Header {
 
 
 case class ICHeaderAbs(parts: ICHeaderPart*) extends ICHeader {
-  def getBytes = ByteCharSeq(':') ++ parts.map(_.getBytes).reduceLeft(_ ++ ByteCharSeq(':') ++ _)
+  def getByteCharSeq = ByteCharSeq(':') ++ parts.map(_.getByteCharSeq).reduceLeft(_ ++ ByteCharSeq(':') ++ _)
   def ~(part: ICHeaderPart): ICHeaderAbs = ICHeaderAbs((parts ++ Seq(part)) :_*)
   override def toString = ":" + parts.map(_.toString).mkString(":")
 }
 
 case class ICHeaderRel(parts: ICHeaderPart*) extends ICHeader {
-  def getBytes = parts.map(_.getBytes).reduceLeft(_ ++ ByteCharSeq(':') ++ _)
+  def getByteCharSeq = parts.map(_.getByteCharSeq).reduceLeft(_ ++ ByteCharSeq(':') ++ _)
   def unary_~ = ICHeaderAbs(parts :_*)
   def ~(part: ICHeaderPart): ICHeaderRel = ICHeaderRel((parts ++ Seq(part)) :_*)
   override def toString = parts.map(_.toString) mkString(":")
@@ -56,7 +60,7 @@ case class ICHeaderRel(parts: ICHeaderPart*) extends ICHeader {
 
 case class ICHeaderPart(mnem: Mnemonic, suffix: Int = 1) {
   require(suffix >= 1)
-  def getBytes = mnem.getBytes ++ (if (suffix > 1) ByteCharSeq(suffix.toString) else ByteCharSeq.empty)
+  def getByteCharSeq = mnem.getByteCharSeq ++ (if (suffix > 1) ByteCharSeq(suffix.toString) else ByteCharSeq.empty)
   def unary_~ = ICHeaderAbs(this)
   def ~(that: ICHeaderPart) = ICHeaderRel(this, that)
   override def toString = mnem.toString ++ (if (suffix > 1) suffix.toString else "")

@@ -24,17 +24,35 @@ sealed abstract class Message extends HasByteRep
 
 
 case class Response(val results: Result*) extends Message {
-  def getBytes = results map {_.getBytes} flatWithSep ByteCharSeq(";")
+  def putBytes(builder: ByteSeqBuilder) = {
+    var first = true
+    for (x <- results) {
+      if (first) {first = false} else {builder += ';'.toByte}
+      x.putBytes(builder)
+    }
+  }
 }
 
 
-case class Result(values: ByteCharSeq*) {
-  def getBytes = values flatWithSep ByteCharSeq(",")
+case class Result(values: ByteCharSeq*) extends HasByteRep {
+  def putBytes(builder: ByteSeqBuilder) = {
+    var first = true
+    for (x <- values) {
+      if (first) {first = false} else {builder += ','.toByte}
+      x.putBytes(builder)
+    }
+  }
 }
 
 
 case class Request(val instr: Instruction*) extends Message {
-  def getBytes = instr map {_.getBytes} flatWithSep ByteCharSeq(";")
+  def putBytes(builder: ByteSeqBuilder) = {
+    var first = true
+    for (x <- instr) {
+      if (first) {first = false} else {builder += ';'.toByte}
+      x.putBytes(builder)
+    }
+  }
   
   def hasResponse: Boolean = instr.find(_.isInstanceOf[Query]) != None
   override def toString = instr.map(_.toString).mkString("; ")
@@ -47,9 +65,12 @@ sealed abstract class Instruction extends HasByteRep {
 
 
 case class Command(header: Header, params: ByteCharSeq*) extends Instruction {
-  def getBytes = {
-    if (!params.isEmpty) Seq(header.getBytes, ByteCharSeq(" "), Result(params:_*).getBytes).flat
-    else header.getBytes
+  def putBytes(builder: ByteSeqBuilder) = {
+    header.putBytes(builder)
+    if (!params.isEmpty) {
+      builder += ' '.toByte
+      Result(params:_*).putBytes(builder)
+    }
   }
   override def toString = {
     if (!params.isEmpty) header.toString + " " + Result(params:_*).toString
@@ -59,9 +80,13 @@ case class Command(header: Header, params: ByteCharSeq*) extends Instruction {
 
 
 case class Query(header: Header, params: ByteCharSeq*) extends Instruction {
-  def getBytes = {
-    if (!params.isEmpty) Seq(header.getBytes, ByteCharSeq("? "), Result(params:_*).getBytes).flat
-    else Seq(header.getBytes, ByteCharSeq("?")).flat
+  def putBytes(builder: ByteSeqBuilder) = {
+    header.putBytes(builder)
+    builder += '?'.toByte
+    if (!params.isEmpty) {
+      builder += ' '.toByte
+      Result(params:_*).putBytes(builder)
+    }
   }
   override def toString = {
     if (!params.isEmpty) header.toString + "? " + Result(params:_*).toString

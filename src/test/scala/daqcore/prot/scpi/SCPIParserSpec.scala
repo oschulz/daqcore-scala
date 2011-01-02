@@ -33,23 +33,22 @@ class SCPIParserSpec extends WordSpec with MustMatchers {
       val x = 7.3
       val s = "foo"
       val l = List(1,2,3,4)
-      val bytes = "Some block data".getBytes("ASCII").toSeq.asInstanceOf[IndexedSeq[Byte]]
-      val bytes2 = (0 to 511) map {_.toByte}
+      val bytes = ByteSeq.wrap("Some block data".getBytes("ASCII"))
+      val bytes2 = ByteSeq((0 to 511) map {_.toByte}: _*)
 
       val input = Response(Result(NR1(i) :: BlockData(bytes) :: SRD(s) :: BlockData(bytes2) :: NRf(x) :: l.map{NR1(_)}: _*)).getBytes
 
       val response = parser.parseResponse(input)
       assert( response.getBytes === input )
 
-      //!! Currently broken with scala-2.8.0.RC3, should work again with RC4:
-      /* val Response(Result(NR1(iR), BlockData(bytesR), SRD(sR), BlockData(bytes2R), NRf(xR), lRR @_*)) = response
+      val Response(Result(NR1(iR), BlockData(bytesR), SRD(sR), BlockData(bytes2R), NRf(xR), lRR @_*)) = response
       val lR = lRR map {c => val NR1(i) = c; i}
       assert( iR === i )
       assert( xR === x )
       assert( sR === s )
       assert( bytesR  === bytes )
       assert( bytes2R === bytes2 )
-      assert( lR === l )*/
+      assert( lR === l )
       
       val input2 = ByteCharSeq("  1,  \t 2,3 ,  #15Hello , 4 ")
       val response2 = parser.parseResponse(input2)
@@ -69,7 +68,7 @@ class SCPIParserSpec extends WordSpec with MustMatchers {
       
       val req2 = ByteCharSeq("  *IDN? \t;  SET:VOLT2:DC 5 , 5.5 , #15Hello ; :MEAS:VOLT? ")
       val preq2 = parser.parseRequest(req2)
-      assert( preq2.getBytes === expected )
+      assert( preq2.getBytes === expected.getBytes )
       assert( preq === preq2 )
     }
     
@@ -86,8 +85,6 @@ class SCPIParserSpec extends WordSpec with MustMatchers {
       
       assert( res1.get == in1 )
       assert( res2.get == in2 )
-      assert( res1.get sharedWith input )
-      assert( res2.get sharedWith input )
       assert( res3.successful === false )
     }
   }

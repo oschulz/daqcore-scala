@@ -21,7 +21,9 @@ import daqcore.util._
 
 
 sealed abstract class Mnemonic extends HasByteRep {
-  def getBytes: ByteCharSeq
+  def getByteCharSeq: ByteCharSeq
+  override def getBytes = getByteCharSeq.getBytes
+  def putBytes(builder: ByteSeqBuilder) = getByteCharSeq.putBytes(builder)
 }
 
 
@@ -35,17 +37,17 @@ object Mnemonic {
 }
   
 case class RecMnemonic(bytes: ByteCharSeq) extends Mnemonic {
-  override def hashCode = getBytes.toString.hashCode
+  override def hashCode = getByteCharSeq.toString.hashCode
     override def canEqual(that: Any) = that.isInstanceOf[Mnemonic]
     override def equals(that: Any) = canEqual(that) && (that match {
-    case that:RecMnemonic => that.getBytes == this.getBytes
+    case that:RecMnemonic => that.getByteCharSeq == this.getByteCharSeq
     case that:SpecMnemonic => that == this
     case _ => false
   })
   
-  def getBytes = bytes
+  def getByteCharSeq = bytes
 
-  override def toString = getBytes.toString
+  override def toString = getByteCharSeq.toString
 }
 
 
@@ -54,7 +56,7 @@ case class SpecMnemonic(short:String, long:String) extends Mnemonic {
     def canEqual(that: Any) = that.isInstanceOf[Mnemonic]
     override def equals(that: Any) = canEqual(that) && (that match {
     case that:RecMnemonic => {
-      val thatStr = that.getBytes.toString
+      val thatStr = that.getByteCharSeq.toString
       ( (thatStr == short.toLowerCase) || (thatStr == long.toLowerCase) ||
       (thatStr == short.toUpperCase) || (thatStr == long.toUpperCase) )
     }
@@ -67,7 +69,7 @@ case class SpecMnemonic(short:String, long:String) extends Mnemonic {
     else None
   }
   
-  def getBytes = ByteCharSeq(short)
+  def getByteCharSeq = ByteCharSeq(short)
   
   override def toString = long
 }

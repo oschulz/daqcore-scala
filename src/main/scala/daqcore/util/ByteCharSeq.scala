@@ -24,6 +24,7 @@ import collection.mutable.{Builder,ArrayBuffer,ArrayBuilder}
 class ByteCharSeq(protected val buffer: Array[Byte], val from: Int, val until: Int) extends CharSequence
   with scala.collection.immutable.IndexedSeq[Byte]
   with IndexedSeqLike[Byte, ByteCharSeq]
+  with HasByteRep
 {
   override def iterator = ArrayIterator.forArrayRange(buffer, from, until)
 
@@ -65,7 +66,17 @@ class ByteCharSeq(protected val buffer: Array[Byte], val from: Int, val until: I
   
   def ++(that: Seq[Byte]): ByteCharSeq = this ++ ByteCharSeq(that: _*)
   def ++(s: String): ByteCharSeq = this ++ ByteCharSeq(s)
+
+  override def getBytes: ByteSeq = {
+    if ((from == 0) && (until == buffer.length)) ByteSeq.wrap(buffer)
+    else ByteSeq.wrap(toArray)
+  }
   
+  def putBytes(builder: ByteSeqBuilder) = {
+    if ((from == 0) && (until == buffer.length)) builder ++= buffer
+    else builder ++= iterator
+  }
+
   override def toString =
     new String(toArray, ByteCharSeq.encoding)
   

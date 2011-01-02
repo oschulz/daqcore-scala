@@ -43,7 +43,7 @@ class SCPIParser extends ByteCharSeqParsers {
   def streamMsgTerm: Parser[ByteCharSeq] = streamMsgTermExpr
 
 
-  protected def parseBlockData(in: Input): ParseResult[(IndexedSeq[Byte], ByteCharSeq)] = {
+  protected def parseBlockData(in: Input): ParseResult[(ByteSeq, ByteCharSeq)] = {
     val (source, offset) = (in.source, in.offset)
     if (offset >= source.length) Failure("Reached end of input", in)
     else try {
@@ -63,7 +63,7 @@ class SCPIParser extends ByteCharSeqParsers {
             val raw = inSeq.subSequence(offset, offset+dataEnd)
             val rest = in.drop(dataEnd)
             require(data.length == size)
-            Success((data, raw), rest)
+            Success((ByteSeq.wrap(data.toArray), raw), rest)
           }
         }
       } else Failure("Not arbitrary block data", in)
@@ -73,7 +73,7 @@ class SCPIParser extends ByteCharSeqParsers {
     }
   }
   
-  def blockDataBytes: Parser[IndexedSeq[Byte]] = new Parser[IndexedSeq[Byte]] {
+  def blockDataBytes: Parser[ByteSeq] = new Parser[ByteSeq] {
     def apply(in: Input) = parseBlockData(in) match {
       case Success((data,all), rest) =>
         Success(data,rest)
@@ -134,7 +134,7 @@ class SCPIParser extends ByteCharSeqParsers {
   def header = ccqHeader | icHeader
 
   def ccqHeader: Parser[CCQHeader] =
-    "*" ~> recMnemonic ^^ { mnem => CCQHeader(mnem.getBytes.toString) }
+    "*" ~> recMnemonic ^^ { mnem => CCQHeader(ByteCharSeq(mnem.getBytes: _*).toString) }
     
   def mnemSuffix: Parser[Int] = mnemSuffixExpr ^^ { _.toString.toInt }
 
@@ -168,19 +168,19 @@ class SCPIParser extends ByteCharSeqParsers {
     skipWS(repsep(instruction, ";") ^^ { instr => Request(instr : _*) })
     
   /** Extract a CR+LF or LF terminated message from a CharSequence */
-  def extractTermMsg(in: Seq[Byte]) =
+  def extractTermMsg(in: ByteSeq) =
     streamMsgRaw(ByteCharSeqReader(in))
 
   /** Extract a CR+LF or LF terminated message from a Reader */
   def extractTermMsg(in: Input) =  streamMsgRaw(in)
 
-  def parseResponse(in: Seq[Byte]): Response =
+  def parseResponse(in: ByteSeq): Response =
     parseAll(response, ByteCharSeqReader(in)).get
 
-  def parseHeader(in: Seq[Byte]): Header =
+  def parseHeader(in: ByteSeq): Header =
     parseAll(header, ByteCharSeqReader(in)).get
 
-  def parseRequest(in: Seq[Byte]): Request =
+  def parseRequest(in: ByteSeq): Request =
     parseAll(request, ByteCharSeqReader(in)).get
 }
 
