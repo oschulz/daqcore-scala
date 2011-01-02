@@ -18,11 +18,15 @@
 package daqcore.math
 
 object ZigZagEnc {
+  def encode(x: Byte): Byte = encode(x.toInt).toByte
+  def decode(x: Byte): Byte = decode(x.toInt).toByte
+
+  def encode(x: Short): Short = encode(x.toInt).toShort
+  def decode(x: Short): Short = decode(x.toInt).toShort
+
   def encode(x: Int): Int = (x << 1) ^ (x >> 31)
-  
   def decode(x: Int): Int = (x >>> 1) ^ (-(x & 1))
 
   def encode(x: Long): Long = (x << 1) ^ (x >> 63)
-  
   def decode(x: Long): Long = (x >>> 1) ^ (-(x & 1))
 }
