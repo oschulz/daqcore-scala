@@ -26,6 +26,8 @@ import scala.collection.mutable.{Builder,ArrayBuffer,ArrayBuilder}
 class ByteSeqCompanion {
   def apply(values: Byte*) = wrap(values.toArray)
 
+  def empty = this.apply()
+  
   def wrap(array: Array[Byte]) = ArrayVec.wrap(array)
 
   def fromChunks(chunks: Seq[Array[Byte]]): ByteSeq = {
