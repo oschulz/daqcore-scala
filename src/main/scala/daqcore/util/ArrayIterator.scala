@@ -150,6 +150,9 @@ final class ArrayIterator[@specialized A: ClassManifest](private val array: Arra
 object ArrayIterator {
   def forArray[@specialized A: ClassManifest](array: Array[A]): ArrayIterator[A] =
     new ArrayIterator(array, 0, array.length, false)
+
+  def forArrayRange[@specialized A: ClassManifest](array: Array[A], from: Int, until: Int): ArrayIterator[A] =
+    new ArrayIterator(array, from, until, false)
   
   def empty[@specialized A: ClassManifest]: ArrayIterator[A] =
     forArray(Array.empty[A])
