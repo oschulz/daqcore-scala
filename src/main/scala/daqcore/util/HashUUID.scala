@@ -22,20 +22,20 @@ import java.security.MessageDigest
 
 
 object ByteSeqUUID {
-  def apply(bytes: Seq[Byte]) : UUID = {
+  def apply(bytes: ByteSeq) : UUID = {
     require(bytes.size == 16)
-    val msb = bytes.take(8).foldLeft(0.toLong) { (acc, byte) => (acc << 8) | (0xFF & byte.toLong) }
-    val lsb = bytes.drop(8).foldLeft(0.toLong) { (acc, byte) => (acc << 8) | (0xFF & byte.toLong) }
+    val it = bytes.iterator
+    val msb = BigEndian.getLong(it)
+    val lsb = BigEndian.getLong(it)
     
     new UUID(msb, lsb)
   }
     
-  
-  
-  def unapply(uuid: UUID) : Option[IndexedSeq[Byte]] = {
-    val high = (0 to 7).reverse map (i => (uuid.getMostSignificantBits >> (i*8)).toByte)
-    val low = (0 to 7).reverse map (i => (uuid.getLeastSignificantBits >> (i*8)).toByte)
-    Some((high ++ low))
+  def unapply(uuid: UUID) : Option[ByteSeq] = {
+    val builder = ByteSeqBuilder(16)
+    BigEndian.putLong(builder, uuid.getMostSignificantBits)
+    BigEndian.putLong(builder, uuid.getLeastSignificantBits)
+    Some(builder.result)
   }
   
   // Test:
@@ -63,7 +63,7 @@ class HashUUID (val version: Int) {
     hash(6) = ((hash(6) & 0x0F) | (version << 4)).toByte;
     hash(8) = ((hash(8) & 0x3F) | 0x80).toByte;
     
-    ByteSeqUUID(hash.take(16))
+    ByteSeqUUID(ByteSeq.wrap(hash).take(16))
   }
 
   def apply(namespace: UUID, name: String) : UUID =
