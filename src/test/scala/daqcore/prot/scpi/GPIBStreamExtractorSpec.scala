@@ -33,8 +33,8 @@ class GPIBStreamExtractorSpec extends WordSpec with MustMatchers {
         val msg = ByteCharSeq("*IDN?;SET:VOLT2:DC 5,\"String with \"\" quote\", 5.5 , 'String with '' quote',#225SomeBinaryDataDummyString\n")
         val nMessages = 5
 
-        var recovered = Seq.empty[Seq[Byte]]
-        var remaining = Seq.fill(nMessages)(msg).flatten
+        var recovered = Seq.empty[ByteSeq]
+        var remaining = ByteSeq(Seq.fill(nMessages)(msg).flatten: _*)
         while (remaining.size > 0) {
             val fraction = (2 * msg.size * math.pow(util.Random.nextDouble, 3)).toInt + 1
             val (pkg, rest) = remaining.splitAt(fraction)

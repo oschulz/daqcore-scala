@@ -23,8 +23,8 @@ import daqcore.prot._
 
 
 case class GPIBStreamExtractor() extends GenericByteSeqExtractor {
-  protected def parseStart(input: Array[Byte], pos: Int): ParseReturn = {
-    trace("parseStart(%s)".format(ByteCharSeq(SubArray(input, pos, input.size).toArray)))
+  protected def parseStart(input: ByteSeq, pos: Int): ParseReturn = {
+    trace("parseStart(%s)".format(ByteCharSeq(input.slice(pos, input.size): _*)))
     val newline = '\n'.toByte
     val singleQuote = '"'.toByte
     val doubleQuote = '\''.toByte
@@ -46,8 +46,8 @@ case class GPIBStreamExtractor() extends GenericByteSeqExtractor {
     (finished, p, next)
   }
   
-  def parseHash(input: Array[Byte], pos: Int): ParseReturn = {
-    trace("parseHash(%s)".format(ByteCharSeq(SubArray(input, pos, input.size).toArray)))
+  def parseHash(input: ByteSeq, pos: Int): ParseReturn = {
+    trace("parseHash(%s)".format(ByteCharSeq(input.slice(pos, input.size): _*)))
     input(pos) match {
       case b if (b >= '1'.toByte) && (b <= '9'.toByte) =>
         (false, pos+1, parseDLBDSize(0, b.toByte.toChar.toString.toInt) _) // Definite Length Block Data
@@ -56,8 +56,8 @@ case class GPIBStreamExtractor() extends GenericByteSeqExtractor {
     }
   }
   
-  def parseDLBDSize(acc: Int, remLen: Int)(input: Array[Byte], pos: Int): ParseReturn = {
-    trace("parseDLBDSize(%s, %s)(%s)".format(acc, remLen, ByteCharSeq(SubArray(input, pos, input.size).toArray)))
+  def parseDLBDSize(acc: Int, remLen: Int)(input: ByteSeq, pos: Int): ParseReturn = {
+    trace("parseDLBDSize(%s, %s)(%s)".format(acc, remLen, ByteCharSeq(input.slice(pos, input.size): _*)))
     var size = acc
     var r = remLen
     var p = pos
@@ -69,22 +69,22 @@ case class GPIBStreamExtractor() extends GenericByteSeqExtractor {
     else (false, p, parseDLBDContents(size) _)
   }
   
-  def parseDLBDContents(remLen: Int)(input: Array[Byte], pos: Int): ParseReturn = {
-    trace("parseDLBDContents(%s)(%s)".format(remLen, ByteCharSeq(SubArray(input, pos, input.size).toArray)))
+  def parseDLBDContents(remLen: Int)(input: ByteSeq, pos: Int): ParseReturn = {
+    trace("parseDLBDContents(%s)(%s)".format(remLen, ByteCharSeq(input.slice(pos, input.size): _*)))
     if (pos + remLen > input.size) (false, input.size, parseDLBDContents(pos + remLen - input.size) _ )
     else (false, pos + remLen, parseStart _)
   }
   
-  def parseQuoted(quoteChar: Byte)(input: Array[Byte], pos: Int): ParseReturn = {
-    trace("parseQuoted(%s)(%s)".format(quoteChar, ByteCharSeq(SubArray(input, pos, input.size).toArray)))
+  def parseQuoted(quoteChar: Byte)(input: ByteSeq, pos: Int): ParseReturn = {
+    trace("parseQuoted(%s)(%s)".format(quoteChar, ByteCharSeq(input.slice(pos, input.size): _*)))
     var p = pos
     while ((p < input.size) && (input(p) != quoteChar)) p += 1
     if (p < input.size) (false, p+1, parseQuotedEsc(quoteChar) _)
     else (false, p, parseQuoted(quoteChar) _)
   }
   
-  def parseQuotedEsc(quoteChar: Byte)(input: Array[Byte], pos: Int): ParseReturn = {
-    trace("parseQuotedEsc(%s)(%s)".format(quoteChar, ByteCharSeq(SubArray(input, pos, input.size).toArray)))
+  def parseQuotedEsc(quoteChar: Byte)(input: ByteSeq, pos: Int): ParseReturn = {
+    trace("parseQuotedEsc(%s)(%s)".format(quoteChar, ByteCharSeq(input.slice(pos, input.size): _*)))
     if (input(pos) == quoteChar) (false, pos+1, parseQuoted(quoteChar) _)
     else (false, pos, parseStart _)
   }

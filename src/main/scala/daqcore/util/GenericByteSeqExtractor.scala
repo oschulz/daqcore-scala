@@ -21,54 +21,50 @@ package daqcore.util
 trait GenericByteSeqExtractor extends Logging {
   type ParseReturn = (Boolean, Int, ParseFunction)
 
-  trait ParseFunction extends ((Array[Byte], Int) => ParseReturn)
-    { def apply(input: Array[Byte], pos: Int): ParseReturn }
+  trait ParseFunction extends ((ByteSeq, Int) => ParseReturn)
+    { def apply(input: ByteSeq, pos: Int): ParseReturn }
   
-  implicit def parseFunction(f: (Array[Byte], Int) => ParseReturn) =
-    new ParseFunction { def apply(input: Array[Byte], pos: Int) = f(input, pos) }
+  implicit def parseFunction(f: (ByteSeq, Int) => ParseReturn) =
+    new ParseFunction { def apply(input: ByteSeq, pos: Int) = f(input, pos) }
   
-  protected def parseStart(input: Array[Byte], pos: Int): ParseReturn
+  protected def parseStart(input: ByteSeq, pos: Int): ParseReturn
   
-  case class SubArray(array: Array[Byte], from: Int, until: Int) {
+  case class BytesView(bytes: ByteSeq, from: Int, until: Int) {
     require ((from >= 0) && (until >= from))
     def size = until - from
-    def toArray = array.slice(from, until)
+    def iterator = bytes.iterator.slice(from, until)
+    def toByteSeq = iterator.toSeq
   }
 
-  protected var inputQueue: List[SubArray] = Nil
+  protected var inputQueue: List[BytesView] = Nil
   protected var parseFunc = parseStart _
   
   def unfinished: Boolean = ! inputQueue.isEmpty
 
-  def apply(bytes: Seq[Byte]): Seq[Seq[Byte]] = {
-    var extracted: List[Seq[Byte]] = Nil
+  def apply(bytes: ByteSeq): Seq[ByteSeq] = {
+    var extracted: List[ByteSeq] = Nil
   
     trace("apply(%s)".format(loggable(ByteCharSeq(bytes: _*))))
 
-    val array = bytes.toArray
     var startPos = 0
     var pos = 0
-    while (pos < array.size) {
-      val (msgComplete, nextPos, nextParseFunc) = parseFunc(array, pos)
+    while (pos < bytes.size) {
+      val (msgComplete, nextPos, nextParseFunc) = parseFunc(bytes, pos)
       pos = nextPos
       parseFunc = nextParseFunc
       if (msgComplete) {
-        inputQueue = SubArray(array, startPos, pos) :: inputQueue
+        inputQueue = BytesView(bytes, startPos, pos) :: inputQueue
         val totalSize = inputQueue.view map {_.size} sum
-        val outputArray = Array.ofDim[Byte](totalSize)
-        var outputPos = 0
-        for (in <- inputQueue.reverse) {
-          for (i <- 0 to in.size - 1) outputArray(outputPos + i) = in.array(in.from + i)
-          outputPos += in.size
-        }
-        val msg = outputArray.toIISeq
+        val builder = ByteSeqBuilder()
+        for (in <- inputQueue.reverse) builder ++= in.iterator
+        val msg = builder.result()
         trace("Complete sequence of length %s available: [%s]".format(msg.length, loggable(msg)))
         extracted = msg :: extracted
         startPos = pos
         inputQueue = Nil
       }
     }
-    if (startPos < pos) inputQueue = SubArray(array, startPos, pos) :: inputQueue
+    if (startPos < pos) inputQueue = BytesView(bytes, startPos, pos) :: inputQueue
     // trace("inputQueue:" + loggable(inputQueue map loggable))
     
     extracted.reverse

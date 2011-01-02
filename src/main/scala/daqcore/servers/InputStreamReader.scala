@@ -43,7 +43,8 @@ class InputStreamReader(input: InputStream) extends CloseableServer {
     if (avail > 0) {
       val a = Array.ofDim[Byte](maxChunkSize)
       val count = input.read(a)
-      val bytes = if (count < a.size) a.take(count) else a
+      val xs = ByteSeq.wrap(a)
+      val bytes = if (count < xs.size) xs.take(count) else xs
       reply(ByteStreamInput.Received(bytes))
     } else {
       self.stop()

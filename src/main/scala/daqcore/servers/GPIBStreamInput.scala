@@ -39,7 +39,7 @@ trait GPIBStreamInput extends InputFilterServer {
   
   override def needMoreInput = extractor.unfinished
   
-  def srvProcessInput(data: Seq[Byte]) = {
+  def srvProcessInput(data: ByteSeq) = {
     trace("doHandleInput(%s)".format(loggable(data)))
     val extracted = extractor(data)
     for (msg <- extracted) {

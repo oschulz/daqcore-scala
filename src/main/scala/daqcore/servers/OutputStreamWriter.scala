@@ -37,7 +37,7 @@ class OutputStreamWriter(output: OutputStream) extends CloseableServer {
   }
 
   
-  protected def srvSend(data: Seq[Byte]): Unit = {
+  protected def srvSend(data: ByteSeq): Unit = {
     output.write(data.toArray)
   }
 

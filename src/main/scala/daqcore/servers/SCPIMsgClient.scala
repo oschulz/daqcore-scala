@@ -58,7 +58,7 @@ class SCPIMsgClient(msgLnk: RawMsgIO) extends Server with KeepAlive with PostIni
       case RawMsgInput.Received(bytes) => {
           trace("Received %s bytes: %s".format(bytes.size, loggable(bytes)))
           
-          val response = parser.parseResponse(ByteCharSeq(bytes: _*))
+          val response = parser.parseResponse(bytes)
           trace("Received response: %s".format(loggable(response.toString)))
           recvQueue.addReply(response){}
       }

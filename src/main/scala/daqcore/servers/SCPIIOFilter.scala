@@ -57,10 +57,10 @@ trait SCPIRequestInputFilter extends InputFilterServer {
 
   val parser: SCPIParser = new SCPIParser
   
-  def srvProcessInput(data: Seq[Byte]) = {
+  def srvProcessInput(data: ByteSeq) = {
     trace("Received %s bytes: %s".format(data.size, loggable(data)))
     
-    val request = parser.parseRequest(ByteCharSeq(data: _*))
+    val request = parser.parseRequest(data)
     trace("Received request: %s".format(loggable(request.toString)))
     Seq(request)
   }
@@ -85,10 +85,10 @@ trait SCPIResponseInputFilter extends InputFilterServer {
 
   val parser: SCPIParser = new SCPIParser
   
-  def srvProcessInput(data: Seq[Byte]) = {
+  def srvProcessInput(data: ByteSeq) = {
     trace("Received %s bytes: %s".format(data.size, loggable(data)))
     
-    val response = parser.parseResponse(ByteCharSeq(data: _*))
+    val response = parser.parseResponse(data)
     trace("Received response: %s".format(loggable(response.toString)))
     Seq(response)
   }

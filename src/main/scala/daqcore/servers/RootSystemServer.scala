@@ -24,6 +24,7 @@ import java.io.IOException
 import akka.actor._, akka.actor.Actor._, akka.dispatch.Future
 import akka.config.Supervision.{LifeCycle, UndefinedLifeCycle, Temporary, OneForOneStrategy, AllForOneStrategy}
 
+import daqcore.util._
 import daqcore.actors._
 import daqcore.profiles._
 import daqcore.prot.rootsys._
@@ -66,12 +67,12 @@ class RootSystemServer() extends Server with KeepAlive with PostInit with Closea
     msgBuffer.writeInt(requestMsgType)
     msgBuffer.writeInt(msgId)
     request.writeRequest(msgBuffer)
-    io.send(msgBuffer.toArray)
+    io.send(ByteSeq.wrap(msgBuffer.toArray))
     io.flush()
     msgId
   }
   
-  def handleRootSysMsg(msg: Seq[Byte]): Unit = {
+  def handleRootSysMsg(msg: ByteSeq): Unit = {
     io.triggerRecv()
     val ActiveQuery(id, readResp, replyTo) = queries.dequeue()
     val msgBuffer = BufferIO(msg.toArray)

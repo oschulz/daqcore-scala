@@ -66,8 +66,8 @@ class RTVXI11Client(val address: InetAddress, timeout: Long) extends CloseableSe
   var clnt: vxi11core.Client = null  
   var rtlinks: Map[String, SrvLid] = null
 
-  case class LinkRead(lnk: SrvLid , timeout: Long) extends ActorQuery[Seq[Byte]]
-  case class LinkWrite(lnk: SrvLid, timeout: Long, data: Seq[Byte]) extends ActorCmd
+  case class LinkRead(lnk: SrvLid , timeout: Long) extends ActorQuery[ByteSeq]
+  case class LinkWrite(lnk: SrvLid, timeout: Long, data: ByteSeq) extends ActorCmd
   case class LinkClose(lnk: SrvLid) extends ActorCmd
 
 
@@ -155,10 +155,9 @@ class RTVXI11Client(val address: InetAddress, timeout: Long) extends CloseableSe
 
 
   def srvRead(lnk: SrvLid, timeout: Long) : Unit = {
-    @tailrec def readImpl(timeout: Long,
-      acc: IndexedSeq[IndexedSeq[Byte]] = IndexedSeq.empty[IndexedSeq[Byte]]) :
-      Option[ByteCharSeq] =
-    {
+    val acc = ByteSeqBuilder()
+    
+    @tailrec def readImpl(timeout: Long): Unit = {
       require(timeout <= Int.MaxValue)
       val rparms = new vxi11core.Device_ReadParms
       rparms.lid = lnk.lid
@@ -186,39 +185,35 @@ class RTVXI11Client(val address: InetAddress, timeout: Long) extends CloseableSe
           if ((rresp.reason & rcv_reason_reqcnt) != 0)
             throw new IOException("VXI11 read: Request size to small")
           
-          val boxedData: IndexedSeq[IndexedSeq[Byte]] = IndexedSeq(rresp.data)
+          acc ++= ByteSeq.wrap(rresp.data)
           // if end or chr bit set, read is complete, if not, more chunks to read
           if ((rresp.reason & (rcv_reason_end | rcv_reason_chr)) != 0) {
             log.trace("Finished reading")
-            Some(ByteCharSeq((acc ++ boxedData) flatten: _*))
+            val bytes = acc.result()
+            reply(RawMsgInput.Received(bytes))
           } else {
             log.trace("Partial read")
-            readImpl(timeout, (acc ++ boxedData))
+            readImpl(timeout)
           }
 
         case 4|15|17 => // Timeout
-          None
         case 11 => throw new IOException("VXI11 read: Device locked by another link")
         case 23 => throw new IOException("VXI11 read: Abort")
         case _ => throw new IOException("VXI11 read: Unknown error")
       }
     }
 
-    crashOnError(lnk.srv) {
-      readImpl(timeout) match {
-        case Some(bytes: ByteCharSeq) => reply(RawMsgInput.Received(bytes))
-        case None => // Timeout, no reply
-      }
-    }
+    crashOnError(lnk.srv) { readImpl(timeout) }
   }
 
   
-  def srvWrite(lnk: SrvLid, timeout: Long, data: Seq[Byte]): Unit = {
-    @tailrec def writeImpl(timeout: Long, data: Seq[Byte], lastChunk: Boolean = true) :
+  def srvWrite(lnk: SrvLid, timeout: Long, data: ByteSeq): Unit = {
+    @tailrec def writeImpl(timeout: Long, it: ByteSeqIterator, lastChunk: Boolean = true) :
       Unit =
     {
       require(timeout <= Int.MaxValue)
-      val dataArray = data.toArray
+      val (currentIt, nextIt) = it.duplicate
+      val dataArray = currentIt.toArray
       
       val wparms = new vxi11core.Device_WriteParms
       wparms.lid = lnk.lid
@@ -244,10 +239,10 @@ class RTVXI11Client(val address: InetAddress, timeout: Long) extends CloseableSe
       log.trace("device_write error value: " + wresp.error.value)
       log.trace("bytes written: " + bytesWritten)
       if (bytesWritten < data.length)
-        writeImpl(timeout, dataArray.drop(bytesWritten))
+        writeImpl(timeout, nextIt.drop(bytesWritten))
     }
 
-    crashOnError(lnk.srv) { writeImpl(timeout, data) }
+    crashOnError(lnk.srv) { writeImpl(timeout, data.iterator) }
   }
 }
 

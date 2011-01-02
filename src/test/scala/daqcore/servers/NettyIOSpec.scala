@@ -45,8 +45,8 @@ class NettyIOSpec extends WordSpec with MustMatchers with Logging {
             val msg = ByteCharSeq(bytes: _*).toString.trim
             debug(msg)
             if (msg == quit.toString.trim) { conn.close(); exit() }
-            else if (msg == ping.toString.trim) conn send pong
-            else conn send err
+            else if (msg == ping.toString.trim) conn send pong.getBytes
+            else conn send err.getBytes
           }
         } ).start
       }
@@ -55,7 +55,7 @@ class NettyIOSpec extends WordSpec with MustMatchers with Logging {
       
       for (i <- 1 to 10) {
         debug("ping %s".format(i))
-        conn send ping
+        conn send ping.getBytes
         val bytes = conn.recv()
         val msg = ByteCharSeq(bytes: _*).toString.trim
         debug(msg)

@@ -52,7 +52,7 @@ object NettyIO {
   object NettyChannelSrv {
     case class ChannelConnected(ch: Channel)
 
-    case class ChannelInputData(bytes: Seq[Byte])
+    case class ChannelInputData(bytes: ByteSeq)
 
     case class ChannelException(e: Throwable)
 
@@ -120,7 +120,7 @@ object NettyIO {
       val buffer = e.getMessage().asInstanceOf[ChannelBuffer]
       val bytes = Array.ofDim[Byte](buffer.readableBytes)
       buffer.getBytes(0, bytes, 0, bytes.length)
-      closeOnException(ctx){ aRef ! ChannelInputData(bytes.toSeq) }
+      closeOnException(ctx){ aRef ! ChannelInputData(ByteSeq.wrap(bytes)) }
     }
 
     override def exceptionCaught(ctx: ChannelHandlerContext, e: ExceptionEvent): Unit =  {

@@ -24,9 +24,9 @@ import daqcore.actors._
 
 
 trait ByteStreamInput extends GenericInput { val inputCompanion = ByteStreamInput }
-object ByteStreamInput extends GenericInputCompanion { type InputData = Seq[Byte] }
+object ByteStreamInput extends GenericInputCompanion { type InputData = ByteSeq }
 
 trait ByteStreamOutput extends GenericOutput { val outputCompanion = ByteStreamOutput }
-object ByteStreamOutput extends GenericOutputCompanion { type OutputData = Seq[Byte] }
+object ByteStreamOutput extends GenericOutputCompanion { type OutputData = ByteSeq }
 
 trait ByteStreamIO extends ByteStreamInput with ByteStreamOutput

@@ -25,7 +25,6 @@ import akka.config.Supervision.{LifeCycle, UndefinedLifeCycle}
 import daqcore.actors._
 import daqcore.profiles._
 import daqcore.util._
-import daqcore.prot.scpi.{StreamMsgTerm}
 
 
 trait GPIBStreamOutput extends OutputFilterServer {
@@ -35,15 +34,18 @@ trait GPIBStreamOutput extends OutputFilterServer {
   override def target: ByteStreamOutput
   val targetCompanion = ByteStreamOutput
 
-  protected def srvSend(data: Seq[Byte]): Unit = if (!data.isEmpty) {
-    target.send(data)
-    if (! (data(data.length-1) == 0x0A)) target.send(StreamMsgTerm)
-    target.flush()
+  protected def srvSend(data: ByteSeq): Unit = if (!data.isEmpty) {
+    val bld = ByteSeqBuilder()
+    bld ++= data
+    if (! (data(data.length-1) == 0x0A)) bld ++= GPIBStreamOutput.streamMsgTerm
+    target.send(bld.result())
   }
 }
 
 
 object GPIBStreamOutput {
+  val streamMsgTerm = ByteSeq(daqcore.prot.scpi.StreamMsgTerm: _*)
+
   class DefaultGPIBStreamOutput(val target: ByteStreamOutput) extends GPIBStreamOutput
 
   def apply(stream: ByteStreamOutput, sv: Supervising = defaultSupervisor, lc: LifeCycle = UndefinedLifeCycle): RawMsgOutput = {

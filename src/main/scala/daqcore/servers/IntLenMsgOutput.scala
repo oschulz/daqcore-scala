@@ -32,9 +32,11 @@ trait IntLenMsgOutput extends OutputFilterServer {
   override def target: ByteStreamOutput
   val targetCompanion = ByteStreamOutput
 
-  def srvSend(data: Seq[Byte]): Unit = if (!data.isEmpty) {
-    target.send(BigEndian.toBytes(ArrayVec(data.size.toInt)))
-    target.send(data)
+  def srvSend(data: ByteSeq): Unit = if (!data.isEmpty) {
+    val bld = ByteSeqBuilder()
+    BigEndian.putInt(bld, data.length.toInt)
+    bld ++= data
+    target.send(bld.result())
   }
 }
 

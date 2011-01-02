@@ -34,6 +34,7 @@ import daqcore.system._
 
 class RootSystemProcess extends Server with KeepAlive with PostInit with CloseableServer {
   import RootSystemProcess.{msgHeader}
+  implicit val encoding = BigEndian
 
   val rsp: ActorRef = self
   val rspLog = log
@@ -53,13 +54,15 @@ class RootSystemProcess extends Server with KeepAlive with PostInit with Closeab
       atCleanup { try { srvFlush() } finally { output.close } }
     }
     
-    protected def srvSend(data: Seq[Byte]): Unit = {
+    protected def srvSend(data: ByteSeq): Unit = {
       log.trace("srvSend(%s)".format(loggable(data map hex)))
-      val msgData = data.toArray
-      val msgLen = BigEndian.toBytes(ArrayVec(msgData.length)).toArray
-      output.write(msgHeader.toArray)
-      output.write(msgLen)
-      output.write(msgData)
+      val bld = ByteSeqBuilder()
+
+      bld ++= msgHeader
+      bld.putInt(data.length)
+      bld ++= data
+
+      output.write(bld.result().toArray)
     }
 
     protected def srvFlush(): Unit = {
@@ -113,7 +116,7 @@ class RootSystemProcess extends Server with KeepAlive with PostInit with Closeab
         val msgData = Array.ofDim[Byte](len)
         read(msgData)
         log.trace("received(%s byte(s): %s)".format(msgData.length, loggable(msgData.toSeq map hex)))
-        reply(ByteStreamInput.Received(msgData))
+        reply(ByteStreamInput.Received(ByteSeq.wrap(msgData)))
       } catch {
         case e: EOIException => {
             log.debug("Reached end of STDIN")
@@ -192,9 +195,8 @@ class RootSystemProcess extends Server with KeepAlive with PostInit with Closeab
       rspLog.error_? -> "ERROR"
     )
 
-    val dbgDefs = (for { (on, name) <- dbgConfig if (on) } yield {"#define %s\n".format(name)}).mkString.getBytes("ASCII")
+    val dbgDefs = ByteSeq.wrap((for { (on, name) <- dbgConfig if (on) } yield {"#define %s\n".format(name)}).mkString.getBytes("ASCII"))
     tmpRootIOSrc = RootSystemProcess.tmpResourceCopy("/cxx/root-system/rootSysServer.cxx", before = dbgDefs)
-
   }
 
   override def postInit() = {
@@ -235,7 +237,7 @@ class RootSystemProcess extends Server with KeepAlive with PostInit with Closeab
 
 
 object RootSystemProcess extends Logging {
-  val msgHeader = List(0x10.toByte, 0x9B.toByte) // DLE CSI
+  val msgHeader = ByteSeq(0x10.toByte, 0x9B.toByte) // DLE CSI
   
   val rootExe = new java.io.File((Nil | "root-config --bindir").head + "/root.exe")
 
@@ -247,9 +249,13 @@ object RootSystemProcess extends Logging {
     Version5UUID(rootBuildNs, rootBuildSpec)
   }
   
-  def tmpResourceCopy(resourceName: String, before: Seq[Byte] = Nil, after: Seq[Byte] = Nil): File = {
+  def tmpResourceCopy(resourceName: String, before: ByteSeq = ByteSeq.empty, after: ByteSeq = ByteSeq.empty): File = {
     val name = new File(resourceName) getName
-    val srcBytes = (before ++ this.getClass.getResource(resourceName).getBytes.toSeq ++ after).toArray
+    val builder = ByteSeqBuilder()
+    builder ++= before
+    builder ++= ByteSeq.wrap(this.getClass.getResource(resourceName).getBytes)
+    builder ++= after
+    val srcBytes = builder.result()
     val userName = java.lang.System.getProperty("user.name")
     val uuid = Version5UUID(rootBuildID, srcBytes)
     val trgDir = daqcoreTmpDir / uuid.toString

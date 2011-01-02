@@ -33,11 +33,11 @@ trait IntLenMsgInput extends InputFilterServer {
   val sourceCompanion = ByteStreamInput
 
   object extractor extends GenericByteSeqExtractor {
-    def parseStart(input: Array[Byte], pos: Int): ParseReturn =
+    def parseStart(input: ByteSeq, pos: Int): ParseReturn =
       (false, pos, parseMsgSize(0, 4) _)
 
-    def parseMsgSize(acc: Int, remLen: Int)(input: Array[Byte], pos: Int): ParseReturn = {
-      trace("parseMsgSize(%s, %s)(%s)".format(acc, remLen, ByteCharSeq(SubArray(input, pos, input.size).toArray)))
+    def parseMsgSize(acc: Int, remLen: Int)(input: ByteSeq, pos: Int): ParseReturn = {
+      trace("parseMsgSize(%s, %s)(%s)".format(acc, remLen, ByteCharSeq(input.slice(pos, input.size): _*)))
       var size = acc
       var r = remLen
       var p = pos
@@ -49,8 +49,8 @@ trait IntLenMsgInput extends InputFilterServer {
       else (false, p, parseMsgContents(size) _)
     }
 
-    def parseMsgContents(remLen: Int)(input: Array[Byte], pos: Int): ParseReturn = {
-      trace("parseMsgContents(%s)(%s)".format(remLen, ByteCharSeq(SubArray(input, pos, input.size).toArray)))
+    def parseMsgContents(remLen: Int)(input: ByteSeq, pos: Int): ParseReturn = {
+      trace("parseMsgContents(%s)(%s)".format(remLen, ByteCharSeq(input.slice(pos, input.size): _*)))
       if (pos + remLen > input.size) (false, input.size, parseMsgContents(pos + remLen - input.size) _ )
       else (true, pos + remLen, parseStart _)
     }
@@ -58,9 +58,9 @@ trait IntLenMsgInput extends InputFilterServer {
   
   override def needMoreInput = extractor.unfinished
   
-  def srvProcessInput(data: Seq[Byte]) = {
+  def srvProcessInput(data: ByteSeq) = {
     trace("doHandleInput(%s)".format(loggable(data)))
-    val extracted = extractor(data) map { _.toArray.drop(4).toIISeq }
+    val extracted = extractor(data) map { _.drop(4) }
     for (msg <- extracted) trace("Complete message of length %s available: [%s]".format(msg.length, loggable(ByteCharSeq(msg: _*))))
     extracted
   }

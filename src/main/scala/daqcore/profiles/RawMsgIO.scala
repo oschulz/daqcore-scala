@@ -24,9 +24,9 @@ import daqcore.actors._
 
 
 trait RawMsgInput extends GenericInput { val inputCompanion = RawMsgInput }
-object RawMsgInput extends GenericInputCompanion { type InputData = Seq[Byte] }
+object RawMsgInput extends GenericInputCompanion { type InputData = ByteSeq }
 
 trait RawMsgOutput extends GenericOutput { val outputCompanion = RawMsgOutput }
-object RawMsgOutput extends GenericOutputCompanion { type OutputData = Seq[Byte] }
+object RawMsgOutput extends GenericOutputCompanion { type OutputData = ByteSeq }
 
 trait RawMsgIO extends RawMsgInput with RawMsgOutput
