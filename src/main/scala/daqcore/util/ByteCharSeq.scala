@@ -25,6 +25,8 @@ class ByteCharSeq(protected val buffer: Array[Byte], val from: Int, val until: I
   with scala.collection.immutable.IndexedSeq[Byte]
   with IndexedSeqLike[Byte, ByteCharSeq]
 {
+  override def iterator = ArrayIterator.forArrayRange(buffer, from, until)
+
   require((from <= until) && (until <= buffer.length))
 
   def length = until - from
@@ -34,22 +36,11 @@ class ByteCharSeq(protected val buffer: Array[Byte], val from: Int, val until: I
     else throw new java.lang.IndexOutOfBoundsException(index.toString)
   }
   
-  override def copyToArray[B >: Byte](xs: Array[B], start: Int, len: Int): Unit = {
-    try copyToArray(xs.asInstanceOf[Array[Byte]], start, len, 0)
-    catch {
-      case e: java.lang.ClassCastException =>
-        super.copyToArray(xs, start, len)
-    }
-  }
+  override def copyToArray[B >: Byte](xs: Array[B], start: Int, len: Int): Unit =
+    iterator.copyToArray(xs, start, len)
 
-  def copyToArray(xs: Array[Byte], start: Int, len: Int, offset: Int): Unit =
-    for (i <- 0 to len - 1) xs(offset + i) = buffer(from + start + i)
-
-  override def toArray[B >: Byte](implicit arg0: ClassManifest[B]): Array[B] = {
-    val a: Array[Byte] = Array.ofDim[Byte](length)
-    copyToArray(a)
-    a.asInstanceOf[Array[B]]    
-  }
+  override def toArray[B >: Byte](implicit arg0: ClassManifest[B]): Array[B] =
+    iterator.toArray
   
   override def foreach[U](f: (Byte) => U): Unit =
     for (i <- this.from to this.until-1) f(buffer(i))
@@ -66,8 +57,8 @@ class ByteCharSeq(protected val buffer: Array[Byte], val from: Int, val until: I
       new ByteCharSeq(this.buffer, this.from, that.until)
     } else {
       val a = Array.ofDim[Byte](this.length + that.length)
-      this.copyToArray(a, 0, this.length, 0)
-      that.copyToArray(a, 0, that.length, this.length)
+      this.copyToArray(a, 0, this.length)
+      that.copyToArray(a, this.length, that.length)
       new ByteCharSeq(a, 0, a.length)
     }
   }
