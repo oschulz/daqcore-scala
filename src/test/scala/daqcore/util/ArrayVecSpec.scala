@@ -45,5 +45,38 @@ class ArrayVecSpec extends WordSpec with MustMatchers {
         assert(sub2 === seq.slice(2,4))
       }
     }
+    
+    "exerciced" should {
+      "behave like a Vector" in {
+        for (i <- 1 to 10000) {
+          def rndFull = util.Random.nextInt
+          def rnd(max: Int) = util.Random.nextInt(max)
+          
+          val n = rnd(16) + 1
+          val nTake = rnd(n)
+          val nDrop = rnd(n)
+          val rev = util.Random.nextBoolean
+          val arrayOffs = rnd(n)
+          val arrayCpLen = rnd(n)
+          
+          val ref = Vector.fill(n){rndFull}
+          val seq = ArrayVec(ref: _*)
+          
+          var refIt = if (!rev) ref.iterator else ref.reverseIterator
+          var seqIt = if (!rev) seq.iterator else seq.reverseIterator
+          
+          refIt = refIt.take(nTake).drop(nDrop)
+          seqIt = seqIt.take(nTake).drop(nDrop)
+
+          val refArray = Array.ofDim[Int](n)
+          val seqArray = Array.ofDim[Int](n)
+          refIt.copyToArray(refArray, arrayOffs, arrayCpLen)
+          seqIt.copyToArray(seqArray, arrayOffs, arrayCpLen)
+          
+          assert(refIt.toList === seqIt.toList)
+          assert(refArray.toSeq === seqArray.toSeq)
+        }
+      }
+    }
   }
 }
