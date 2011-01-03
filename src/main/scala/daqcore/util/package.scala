@@ -35,6 +35,18 @@ implicit def reflectionOps(cl: java.lang.Class[_]) = new ReflectionOps(cl)
 implicit def randomOps(rnd: scala.util.Random) = new RandomOps(rnd)
 implicit val defaultRandom = scala.util.Random
 
+
+implicit def intArrayIteratorOpt(it: ArrayIterator[Int]) = new IntArrayIteratorOpt(it)
+implicit def longArrayIteratorOpt(it: ArrayIterator[Long]) = new LongArrayIteratorOpt(it)
+implicit def floatArrayIteratorOpt(it: ArrayIterator[Float]) = new FloatArrayIteratorOpt(it)
+implicit def doubleArrayIteratorOpt(it: ArrayIterator[Double]) = new DoubleArrayIteratorOpt(it)
+
+implicit def intArrayVecOpt(seq: ArrayVec[Int]) = new IntArrayVecOpt(seq)
+implicit def longArrayVecOpt(seq: ArrayVec[Long]) = new LongArrayVecOpt(seq)
+implicit def floatArrayVecOpt(seq: ArrayVec[Float]) = new FloatArrayVecOpt(seq)
+implicit def doubleArrayVecOpt(seq: ArrayVec[Double]) = new DoubleArrayVecOpt(seq)
+
+
 def fast[A: ClassManifest](seq: Seq[A]) = FastSeqOps[A](seq)
 
 implicit def idxSeq2subSeq[T](seq: IndexedSeq[T]) = new SubIdxSeq(seq, 0, seq.length)

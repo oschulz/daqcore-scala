@@ -20,4 +20,9 @@ package daqcore.util
 
 class TraversableOnceOps[A](coll: TraversableOnce[A]) {
   def toLazyStream: LazyStream[A] = coll.toList.toLazyStream
+  
+  def toArrayVec (implicit arg0: ClassManifest[A]): ArrayVec[A] = coll match {
+    case seq: ArrayVec[_] => seq.asInstanceOf[ArrayVec[A]]
+    case trav => ArrayVec.wrap(trav.toArray)
+  }
 }

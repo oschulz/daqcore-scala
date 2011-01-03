@@ -22,4 +22,6 @@ import scala.collection.mutable.ArrayBuilder
 
 class ArrayOps[A: ClassManifest](array: Array[A]) {
   def toIISeq = array.toSeq.asInstanceOf[IndexedSeq[A]]
+
+  def toArrayVec: ArrayVec[A] = ArrayVec.wrap(array)
 }
