@@ -20,10 +20,6 @@ package daqcore.prot.rootsys
 import daqcore.util._
 
 import java.util.UUID
-import org.jboss.netty.buffer.{ChannelBuffer => NChannelBuffer, ChannelBuffers => NChannelBuffers}
-
-
-trait BasicIO extends BasicInput with BasicOutput
 
 
 abstract trait BasicInput {
@@ -37,9 +33,10 @@ abstract trait BasicInput {
   def readString(): String
   def readUUID(): UUID
 
-  def readArray[@specialized A: ClassManifest](): Array[A]
+  def readArray[@specialized A: ClassManifest](): Array[A] =
+    readSeq[A]().toArray
   
-  def readSeq[A: ClassManifest](): ArrayVec[A] = readArray[A].toArrayVec
+  def readSeq[A: ClassManifest](): ArrayVec[A]
 }
 
 
@@ -54,29 +51,23 @@ abstract trait BasicOutput {
   def writeString(x: String): Unit
   def writeUUID(x: UUID): Unit
 
-  def writeArray[@specialized A: ClassManifest](array: Array[A]): Unit
+  def writeArray[@specialized A: ClassManifest](array: Array[A]): Unit =
+    writeSeq(ArrayVec.wrap(array))
   
-  def writeSeq[A: ClassManifest](seq: Seq[A]): Unit = writeArray(seq.toArray)
+  def writeSeq[A: ClassManifest](seq: Seq[A]): Unit
 }
 
 
-class BufferIO(val buffer: NChannelBuffer) extends BasicIO {
-  def clear(): Unit = buffer.clear()
+case class RootEncInput(val source: ByteSeqIterator) extends BasicInput {
+  implicit val enc = BigEndian
 
-  def toArray: Array[Byte] = {
-    val a = Array.ofDim[Byte](buffer.writerIndex)
-    buffer.getBytes(0, a, 0, a.length)
-    a
-  }
-
-
-  final def readBoolean() = (buffer.readByte() > 0)
-  final def readByte() = buffer.readByte()
-  final def readShort() = buffer.readShort()
-  final def readInt() = buffer.readInt()
-  final def readLong() = buffer.readLong()
-  final def readFloat() = buffer.readFloat()
-  final def readDouble() = buffer.readDouble()
+  final def readBoolean() = (enc.getByte(source) > 0)
+  final def readByte() = enc.getByte(source)
+  final def readShort() = enc.getShort(source)
+  final def readInt() = enc.getInt(source)
+  final def readLong() = enc.getLong(source)
+  final def readFloat() = enc.getFloat(source)
+  final def readDouble() = enc.getDouble(source)
 
   final def readString() = {
     val length = {
@@ -84,7 +75,8 @@ class BufferIO(val buffer: NChannelBuffer) extends BasicIO {
       if (l < 0xff) l else readInt()
     }
     val a = Array.ofDim[Byte](length)
-    buffer.readBytes(a)
+    require(source.length >= length)
+    source.copyToArray(a)
     new String(a)
   }
 
@@ -94,19 +86,41 @@ class BufferIO(val buffer: NChannelBuffer) extends BasicIO {
     new UUID(mostSigBits, leastSigBits)
   }
 
-  final def writeBoolean(x: Boolean) = buffer.writeByte(if (x) 1 else 0)
-  final def writeByte(x: Byte) = buffer.writeByte(x)
-  final def writeShort(x: Short) = buffer.writeShort(x)
-  final def writeInt(x: Int) = buffer.writeInt(x)
-  final def writeLong(x: Long) = buffer.writeLong(x)
-  final def writeFloat(x: Float) = buffer.writeFloat(x)
-  final def writeDouble(x: Double) = buffer.writeDouble(x)
+  final def readSeq[A: ClassManifest](): ArrayVec[A] = {
+    val mf = classManifest[A]
+    val length = readInt()
+
+    if (mf == classManifest[Boolean]) enc.getBytes(source, length).map{_ > 0}.asInstanceOf[ArrayVec[A]]
+    else if (mf == classManifest[Byte]) enc.getBytes(source, length).asInstanceOf[ArrayVec[A]]
+    else if (mf == classManifest[Short]) enc.getShorts(source, length).asInstanceOf[ArrayVec[A]]
+    else if (mf == classManifest[Int]) enc.getInts(source, length).asInstanceOf[ArrayVec[A]]
+    else if (mf == classManifest[Long]) enc.getLongs(source, length).asInstanceOf[ArrayVec[A]]
+    else if (mf == classManifest[Float]) enc.getFloats(source, length).asInstanceOf[ArrayVec[A]]
+    else if (mf == classManifest[Double]) enc.getDoubles(source, length).asInstanceOf[ArrayVec[A]]
+    else throw new UnsupportedOperationException("RootEncInput.readSeq() does not support " + mf)
+  }
+}
+
+
+case class RootEncOutput(val target: ByteSeqBuilder) extends BasicOutput {
+  implicit val enc = BigEndian
+
+  def clear() = target.clear()
+
+  def result() = target.result()
+
+  final def writeBoolean(x: Boolean) = enc.putByte(target, if (x) 1 else 0)
+  final def writeByte(x: Byte) = enc.putByte(target, x)
+  final def writeShort(x: Short) = enc.putShort(target, x)
+  final def writeInt(x: Int) = enc.putInt(target, x)
+  final def writeLong(x: Long) = enc.putLong(target, x)
+  final def writeFloat(x: Float) = enc.putFloat(target, x)
+  final def writeDouble(x: Double) = enc.putDouble(target, x)
 
   final def writeString(x: String) = {
     if (x.length < 0xff) writeByte(x.length.toByte)
     else { writeByte(0xff.toByte); writeInt(x.length) }
-    val a = x.getBytes()
-    buffer.writeBytes(a)
+    target ++= x.getBytes()
   }
 
   final def writeUUID(x: UUID) = {
@@ -116,83 +130,18 @@ class BufferIO(val buffer: NChannelBuffer) extends BasicIO {
     writeLong(leastSigBits)
   }
 
-  final def writeArray[@specialized A: ClassManifest](array: Array[A]): Unit = {
-    writeInt(array.length)
+  def writeSeq[A: ClassManifest](seq: Seq[A]) = {
+    val mf = classManifest[A]
+    writeInt(seq.length)
 
-    if (array.isInstanceOf[Array[Boolean]]) {
-      val a = array.asInstanceOf[Array[Boolean]]
-      for (i <- 0 to a.length-1) writeBoolean(a(i))
-    }
-    else if (array.isInstanceOf[Array[Byte]]) {
-      val a = array.asInstanceOf[Array[Byte]]
-      buffer.writeBytes(a)
-    }
-    else if (array.isInstanceOf[Array[Short]]) {
-      val a = array.asInstanceOf[Array[Short]]
-      for (i <- 0 to a.length-1) buffer.writeShort(a(i))
-    }
-    else if (array.isInstanceOf[Array[Int]]) {
-      val a = array.asInstanceOf[Array[Int]]
-      for (i <- 0 to a.length-1) buffer.writeInt(a(i))
-    }
-    else if (array.isInstanceOf[Array[Long]]) {
-      val a = array.asInstanceOf[Array[Long]]
-      for (i <- 0 to a.length-1) buffer.writeLong(a(i))
-    }
-    else if (array.isInstanceOf[Array[Float]]) {
-      val a = array.asInstanceOf[Array[Float]]
-      for (i <- 0 to a.length-1) buffer.writeFloat(a(i))
-    }
-    else if (array.isInstanceOf[Array[Double]]) {
-      val a = array.asInstanceOf[Array[Double]]
-      for (i <- 0 to a.length-1) buffer.writeDouble(a(i))
-    }
-    else throw new IllegalArgumentException("BufferIO.writeArray does not support " + array.getClass)
+    val xs = seq.toArrayVec
+    if (mf == classManifest[Boolean]) enc.putBytes(target, xs.asInstanceOf[ArrayVec[Boolean]].map{x => (if (x) 1 else 0).toByte})
+    else if (mf == classManifest[Byte]) enc.putBytes(target, xs.asInstanceOf[ArrayVec[Byte]])
+    else if (mf == classManifest[Short]) enc.putShorts(target, xs.asInstanceOf[ArrayVec[Short]])
+    else if (mf == classManifest[Int]) enc.putInts(target, xs.asInstanceOf[ArrayVec[Int]])
+    else if (mf == classManifest[Long]) enc.putLongs(target, xs.asInstanceOf[ArrayVec[Long]])
+    else if (mf == classManifest[Float]) enc.putFloats(target, xs.asInstanceOf[ArrayVec[Float]])
+    else if (mf == classManifest[Double]) enc.putDoubles(target, xs.asInstanceOf[ArrayVec[Double]])
+    else throw new UnsupportedOperationException("RootEncOutput.writeSeq(...) does not support " + mf)
   }
-
-
-  final def readArray[@specialized A: ClassManifest](): Array[A] = {
-    val length = readInt()
-    val array = Array.ofDim[A](length)
-
-    if (array.isInstanceOf[Array[Boolean]]) {
-      val a = array.asInstanceOf[Array[Boolean]]
-      for (i <- 0 to a.length-1) a(i) = readBoolean()
-    }
-    else if (array.isInstanceOf[Array[Byte]]) {
-      val a = array.asInstanceOf[Array[Byte]]
-      buffer.readBytes(a)
-    }
-    else if (array.isInstanceOf[Array[Short]]) {
-      val a = array.asInstanceOf[Array[Short]]
-      for (i <- 0 to a.length-1) a(i) = buffer.readShort()
-    }
-    else if (array.isInstanceOf[Array[Int]]) {
-      val a = array.asInstanceOf[Array[Int]]
-      for (i <- 0 to a.length-1) a(i) = buffer.readInt()
-    }
-    else if (array.isInstanceOf[Array[Long]]) {
-      val a = array.asInstanceOf[Array[Long]]
-      for (i <- 0 to a.length-1) a(i) = buffer.readLong()
-    }
-    else if (array.isInstanceOf[Array[Float]]) {
-      val a = array.asInstanceOf[Array[Float]]
-      for (i <- 0 to a.length-1) a(i) = buffer.readFloat()
-    }
-    else if (array.isInstanceOf[Array[Double]]) {
-      val a = array.asInstanceOf[Array[Double]]
-      for (i <- 0 to a.length-1) a(i) = buffer.readDouble()
-    }
-    else throw new IllegalArgumentException("BufferIO.readArray does not support " + array.getClass)
-
-    array
-  }
-}
-
-
-object BufferIO {
-  def apply(): BufferIO = apply(1024)
-  def apply(initialSize: Int): BufferIO = new BufferIO(NChannelBuffers.dynamicBuffer(initialSize))
-  def apply(array: Array[Byte]): BufferIO = new BufferIO(NChannelBuffers.wrappedBuffer(array))
-  def apply(buffer: NChannelBuffer): BufferIO = new BufferIO(buffer)
 }

@@ -35,8 +35,6 @@ class RootSystemServer() extends Server with KeepAlive with PostInit with Closea
 
   override def profiles = super.profiles.+[Closeable]
 
-  val msgBuffer = BufferIO()
-
   case class ActiveQuery(id: Int, readResp: BasicInput => Any, replyTo: MsgTarget)
   
   var io: RawMsgIO = _
@@ -63,11 +61,11 @@ class RootSystemServer() extends Server with KeepAlive with PostInit with Closea
 
   def sendRequest(request: RootSysRequest): Int = {
     msgId += 1
-    msgBuffer.clear()
+    val msgBuffer = RootEncOutput(ByteSeqBuilder(1024))
     msgBuffer.writeInt(requestMsgType)
     msgBuffer.writeInt(msgId)
     request.writeRequest(msgBuffer)
-    io.send(ByteSeq.wrap(msgBuffer.toArray))
+    io.send(msgBuffer.result())
     io.flush()
     msgId
   }
@@ -75,14 +73,14 @@ class RootSystemServer() extends Server with KeepAlive with PostInit with Closea
   def handleRootSysMsg(msg: ByteSeq): Unit = {
     io.triggerRecv()
     val ActiveQuery(id, readResp, replyTo) = queries.dequeue()
-    val msgBuffer = BufferIO(msg.toArray)
+    val source = RootEncInput(msg.iterator)
 
-    val msgType = msgBuffer.readInt()
+    val msgType = source.readInt()
     if (msgType != responseMsgType) throw new IOException("Unknown message type " + msgType)
-    val msgId = msgBuffer.readInt()
+    val msgId = source.readInt()
     if (msgId != id) throw new IOException("Unexpected message id " + msgId)
     
-    val resp = readResp(msgBuffer)
+    val resp = readResp(source)
     replyTo ! resp
   }
   
