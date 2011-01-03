@@ -119,11 +119,11 @@ trait ValEncoding {
   def fromBytes[A <: AnyVal : ClassManifest](bytes: ByteSeq) : ArrayVec[A] = {
     val mf = classManifest[A]
     if (mf == classManifest[Byte]) getBytes(bytes.iterator, bytes.length / sizeOf[Byte]).asInstanceOf[ArrayVec[A]]
-    if (mf == classManifest[Short]) getShorts(bytes.iterator, bytes.length / sizeOf[Short]).asInstanceOf[ArrayVec[A]]
-    if (mf == classManifest[Int]) getInts(bytes.iterator, bytes.length / sizeOf[Int]).asInstanceOf[ArrayVec[A]]
-    if (mf == classManifest[Long]) getLongs(bytes.iterator, bytes.length / sizeOf[Long]).asInstanceOf[ArrayVec[A]]
-    if (mf == classManifest[Float]) getFloats(bytes.iterator, bytes.length / sizeOf[Float]).asInstanceOf[ArrayVec[A]]
-    if (mf == classManifest[Double]) getDoubles(bytes.iterator, bytes.length / sizeOf[Double]).asInstanceOf[ArrayVec[A]]
+    else if (mf == classManifest[Short]) getShorts(bytes.iterator, bytes.length / sizeOf[Short]).asInstanceOf[ArrayVec[A]]
+    else if (mf == classManifest[Int]) getInts(bytes.iterator, bytes.length / sizeOf[Int]).asInstanceOf[ArrayVec[A]]
+    else if (mf == classManifest[Long]) getLongs(bytes.iterator, bytes.length / sizeOf[Long]).asInstanceOf[ArrayVec[A]]
+    else if (mf == classManifest[Float]) getFloats(bytes.iterator, bytes.length / sizeOf[Float]).asInstanceOf[ArrayVec[A]]
+    else if (mf == classManifest[Double]) getDoubles(bytes.iterator, bytes.length / sizeOf[Double]).asInstanceOf[ArrayVec[A]]
     else throw new UnsupportedOperationException("ByteOrder.fromBytes() does not support " + mf)
   }
 
