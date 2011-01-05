@@ -326,6 +326,8 @@ abstract class SIS3300Server(val vmeBus: VMEBus, val baseAddress: Int) extends E
     settingsVar = settingsVar.copy(daq = clampedSettings)
   }
   
+  def trigEnabled(i: Int): Boolean = settings.trigger.thresholds(i).threshold != 0xfff
+  
   def srvSetTrigMode(toSet: TriggerMode): Unit
   
   
@@ -479,7 +481,10 @@ abstract class SIS3300Server(val vmeBus: VMEBus, val baseAddress: Int) extends E
 
     val evDir = read(evDirRegs take nEvents)
     val tsDir = read(tsDirRegs take nEvents)
-    val rawGroupEvData = for {(group, mem) <- groupMem} yield {
+    val rawGroupEvData = for {
+      (group, mem) <- groupMem
+      if (!settingsVar.daq.trigOnly || trigEnabled(group.chOdd) || trigEnabled(group.chEven))      
+    } yield {
       val raw = read(mem take nEvents * nSamples).toArrayVec
       group -> raw
     }
