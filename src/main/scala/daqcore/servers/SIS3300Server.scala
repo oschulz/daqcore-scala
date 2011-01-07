@@ -99,7 +99,7 @@ abstract class SIS3300Server(val vmeBus: VMEBus, val baseAddress: Int) extends E
   }
 
 
-  /*protected*/ def acquireNext = sendAfter(100, srv, TimedAcquire)
+  /*protected*/ def acquireNext = sendAfter(50, srv, TimedAcquire)
   
   protected def onAcquireNext: Unit = {
     if (getBankFull) {
