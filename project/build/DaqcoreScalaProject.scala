@@ -16,6 +16,7 @@ class DaqcoreScalaProject(info: ProjectInfo) extends DefaultProject(info) with A
   val multiverseRepo = "Multiverse Releases" at "http://multiverse.googlecode.com/svn/maven-repository/releases/"
   val guiceyfruitRepo = "GuiceyFruit" at "http://guiceyfruit.googlecode.com/svn/repo/releases/"
   val akkaRepo = "Akka Maven Repository" at "http://scalablesolutions.se/akka/repository"
+  val databinderModuleConfig  = ModuleConfiguration("net.databinder", ScalaToolsReleases)
 
   val scala_continuations = compilerPlugin("org.scala-lang.plugins" % "continuations" % "2.8.1")
 
