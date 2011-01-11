@@ -27,9 +27,6 @@ class DaqcoreScalaProject(info: ProjectInfo) extends DefaultProject(info) with A
   val akka_remote = "se.scalablesolutions.akka" % "akka-remote" % "1.0-RC3"
   val akka_stm = "se.scalablesolutions.akka" % "akka-stm" % "1.0-RC3"
 
-  val mina_ore = "org.apache.mina" % "mina-core" % "2.0.0-RC1"
-  val mina_serial = "org.apache.mina" % "mina-transport-serial" % "2.0.0-RC1"
-
   val netty = "org.jboss.netty" % "netty" % "3.2.1.Final" % "compile"
 
   val jfreechart = "jfree" % "jfreechart" % "1.0.13"
