@@ -1,7 +1,7 @@
 import sbt._
 import Process._
 
-class DaqcoreScalaProject(info: ProjectInfo) extends DefaultProject(info) with AutoCompilerPlugins {
+class DaqcoreScalaProject(info: ProjectInfo) extends DefaultProject(info) with AutoCompilerPlugins with AkkaProject {
   override def parallelExecution = true
 
   val publishTo = Resolver.file("maven-local", Path.userHome / ".m2" / "repository" asFile)
@@ -10,23 +10,15 @@ class DaqcoreScalaProject(info: ProjectInfo) extends DefaultProject(info) with A
   val tuDoE4Releases = "TU-Do Physik E4 Releases" at "http://maven.e4.physik.uni-dortmund.de/maven2/releases/"
   val tuDoE4Snapshots = "TU-Do Physik E4 Releases" at "http://maven.e4.physik.uni-dortmund.de/maven2/snapshots/"
 
-  val snapshotsRepo = ScalaToolsSnapshots
-
-  val jBossRepo = "jBoss" at "http://repository.jboss.org/nexus/content/groups/public/"
-  val multiverseRepo = "Multiverse Releases" at "http://multiverse.googlecode.com/svn/maven-repository/releases/"
-  val guiceyfruitRepo = "GuiceyFruit" at "http://guiceyfruit.googlecode.com/svn/repo/releases/"
-  val akkaRepo = "Akka Maven Repository" at "http://scalablesolutions.se/akka/repository"
-  val databinderModuleConfig  = ModuleConfiguration("net.databinder", ScalaToolsReleases)
-
   val scala_continuations = compilerPlugin("org.scala-lang.plugins" % "continuations" % "2.8.1")
 
   val scala_swing = "org.scala-lang" % "scala-swing" % "2.8.1"
 
   val scalatest = "org.scalatest" % "scalatest" % "1.2" % "test"
 
-  val akka_actor = "se.scalablesolutions.akka" % "akka-actor" % "1.0-RC3"
-  val akka_remote = "se.scalablesolutions.akka" % "akka-remote" % "1.0-RC3"
-  val akka_stm = "se.scalablesolutions.akka" % "akka-stm" % "1.0-RC3"
+  val akka_actor = akkaModule("actor")
+  val akka_remote = akkaModule("remote")
+  val akka_stm = akkaModule("stm")
 
   val netty = "org.jboss.netty" % "netty" % "3.2.1.Final" % "compile"
 

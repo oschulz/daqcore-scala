@@ -1,4 +1,3 @@
 /project/boot
-/project/build/target
-/lib_managed
-/target
+lib_managed
+target
