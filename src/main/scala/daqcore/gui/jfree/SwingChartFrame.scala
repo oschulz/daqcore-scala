@@ -15,7 +15,8 @@
 // Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 
-package daqcore.gui.jfree
+package daqcore.gui
+package jfree
 
 import scala.swing._
 import org.jfree.chart._
@@ -41,7 +42,7 @@ class SwingChartFrame(chart: JFreeChart, frameTitle: String = "Chart") extends F
   title = frameTitle
   contents = SwingChartPanel(chart)
   
-  def show() = Swing.onEDT {
+  def show() = synchedOnEDT {
     pack()
     visible = true
   }

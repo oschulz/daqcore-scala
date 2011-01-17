@@ -15,7 +15,8 @@
 // Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 
-package daqcore.gui.jfree
+package daqcore.gui
+package jfree
 
 import scala.swing._
 
@@ -45,7 +46,7 @@ class JFreeChartOps(chart: JFreeChart) {
   
   def onProgress(handlerFunc: PartialFunction[ChartProgressEvent, Boolean]): Unit = {
     val handler = new ChartProgressHandler(handlerFunc)
-    Swing.onEDT { chart.addProgressListener(handler) }
+    synchedOnEDT { chart.addProgressListener(handler) }
   }
 
   def draw(title: String = ""): SwingChartFrame = {

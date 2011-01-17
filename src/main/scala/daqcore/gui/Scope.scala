@@ -53,7 +53,7 @@ class Scope(source: EventSource) extends CloseableServer {
     
     contents = SwingChartPanel(chart)
 
-    def draw(ev: raw.Event) = Swing.onEDT {
+    def draw(ev: raw.Event) = synchedOnEDT {
       val xRanges = for ((ch, trans) <- ev.trans) yield
         ch -> Range(0 - trans.trigPos, trans.samples.size - trans.trigPos)
       
@@ -77,7 +77,7 @@ class Scope(source: EventSource) extends CloseableServer {
         chSeries(ch) ++= xRanges(ch).view zip trans.samples
     }
     
-    def show() = Swing.onEDT {
+    def show() = synchedOnEDT {
       pack()
       visible = true
     }

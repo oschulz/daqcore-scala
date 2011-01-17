@@ -15,7 +15,8 @@
 // Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 
-package daqcore.gui.jfree
+package daqcore.gui
+package jfree
 
 import scala.swing._
 
@@ -33,8 +34,9 @@ class XYSeriesOps(series: XYSeries) {
   def ++=[TX, TY]
     (points: Seq[(TX, TY)])
     (implicit numX: Numeric[TX], numY: Numeric[TY])
-    : XYSeries = {
-      Swing.onEDT { for (p <- points) series.add(numX.toDouble(p._1), numY.toDouble(p._2)) }
+    : XYSeries =
+    synchedOnEDT {
+      for (p <- points) series.add(numX.toDouble(p._1), numY.toDouble(p._2))
       series
     }
 }
