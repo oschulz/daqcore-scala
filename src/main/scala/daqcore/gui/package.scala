@@ -18,13 +18,35 @@
 package daqcore
 
 import scala.swing._
-import javax.swing.UIManager
-
+import javax.swing.{SwingUtilities, UIManager}
 
 package object gui {
   def setLook(): Unit = {
     Swing.onEDT {
       UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName())
+    }
+  }
+  
+  def asyncOnEDT(body: => Unit): Unit = Swing.onEDT { body }
+
+  def synchedOnEDT[A](body: => A): A = {
+    if (SwingUtilities.isEventDispatchThread()) body
+    else {
+      var result: Option[A] = None
+      var exception: Throwable = null
+      
+      val lock = new {}
+      lock.synchronized {
+        Swing.onEDT {
+          lock.synchronized {
+            try { result = Some(body) }
+            catch { case e => exception = e }
+            finally { lock.notify() }
+          }
+        }
+        lock.wait()
+        result getOrElse {throw exception}
+      }
     }
   }
 }
