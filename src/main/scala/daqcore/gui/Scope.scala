@@ -29,7 +29,9 @@ import daqcore.profiles._
 import daqcore.monads._
 import daqcore.data._
 
-import org.jfree.chart.{event => jfcEvent}
+import org.jfree.chart.event.ChartProgressEvent
+
+import daqcore.gui.jfree._
 
 
 class Scope(source: EventSource) extends CloseableServer {
@@ -40,28 +42,16 @@ class Scope(source: EventSource) extends CloseableServer {
 
   def maxRange(a: Range, b: Range) = math.min(a.head, b.head) to math.max(a.last, b.last)
 
-  val plot = XYLinePlot()
+  val chart = Chart.XY()
 
   val channels = 1 to 9
-  val chSeries = Map ( (
-    for (ch <- channels) yield { ch -> XYSeries("Ch%s".format(ch)) }
-  ) : _*)
-  for (ch <- channels) plot.addSeries(chSeries(ch))
-
-  object drawProgressListener extends jfcEvent.ChartProgressListener {
-    def enableOnce() : Unit = plot.self.addProgressListener(this)
-    def chartProgress(event: jfcEvent.ChartProgressEvent) = {
-      if (event.getType == jfcEvent.ChartProgressEvent.DRAWING_FINISHED ) {
-        plot.self.removeProgressListener(this)
-        srv ! DrawingFinished
-      }
-    }
-  }
+  val chSeries = ( for (ch <- channels) yield { ch -> jfree.XYSeries("Ch%s".format(ch)) } ).toMap
+  for (ch <- channels) chart.xyDatasets.addSeries(chSeries(ch))
 
   object frame extends Frame {
     title = "Scope"
     
-    contents = PlotPanel(plot)
+    contents = SwingChartPanel(chart)
 
     def draw(ev: raw.Event) = Swing.onEDT {
       val xRanges = for ((ch, trans) <- ev.trans) yield
@@ -70,21 +60,21 @@ class Scope(source: EventSource) extends CloseableServer {
       val yRanges = for ((ch, trans) <- ev.trans) yield
         ch -> (trans.samples.min to trans.samples.max)
       
-      if (plot.self.getXYPlot.getDomainAxis.isAutoRange) {
+      if (chart.getXYPlot.getDomainAxis.isAutoRange) {
         val xRange = xRanges.values.reduceLeft(maxRange)
-        plot.self.getXYPlot.getDomainAxis.setLowerBound(xRange.head)
-        plot.self.getXYPlot.getDomainAxis.setUpperBound(xRange.last)
+        chart.getXYPlot.getDomainAxis.setLowerBound(xRange.head)
+        chart.getXYPlot.getDomainAxis.setUpperBound(xRange.last)
       }
-      if (plot.self.getXYPlot.getRangeAxis.isAutoRange) {
+      if (chart.getXYPlot.getRangeAxis.isAutoRange) {
         val yRange = maxRange(0 to 4095, yRanges.values.reduceLeft(maxRange))
-        plot.self.getXYPlot.getRangeAxis.setLowerBound(yRange.head)
-        plot.self.getXYPlot.getRangeAxis.setUpperBound(yRange.last)
+        chart.getXYPlot.getRangeAxis.setLowerBound(yRange.head)
+        chart.getXYPlot.getRangeAxis.setUpperBound(yRange.last)
       }
       
       for ((ch, trans) <- ev.trans) chSeries(ch).clear()
 
       for ((ch, trans) <- ev.trans)
-        chSeries(ch) append ( xRanges(ch).view zip trans.samples )
+        chSeries(ch) ++= xRanges(ch).view zip trans.samples
     }
     
     def show() = Swing.onEDT {
@@ -105,9 +95,13 @@ class Scope(source: EventSource) extends CloseableServer {
       trace("Drawing finished")
       source addHandlerFunc { case ev:raw.Event => srv ! Draw(ev); false }
     }
+
     case Draw(ev) => {
+      chart onProgress {
+        case ev if ev.getType == ChartProgressEvent.DRAWING_FINISHED =>
+          { srv ! DrawingFinished; false }
+      }
       frame.draw(ev)
-      drawProgressListener.enableOnce()
     }
   }
 }
