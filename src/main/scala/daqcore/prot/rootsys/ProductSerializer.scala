@@ -35,8 +35,15 @@ class ProductSerializer[A <: Product : ClassManifest]() extends ContentSerialize
     
     if (fieldMFs != ctorMFs) throw new IllegalArgumentException("ProductSerializer: Can't support type " + mf + ", constructor argument and field types don't match.")
     
-    for {(name, mf) <- fieldNames zip ctorMFs} yield new FieldIO(name, ContentSerializer.forType(mf))
+    for {(name, mf) <- fieldNames zip ctorMFs} yield FieldIO(name, ContentSerializer.forType(mf))
   }
+  
+  val flatFields: Seq[FieldIO[_]] = fields flatMap { f => f.io match {
+    case ps: ProductSerializer[_] => for (g <- ps.flatFields) yield {
+      g.copy(f.name + "." + g.name, g.io)
+    }
+    case _ => Seq(f)
+  } }
 
   def write(out: BasicOutput, x: A) = {
     for { (f, v) <- fields.iterator zip x.productIterator }
@@ -55,7 +62,7 @@ class ProductSerializer[A <: Product : ClassManifest]() extends ContentSerialize
 object ProductSerializer {
   def forType[A <: Product : ClassManifest] = new ProductSerializer[A]
 
-  class FieldIO[T](val name: String, val io: ContentSerializer[T]) {
+  case class FieldIO[T](val name: String, val io: ContentSerializer[T]) {
     protected def getTypeName(mf: ClassManifest[_]): String = {
       def unsupported = new IllegalArgumentException("FieldIO does not support type " + mf)
       mf.erasure match {
@@ -72,6 +79,7 @@ object ProductSerializer {
           else if (classOf[UUID] == cl) "uuid"
           else if (classOf[Seq[_]].isAssignableFrom(cl) && cl.isAssignableFrom(classOf[ArrayVec[_]]))
             "vector<" + getTypeName(mf.typeArguments.head.asInstanceOf[ClassManifest[_]]) + ">"
+          else if (classOf[Product].isAssignableFrom(cl)) cl.shortName
           else throw unsupported
         }
       }
