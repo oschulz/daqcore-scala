@@ -31,6 +31,8 @@ import daqcore.actors._
 import daqcore.profiles._
 import daqcore.data._
 
+import Event.Raw.Transient
+
 
 class TTreeEventWriter(val source: EventSource, val target: File, timeout: Long = 10000) extends PostInit with CloseableServer {
   override def profiles = super.profiles.+[Closeable]

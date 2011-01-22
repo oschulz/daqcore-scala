@@ -31,6 +31,9 @@ import daqcore.monads._
 import daqcore.data._
 import daqcore.math._
 
+import Event.{Info, Raw}
+import Raw.Transient
+
 
 class SCPIEventReader(val source: SCPIRequestInput) extends InputFilterServer {
   import daqcore.prot.scpi._
@@ -52,8 +55,6 @@ class SCPIEventReader(val source: SCPIRequestInput) extends InputFilterServer {
   def srvProcessInput(data: Request) = {
     import daqcore.prot.scpi._
     import SCPIEventWriter.headers._
-    
-    import Event.{Info, Raw}
     
     trace("srvProcessInput(%s)".format(loggable(data)))
 

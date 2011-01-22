@@ -22,12 +22,6 @@ import java.util.UUID
 import daqcore.util._
 
 
-case class Transient (
-  trigPos: Int,
-  samples: ArrayVec[Int]
-)
-
-
 case class Event (
   info: Event.Info,
   raw: Event.Raw = Event.Raw()
@@ -43,8 +37,16 @@ object Event {
   
   case class Raw (
     trig: Seq[Int] = Vector.empty[Int],
-    trans: Map[Int, Transient] = Map.empty[Int, Transient]
+    trans: Map[Int, Raw.Transient] = Map.empty[Int, Raw.Transient]
   )
+  
+  object Raw {
+    case class Transient (
+      trigPos: Int,
+      samples: ArrayVec[Int]
+    )
+  }
+
 }
 
 

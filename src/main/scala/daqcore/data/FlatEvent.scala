@@ -55,6 +55,8 @@ object FlatEvent {
 
 
   object FlatRaw {
+    import Event.Raw._
+
     def apply(raw: Event.Raw): FlatRaw = FlatRaw (
       trig = raw.trig,
       trans = FlatTransients(raw.trans)

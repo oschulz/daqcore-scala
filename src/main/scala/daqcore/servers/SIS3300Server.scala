@@ -29,6 +29,8 @@ import daqcore.profiles._
 import daqcore.monads._
 import daqcore.data._
 
+import Event.Raw.Transient
+
 
 abstract class SIS3300Server(val vmeBus: VMEBus, val baseAddress: Int) extends EventServer with SyncableServer {
   import SIS3300._

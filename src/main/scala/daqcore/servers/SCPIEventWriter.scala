@@ -30,6 +30,8 @@ import daqcore.profiles._
 import daqcore.monads._
 import daqcore.data._
 
+import Event.Raw.Transient
+
 
 class SCPIEventWriter(val source: EventSource, val output: SCPIRequestOutput) extends CloseableServer {
   import daqcore.prot.scpi._
