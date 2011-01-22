@@ -23,21 +23,16 @@ import java.util.UUID
 import daqcore.util._
 
 
-case class FlatEvent (
-  idx: Int,
-  run: UUID,
-  time: Double,
-  systime: Double,
-  trig: Seq[Int],
-  trans_trigPos: Seq[Int],
-  trans_samples_ch: Seq[Int],
-  trans_samples_val_n: Seq[Int],
-  trans_samples_val: ArrayVec[Short]
+case class FlatTransients (
+  trigPos: Seq[Int],
+  samples_ch: Seq[Int],
+  samples_val_n: Seq[Int],
+  samples_val: ArrayVec[Short]
 ) {
-  def toEvent: Event = {
-    val channelIt = trans_samples_ch.iterator
-    val trigPosIt = trans_trigPos.iterator
-    val nSamplesIt = trans_samples_val_n.iterator
+  def toTransients: Map[Int, Transient] = {
+    val channelIt = samples_ch.iterator
+    val trigPosIt = trigPos.iterator
+    val nSamplesIt = samples_val_n.iterator
 
     var transients = Map.empty[Int, raw.Transient]
     var offset = 0
@@ -46,20 +41,47 @@ case class FlatEvent (
       val channel = channelIt.next
       val trigPos = trigPosIt.next
       val nSamples = nSamplesIt.next
-      val samples = (for {v <- trans_samples_val.view.slice(offset, offset + nSamples)} yield v.toInt).toArrayVec
+      val samples = (for {v <- samples_val.view.slice(offset, offset + nSamples)} yield v.toInt).toArrayVec
       transients = transients + (channel -> raw.Transient(trigPos, samples))
       offset = offset + nSamples
     }
+    
+    transients
+  }
+}
 
-    Event(
-      idx = idx,
-      run = run,
-      time = time,
-      systime = systime,
-      trig = trig,
-      trans = transients
+
+object FlatTransients {
+  def apply(transients: Map[Int, Transient]): FlatTransients = {
+    val transCh = transients.keys.toSeq.sortWith{_ < _}
+
+    FlatTransients(
+      samples_ch = for (ch <- transCh) yield ch,
+      trigPos = for (ch <- transCh) yield transients(ch).trigPos,
+      samples_val_n = for (ch <- transCh) yield transients(ch).samples.size,
+      samples_val = (for {ch <- transCh.view; s <-transients(ch).samples.view} yield s.toShort).toArrayVec
     )
   }
+}
+
+
+
+case class FlatEvent (
+  idx: Int,
+  run: UUID,
+  time: Double,
+  systime: Double,
+  trig: Seq[Int],
+  trans: FlatTransients
+) {
+  def toEvent: Event = Event(
+    idx = idx,
+    run = run,
+    time = time,
+    systime = systime,
+    trig = trig,
+    trans = trans.toTransients
+  )
 }
 
 
@@ -73,10 +95,7 @@ object FlatEvent {
       time = event.time,
       systime = event.systime,
       trig = event.trig,
-      trans_samples_ch = for (ch <- transCh) yield ch,
-      trans_trigPos = for (ch <- transCh) yield event.trans(ch).trigPos,
-      trans_samples_val_n = for (ch <- transCh) yield event.trans(ch).samples.size,
-      trans_samples_val = (for {ch <- transCh.view; s <-event.trans(ch).samples.view} yield s.toShort).toArrayVec
+      trans = FlatTransients(event.trans)
     )
   }
 }
