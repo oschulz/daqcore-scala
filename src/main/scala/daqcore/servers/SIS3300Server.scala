@@ -27,7 +27,7 @@ import daqcore.util._
 import daqcore.actors._
 import daqcore.profiles._
 import daqcore.monads._
-import daqcore.data._, daqcore.data.raw._
+import daqcore.data._
 
 
 abstract class SIS3300Server(val vmeBus: VMEBus, val baseAddress: Int) extends EventServer with SyncableServer {
@@ -550,13 +550,17 @@ abstract class SIS3300Server(val vmeBus: VMEBus, val baseAddress: Int) extends E
       
       val transients = Map(transSeq.flatten: _*) ++ userInMap
 
-      val ev = Event(
-        idx = nextEventNoVar + i,
-        run = runStart.get.uuid,
-        time = time,
-        systime = systime,
-        trig = trig,
-        trans = transients
+      val ev = Event (
+        info = Event.Info (
+          idx = nextEventNoVar + i,
+          run = runStart.get.uuid,
+          time = time,
+          systime = systime
+        ),
+        raw = Event.Raw (
+          trig = trig,
+          trans = transients
+        )
       )
       
       ev

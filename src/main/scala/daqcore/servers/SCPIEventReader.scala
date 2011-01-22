@@ -41,7 +41,7 @@ class SCPIEventReader(val source: SCPIRequestInput) extends InputFilterServer {
   val sourceCompanion = SCPIRequestInput
   
   var runUUID = UUID.randomUUID()
-  var currentEvent: Option[raw.Event] = None
+  var currentEvent: Option[Event] = None
   var eventQueue: List[EventInput.InputData] = Nil
   override def needMoreInput = currentEvent == None
   
@@ -52,6 +52,8 @@ class SCPIEventReader(val source: SCPIRequestInput) extends InputFilterServer {
   def srvProcessInput(data: Request) = {
     import daqcore.prot.scpi._
     import SCPIEventWriter.headers._
+    
+    import Event.{Info, Raw}
     
     trace("srvProcessInput(%s)".format(loggable(data)))
 
@@ -68,11 +70,11 @@ class SCPIEventReader(val source: SCPIRequestInput) extends InputFilterServer {
     
       case Command(`H_EVENt`, NR1(idx), NRf(time)) => {
         require(currentEvent == None)
-        currentEvent = Some(raw.Event(idx = idx, run = runUUID, time = time, systime = 0))
+        currentEvent = Some(Event(Info(idx = idx, run = runUUID, time = time, systime = 0)))
       }
       case SeqCmd(`H_EVEN_TRIGger`, NR1Seq(channels @ _*)) => {
         val ev = currentEvent.get
-        currentEvent = Some( ev.copy(trig = ev.trig ++ channels) )
+        currentEvent = Some( ev.copy(raw = ev.raw.copy(trig = ev.raw.trig ++ channels)) )
       }
       case SeqCmd(`H_EVENt_TRANSient_CHANnel`, NR1Seq(channels @ _*)) =>
         transChannels = channels
@@ -92,7 +94,7 @@ class SCPIEventReader(val source: SCPIRequestInput) extends InputFilterServer {
         val trigPosIt = transTrigPos.iterator
         val nSamplesIt = transNSamples.iterator
         
-        var transients = Map.empty[Int, raw.Transient]
+        var transients = Map.empty[Int, Transient]
         var offset = 0
 
         while(channelIt.hasNext) {
@@ -100,13 +102,13 @@ class SCPIEventReader(val source: SCPIRequestInput) extends InputFilterServer {
           val trigPos = trigPosIt.next
           val nSamples = nSamplesIt.next
           val samples = allSamples.slice(offset, offset + nSamples)
-          transients = transients + (channel -> raw.Transient(trigPos, samples))
+          transients = transients + (channel -> Transient(trigPos, samples))
           offset = offset + nSamples
         }
         
         transChannels = Nil; transTrigPos = Nil; transNSamples = Nil
         val ev = currentEvent.get
-        currentEvent = Some( ev.copy(trans = ev.trans ++ transients) )
+        currentEvent = Some( ev.copy(raw = ev.raw.copy(trans = ev.raw.trans ++ transients)) )
       }
       case Command(`H_EVENt_END`) => {
         eventQueue = currentEvent.get::eventQueue

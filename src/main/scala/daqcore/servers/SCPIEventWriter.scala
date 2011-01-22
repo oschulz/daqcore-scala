@@ -40,7 +40,7 @@ class SCPIEventWriter(val source: EventSource, val output: SCPIRequestOutput) ex
   val handler = EventHandler {
     case ev: RunStart => srv ! ev; true
     case ev: RunStop => srv ! ev; true
-    case ev: raw.Event => srv ! ev; true
+    case ev: Event => srv ! ev; true
   }
   
   var startState = RunStart()
@@ -72,16 +72,16 @@ class SCPIEventWriter(val source: EventSource, val output: SCPIRequestOutput) ex
   }
 
   override def serve = super.serve orElse {
-    case event: raw.Event => {
+    case event: Event => {
       import daqcore.prot.scpi.mnemonics._
       trace(loggable(event))
-      val transCh = event.trans.keys.toSeq.sortWith{_ < _}
-      write( H_EVENt!( NR1(event.idx), NRf(event.time)) )
-      write( H_EVEN_TRIGger!(event.trig map {t => NR1(t)}: _*) )
+      val transCh = event.raw.trans.keys.toSeq.sortWith{_ < _}
+      write( H_EVENt!( NR1(event.info.idx), NRf(event.info.time)) )
+      write( H_EVEN_TRIGger!(event.raw.trig map {t => NR1(t)}: _*) )
       write( H_EVENt_TRANSient_CHANnel!((for (ch <- transCh.view) yield NR1(ch)): _*) )
-      write( H_EVENt_TRANSient_TPOSition!((for (ch <- transCh.view) yield NR1(event.trans(ch).trigPos)): _*) )
-      write( H_EVENt_TRANSient_NSAMples!((for (ch <- transCh.view) yield NR1(event.trans(ch).samples.size)): _*) )
-      write( H_EVENt_TRANSient_SAMples! ((for {ch <- transCh.view; s <-event.trans(ch).samples.view} yield NR1(s)): _*) )
+      write( H_EVENt_TRANSient_TPOSition!((for (ch <- transCh.view) yield NR1(event.raw.trans(ch).trigPos)): _*) )
+      write( H_EVENt_TRANSient_NSAMples!((for (ch <- transCh.view) yield NR1(event.raw.trans(ch).samples.size)): _*) )
+      write( H_EVENt_TRANSient_SAMples! ((for {ch <- transCh.view; s <-event.raw.trans(ch).samples.view} yield NR1(s)): _*) )
       write( H_EVENt_END! )
     }
     case op @ RunStart(_, uuid, time) => {

@@ -38,12 +38,12 @@ class TTreeEventWriter(val source: EventSource, val target: File, timeout: Long 
   val handler = EventHandler {
     case ev: RunStart => srv ! ev; true
     case ev: RunStop => srv ! ev; true
-    case ev: raw.Event => srv ! ev; true
+    case ev: Event => srv ! ev; true
   }
   
   var rio: RootIO = _
   var outFile: Option[TFile] = None
-  var events: Option[TTree[raw.FlatEvent]] = None
+  var events: Option[TTree[FlatEvent]] = None
   var runs: Option[TTree[RunInfo]] = None
   var runStart: Option[RunStart] = None
   
@@ -77,11 +77,11 @@ class TTreeEventWriter(val source: EventSource, val target: File, timeout: Long 
   }
 
   override def serve = super.serve orElse {
-    case event: raw.Event => {
+    case event: Event => {
       trace(loggable(event))
-      for { start <- runStart } require(event.run == start.uuid)
+      for { start <- runStart } require(event.info.run == start.uuid)
       events match {
-        case Some(events) => events += raw.FlatEvent(event)
+        case Some(events) => events += FlatEvent(event)
         case None => log.warn("No output open, can't write event")
       }
     }
@@ -92,7 +92,7 @@ class TTreeEventWriter(val source: EventSource, val target: File, timeout: Long 
       val timeStamp = dateString(start.startTime)
       val file = new java.io.File(target.getPath + "_%s_%s.root".format(timeStamp, uuidStamp))
       outFile = Some(rio.openTFile(file, filemode.recreate, timeout))
-      events = Some(outFile.get.createTTree[raw.FlatEvent]("events", "Events"))
+      events = Some(outFile.get.createTTree[FlatEvent]("events", "Events"))
       runs = Some(outFile.get.createTTree[RunInfo]("runs", "Run Information"))
     }
     case stop: RunStop => {

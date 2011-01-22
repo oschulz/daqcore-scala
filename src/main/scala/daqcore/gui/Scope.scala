@@ -38,7 +38,7 @@ class Scope(source: EventSource) extends CloseableServer {
   override def profiles = super.profiles.+[Closeable]
 
   object DrawingFinished
-  case class Draw(ev: raw.Event)
+  case class Draw(ev: Event)
 
   def maxRange(a: Range, b: Range) = math.min(a.head, b.head) to math.max(a.last, b.last)
 
@@ -53,11 +53,11 @@ class Scope(source: EventSource) extends CloseableServer {
     
     contents = SwingChartPanel(chart)
 
-    def draw(ev: raw.Event) = synchedOnEDT {
-      val xRanges = for ((ch, trans) <- ev.trans) yield
+    def draw(ev: Event) = synchedOnEDT {
+      val xRanges = for ((ch, trans) <- ev.raw.trans) yield
         ch -> Range(0 - trans.trigPos, trans.samples.size - trans.trigPos)
       
-      val yRanges = for ((ch, trans) <- ev.trans) yield
+      val yRanges = for ((ch, trans) <- ev.raw.trans) yield
         ch -> (trans.samples.min to trans.samples.max)
       
       if (chart.getXYPlot.getDomainAxis.isAutoRange) {
@@ -71,9 +71,9 @@ class Scope(source: EventSource) extends CloseableServer {
         chart.getXYPlot.getRangeAxis.setUpperBound(yRange.last)
       }
       
-      for ((ch, trans) <- ev.trans) chSeries(ch).clear()
+      for ((ch, trans) <- ev.raw.trans) chSeries(ch).clear()
 
-      for ((ch, trans) <- ev.trans)
+      for ((ch, trans) <- ev.raw.trans)
         chSeries(ch) ++= xRanges(ch).view zip trans.samples
     }
     
@@ -93,7 +93,7 @@ class Scope(source: EventSource) extends CloseableServer {
   override def serve = super.serve orElse {
     case DrawingFinished => {
       trace("Drawing finished")
-      source addHandlerFunc { case ev:raw.Event => srv ! Draw(ev); false }
+      source addHandlerFunc { case ev: Event => srv ! Draw(ev); false }
     }
 
     case Draw(ev) => {

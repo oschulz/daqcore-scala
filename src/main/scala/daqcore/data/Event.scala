@@ -16,7 +16,6 @@
 
 
 package daqcore.data
-package raw
 
 import java.util.UUID
 
@@ -30,13 +29,23 @@ case class Transient (
 
 
 case class Event (
-  idx: Int,
-  run: UUID,
-  time: Double,
-  systime: Double,
-  trig: Seq[Int] = Vector.empty[Int],
-  trans: Map[Int, Transient] = Map.empty[Int, Transient]
+  info: Event.Info,
+  raw: Event.Raw = Event.Raw()
 )
+
+object Event {
+  case class Info (
+    idx: Int,
+    run: UUID,
+    time: Double,
+    systime: Double
+  )
+  
+  case class Raw (
+    trig: Seq[Int] = Vector.empty[Int],
+    trans: Map[Int, Transient] = Map.empty[Int, Transient]
+  )
+}
 
 
 case class Events(events: Event*)
