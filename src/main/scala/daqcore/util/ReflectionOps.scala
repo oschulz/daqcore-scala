@@ -33,10 +33,17 @@ class ReflectionOps(cl: Class[_]) {
     def fields = inheritance flatMap {_.getDeclaredFields}
     for { f <- fields } yield { f -> manifestOf(f.getGenericType) }
   }
+  
+  def shortName = {
+    val shortClassNameExpr(_, name) = cl.getName
+    name
+  }
 }
 
 
 object ReflectionOps {
+  val shortClassNameExpr = """(.*[$.])?([^$.]*)""".r
+
   import java.lang.reflect.{Type => JType, Array => _, _}
   import scala.reflect.Manifest.{classType, intersectionType, arrayType, wildcardType}
   import scala.reflect.Manifest
