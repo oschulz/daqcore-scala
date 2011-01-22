@@ -102,26 +102,25 @@ object filemode extends Enumeration {
 
 
 class TFile(val file: JFile, val io: RootIO, val id: Int, val mode: filemode.Value, val timeout: Long) {
+  import TFile._
   import RootIO.requests._
-
+  
   def close(): Unit = {
     io.srv ! CloseTFile(id)
     io.getIdn(timeout) // Make close operation synchronous
   }
   
-  def createTTree[T <: Product : ClassManifest](name: String, title: String): TTree[T] = {
+  def createTTree[T <: Product : ClassManifest](name: String, title: String, mapBranches: PartialFunction[String, String] = stringIdentity): TTree[T] = {
     val treeId = io.nextId(timeout)
     io.srv ! CreateTree(treeId, id, name, title)
-    val ser = ProductSerializer.forType[T]
-    for (field <- ser.fields) io.srv ! CreateBranch(treeId, field.name, field.typeName)
+    for ((branchName, branchType) <- branchesOf[T](mapBranches)) io.srv ! CreateBranch(treeId, branchName, branchType)
     new TTree[T](this, name, treeId)
   }
   
-  def openTTree[T <: Product : ClassManifest](name: String): TTree[T] = {
+  def openTTree[T <: Product : ClassManifest](name: String, mapBranches: PartialFunction[String, String] = stringIdentity): TTree[T] = {
     val treeId = io.nextId(timeout)
     io.srv ! OpenTree(treeId, id, name)
-    val ser = ProductSerializer.forType[T]
-    for (field <- ser.fields) io.srv ! OpenBranch(treeId, field.name, field.typeName)
+    for ((branchName, branchType) <- branchesOf[T](mapBranches)) io.srv ! OpenBranch(treeId, branchName, branchType)
     new TTree[T](this, name, treeId)
   }
   
@@ -130,6 +129,17 @@ class TFile(val file: JFile, val io: RootIO, val id: Int, val mode: filemode.Val
 
 
 object TFile {
+  val stringIdentity: PartialFunction[String, String] = { case s => s }
+
+  def branchesOf[T <: Product : ClassManifest](mapName: PartialFunction[String, String] = stringIdentity): Seq[(String, String)] = {
+    val ser = ProductSerializer.forType[T]
+    for (field <- ser.flatFields) yield {
+      val name = field.name.replaceAll("[.]", "_")
+      val mappedName = if (mapName isDefinedAt name) mapName(name) else name
+      (mappedName, field.typeName)
+    }
+  }
+
   def apply(file: JFile, mode: filemode.Value = filemode.read)(implicit io:RootIO = RootIO.defaultIO): TFile =
     io.openTFile(file, mode)
 }
