@@ -83,7 +83,7 @@ protected:
 	std::istream *m_in;
 	
 	void read(void *buffer, size_t count, bool closeOnFail = false) {
-		log_trace(Form("Reading %i bytes from input", count));
+		log_trace(Form("Reading %llu bytes from input", (unsigned long long)(count)));
 		m_in->read((char*)buffer, count);
 		if (!m_in->good() && closeOnFail) {
 			log_debug("End of input, exiting");
@@ -182,7 +182,7 @@ protected:
 public:
 	TString type() const { return m_type; }
 	
-	AtomicValue(const TString &type): m_type(type) {  }
+	AtomicValue(const TString &typeName): m_type(typeName) {  }
 };
 
 
@@ -202,7 +202,7 @@ public:
 
 	virtual TString toString() const { return name() + ": " + value().toString(); }
 	
-	Field(const TString &name, Value* value): m_name(name), m_value(value) {  }
+	Field(const TString &fieldName, Value* fieldValue): m_name(fieldName), m_value(fieldValue) {  }
 	virtual ~Field() { delete m_value; }
 };
 
@@ -516,7 +516,7 @@ public:
 		return out;
 	}	
 	
-	ActiveTree(TTree *tree): m_tree(tree) {}
+	ActiveTree(TTree *aTree): m_tree(aTree) {}
 	
 	virtual ~ActiveTree() {
 		Iterator it = m_fields.begin();
