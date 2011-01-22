@@ -102,7 +102,7 @@ object filemode extends Enumeration {
 
 
 class TFile(val file: JFile, val io: RootIO, val id: Int, val mode: filemode.Value, val timeout: Long) {
-  import TFile._
+  import TTree.{stringIdentity, branchesOf}
   import RootIO.requests._
   
   def close(): Unit = {
@@ -129,17 +129,6 @@ class TFile(val file: JFile, val io: RootIO, val id: Int, val mode: filemode.Val
 
 
 object TFile {
-  val stringIdentity: PartialFunction[String, String] = { case s => s }
-
-  def branchesOf[T <: Product : ClassManifest](mapName: PartialFunction[String, String] = stringIdentity): Seq[(String, String)] = {
-    val ser = ProductSerializer.forType[T]
-    for (field <- ser.flatFields) yield {
-      val name = field.name.replaceAll("[.]", "_")
-      val mappedName = if (mapName isDefinedAt name) mapName(name) else name
-      (mappedName, field.typeName)
-    }
-  }
-
   def apply(file: JFile, mode: filemode.Value = filemode.read)(implicit io:RootIO = RootIO.defaultIO): TFile =
     io.openTFile(file, mode)
 }
@@ -178,4 +167,18 @@ class TTree[T <: Product : ClassManifest](val file: TFile, val name: String, val
   }
   
   override def toString = "TTree(%s, %s)".format(file, name)
+}
+
+
+object TTree {
+  val stringIdentity: PartialFunction[String, String] = { case s => s }
+
+  def branchesOf[T <: Product : ClassManifest](mapName: PartialFunction[String, String] = stringIdentity): Seq[(String, String)] = {
+    val ser = ProductSerializer.forType[T]
+    for (field <- ser.flatFields) yield {
+      val name = field.name.replaceAll("[.]", "_")
+      val mappedName = if (mapName isDefinedAt name) mapName(name) else name
+      (mappedName, field.typeName)
+    }
+  }
 }
