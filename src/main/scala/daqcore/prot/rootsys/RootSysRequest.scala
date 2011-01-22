@@ -17,6 +17,7 @@
 
 package daqcore.prot.rootsys
 
+import daqcore.util._
 import daqcore.actors._
 
 
@@ -38,20 +39,13 @@ case class ContentSerCache() {
 }
 
 sealed trait RootSysRequest {
-  import RootSysRequest._
-  
-  val shortClassNameExpr(_, requestName) = getClass.getName
+  val requestName = getClass.shortName
   val requestMf = scala.reflect.ClassManifest.fromClass(getClass).asInstanceOf[ClassManifest[RootSysRequest]]
   
   def writeRequest(out: BasicOutput)(implicit serializerCache: ContentSerCache): Unit = {
     out.writeString(requestName)
     serializerCache.forType[RootSysRequest](requestMf).write(out, this)
   }
-}
-
-
-object RootSysRequest {
-  val shortClassNameExpr = """(.*[$.])?([^$.]*)""".r
 }
 
 
