@@ -39,34 +39,4 @@ case class Event (
 )
 
 
-object Event {
-  def apply(flat: FlatEvent): Event = {
-    val channelIt = flat.trans_samples_ch.iterator
-    val trigPosIt = flat.trans_trigPos.iterator
-    val nSamplesIt = flat.trans_samples_val_n.iterator
-
-    var transients = Map.empty[Int, raw.Transient]
-    var offset = 0
-
-    while(channelIt.hasNext) {
-      val channel = channelIt.next
-      val trigPos = trigPosIt.next
-      val nSamples = nSamplesIt.next
-      val samples = (for {v <- flat.trans_samples_val.view.slice(offset, offset + nSamples)} yield v.toInt).toArrayVec
-      transients = transients + (channel -> raw.Transient(trigPos, samples))
-      offset = offset + nSamples
-    }
-
-    Event(
-      idx = flat.idx,
-      run = flat.run,
-      time = flat.time,
-      systime = flat.systime,
-      trig = flat.trig,
-      trans = transients
-    )
-  }
-}
-
-
 case class Events(events: Event*)

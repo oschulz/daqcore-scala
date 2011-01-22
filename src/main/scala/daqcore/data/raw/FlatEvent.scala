@@ -33,7 +33,34 @@ case class FlatEvent (
   trans_samples_ch: Seq[Int],
   trans_samples_val_n: Seq[Int],
   trans_samples_val: ArrayVec[Short]
-)
+) {
+  def toEvent: Event = {
+    val channelIt = trans_samples_ch.iterator
+    val trigPosIt = trans_trigPos.iterator
+    val nSamplesIt = trans_samples_val_n.iterator
+
+    var transients = Map.empty[Int, raw.Transient]
+    var offset = 0
+
+    while(channelIt.hasNext) {
+      val channel = channelIt.next
+      val trigPos = trigPosIt.next
+      val nSamples = nSamplesIt.next
+      val samples = (for {v <- trans_samples_val.view.slice(offset, offset + nSamples)} yield v.toInt).toArrayVec
+      transients = transients + (channel -> raw.Transient(trigPos, samples))
+      offset = offset + nSamples
+    }
+
+    Event(
+      idx = idx,
+      run = run,
+      time = time,
+      systime = systime,
+      trig = trig,
+      trans = transients
+    )
+  }
+}
 
 
 object FlatEvent {
@@ -41,8 +68,8 @@ object FlatEvent {
     val transCh = event.trans.keys.toSeq.sortWith{_ < _}
 
     FlatEvent(
-      idx = event.idx,
       run = event.run,
+      idx = event.idx,
       time = event.time,
       systime = event.systime,
       trig = event.trig,
