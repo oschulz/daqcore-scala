@@ -90,7 +90,7 @@ class RootSystemProcess extends Server with KeepAlive with PostInit with Closeab
       import scala.collection.immutable.Queue
       
       def read(trg: Array[Byte]): Unit = {
-        log.trace("srvRecv(): reading %s bytes.".format(trg.length))
+        // log.trace("srvRecv(): reading %s bytes.".format(trg.length))
         var pos = 0;
         while (pos < trg.length) {
           val count = input.read(trg, pos, trg.length - pos)
@@ -187,23 +187,24 @@ class RootSystemProcess extends Server with KeepAlive with PostInit with Closeab
 
     self.faultHandler = AllForOneStrategy(List(classOf[Throwable]), 3, 1000)
 
-    val dbgConfig = Seq(
-      rspLog.trace_? -> "TRACE",
-      rspLog.debug_? -> "DEBUG",
-      rspLog.info_? -> "INFO",
-      rspLog.warning_? -> "WARN",
-      rspLog.error_? -> "ERROR"
-    )
-
-    val dbgDefs = ByteSeq.wrap((for { (on, name) <- dbgConfig if (on) } yield {"#define %s\n".format(name)}).mkString.getBytes("ASCII"))
-    tmpRootIOSrc = RootSystemProcess.tmpResourceCopy("/cxx/root-system/rootSysServer.cxx", before = dbgDefs)
+    tmpRootIOSrc = RootSystemProcess.tmpResourceCopy("/cxx/root-system/rootSysServer.cxx")
   }
 
   override def postInit() = {
     super.postInit()
     withCleanup {
-      log.debug("Starting new ROOT-System process")
-      process = new ProcessBuilder("root", "-l", "-b", "-q", tmpRootIOSrc.getPath+"+").start
+      val logLevel: Int = (
+        if (rspLog.trace_?) 1000
+        else if (rspLog.debug_?) 2000
+        else if (rspLog.info_?) 3000
+        else if (rspLog.warning_?) 4000
+        else if (rspLog.error_?) 5000
+        else 0x7fffffff
+      )
+
+      log.debug("Starting new ROOT-System process with logLevel %s".format(logLevel))
+
+      process = new ProcessBuilder("root", "-l", "-b", "-q", "%s+(%s)".format(tmpRootIOSrc.getPath, logLevel)).start
       
       // Since these actors are temporary, they have to be started in postInit to prevent them
       // from being shut down again instantly on a restart
@@ -249,13 +250,9 @@ object RootSystemProcess extends Logging {
     Version5UUID(rootBuildNs, rootBuildSpec)
   }
   
-  def tmpResourceCopy(resourceName: String, before: ByteSeq = ByteSeq.empty, after: ByteSeq = ByteSeq.empty): File = {
+  def tmpResourceCopy(resourceName: String): File = {
     val name = new File(resourceName) getName
-    val builder = ByteSeqBuilder()
-    builder ++= before
-    builder ++= ByteSeq.wrap(this.getClass.getResource(resourceName).getBytes)
-    builder ++= after
-    val srcBytes = builder.result()
+    val srcBytes = this.getClass.getResource(resourceName).getBytes
     val userName = java.lang.System.getProperty("user.name")
     val uuid = Version5UUID(rootBuildID, srcBytes)
     val trgDir = daqcoreTmpDir / uuid.toString

@@ -32,45 +32,28 @@
 using namespace std;
 
 
-void log_trace(const char *msg) { cerr << "TRACE: " << msg << endl << flush; }
-void log_debug(const char *msg) { cerr << "DEBUG: " << msg << endl << flush; }
-void log_info(const char *msg) { cerr << "INFO: " << msg << endl << flush; }
-void log_warn(const char *msg) { cerr << "WARN: " << msg << endl << flush; }
-void log_error(const char *msg) { cerr << "ERROR: " << msg << endl << flush; }
+const Int_t LL_OFF   = 0;
+const Int_t LL_TRACE = 1000;
+const Int_t LL_DEBUG = 2000;
+const Int_t LL_INFO  = 3000;
+const Int_t LL_WARN  = 4000;
+const Int_t LL_ERROR = 5000;
+const Int_t LL_ALL   = 0x7fffffff;
 
-#ifdef ERROR
-#define error(arg) log_error(arg)
-#define WARN
-#else
-#define error(arg)
-#endif
+Int_t g_logLevel = LL_INFO;
 
-#ifdef WARN
-#define warn(arg) log_warn(arg)
-#define INFO
-#else
-#define warn(arg)
-#endif
+void log_trace_impl(const char *msg) { cerr << "TRACE: " << msg << endl << flush; }
+void log_debug_impl(const char *msg) { cerr << "DEBUG: " << msg << endl << flush; }
+void log_info_impl(const char *msg) { cerr << "INFO: " << msg << endl << flush; }
+void log_warn_impl(const char *msg) { cerr << "WARN: " << msg << endl << flush; }
+void log_error_impl(const char *msg) { cerr << "ERROR: " << msg << endl << flush; }
+void log_nothing_impl() {}
 
-#ifdef INFO
-#define info(arg) log_info(arg)
-#define DEBUG
-#else
-#define info(arg)
-#endif
-
-#ifdef DEBUG
-#define debug(arg) log_debug(arg)
-#define TRACE
-#else
-#define debug(arg)
-#endif
-
-#ifdef TRACE
-#define trace(arg) log_trace(arg)
-#else
-#define trace(arg)
-#endif
+#define log_trace(arg) ((LL_TRACE >= g_logLevel) ? log_trace_impl(arg) : log_nothing_impl())
+#define log_debug(arg) ((LL_DEBUG >= g_logLevel) ? log_debug_impl(arg) : log_nothing_impl())
+#define log_info(arg) ((LL_INFO >= g_logLevel) ? log_info_impl(arg) : log_nothing_impl())
+#define log_warn(arg) ((LL_WARN >= g_logLevel) ? log_warn_impl(arg) : log_nothing_impl())
+#define log_error(arg) ((LL_ERROR >= g_logLevel) ? log_error_impl(arg) : log_nothing_impl())
 
 
 
@@ -100,10 +83,10 @@ protected:
 	std::istream *m_in;
 	
 	void read(void *buffer, size_t count, bool closeOnFail = false) {
-		trace(Form("Reading %i bytes from input", count));
+		log_trace(Form("Reading %i bytes from input", count));
 		m_in->read((char*)buffer, count);
 		if (!m_in->good() && closeOnFail) {
-			debug("End of input, exiting");
+			log_debug("End of input, exiting");
 			shutdown();
 		}
 		else assert( m_in->good() );
@@ -111,7 +94,7 @@ protected:
 
 public:
 	void recv(TMessage &msg) {
-		trace("Waiting for message header");
+		log_trace("Waiting for message header");
 		UChar_t header[2];
 		read(header, sizeof(header), true);
 		assert ((header[0] == msgHeader[0]) && (header[0] == msgHeader[0]));
@@ -129,7 +112,7 @@ public:
 		
 		UChar_t *buffer = new UChar_t[len];
 		read(buffer, len);
-		// cerr << "TRACE: In: "; for (UInt_t i=0; i < len; ++i) cerr << " " << hex << setw(2) << setfill('0') << UInt_t(UChar_t(buffer[i])); cerr << endl;
+		// cerr << "log_trace: In: "; for (UInt_t i=0; i < len; ++i) cerr << " " << hex << setw(2) << setfill('0') << UInt_t(UChar_t(buffer[i])); cerr << endl;
 		msgType = hostToNet(*((Int_t*)(buffer)));
 		msg.SetWhat(msgType);
 		if (len > sizeof(msgType)) msg.WriteFastArray(buffer+sizeof(msgType), len-sizeof(msgType));
@@ -137,7 +120,7 @@ public:
 		msg.SetReadMode();
 		msg.SetBufferOffset(8);
 
-		trace(Form("Received message of length %i, what = %i", msg.Length(), msg.What()));
+		log_trace(Form("Received message of length %i, what = %i", msg.Length(), msg.What()));
 		buffer = (UChar_t *) msg.Buffer();
 	}
 
@@ -171,8 +154,8 @@ public:
 		write(buffer, length);
 		flush();
 
-		// cerr << "TRACE: Out: "; for (Int_t i=0; i < length; ++i) cerr << " " << hex << setw(2) << setfill('0') << UInt_t(UChar_t(buffer[i])); cerr << endl;
-		trace(Form("Sent message of length %i, what = %i", msg.Length(), msg.What()));
+		// cerr << "log_trace: Out: "; for (Int_t i=0; i < length; ++i) cerr << " " << hex << setw(2) << setfill('0') << UInt_t(UChar_t(buffer[i])); cerr << endl;
+		log_trace(Form("Sent message of length %i, what = %i", msg.Length(), msg.What()));
 	}
 
 	Output(std::ostream *out) : m_out(out) { }
@@ -233,7 +216,7 @@ class BoolValue: public AtomicValue {
 public:
 	Bool_t value;
 	void createBranch(TTree &tree, const TString &name) { tree.Branch(name.Data(), &value); }
-	void openBranch(TTree &tree, const TString &name) { if (tree.FindBranch(name.Data()) == 0 ) debug(Form("Branch %s does not exist, using default values", name.Data())); else tree.SetBranchAddress(name.Data(), &value); }
+	void openBranch(TTree &tree, const TString &name) { if (tree.FindBranch(name.Data()) == 0 ) log_debug(Form("Branch %s does not exist, using default values", name.Data())); else tree.SetBranchAddress(name.Data(), &value); }
 	void writeTo(TMessage &msg) const { msg.WriteBool(value); }
 	void readFrom(TMessage &msg) { msg.ReadBool(value); }
 	TString toString() const { return TString(value ? "true" : "false"); }
@@ -245,7 +228,7 @@ class Int8Value: public AtomicValue {
 public:
 	Char_t value;
 	void createBranch(TTree &tree, const TString &name) { tree.Branch(name.Data(), &value); }
-	void openBranch(TTree &tree, const TString &name) { if (tree.FindBranch(name.Data()) == 0 ) debug(Form("Branch %s does not exist, using default values", name.Data())); else tree.SetBranchAddress(name.Data(), &value); }
+	void openBranch(TTree &tree, const TString &name) { if (tree.FindBranch(name.Data()) == 0 ) log_debug(Form("Branch %s does not exist, using default values", name.Data())); else tree.SetBranchAddress(name.Data(), &value); }
 	void writeTo(TMessage &msg) const { msg.WriteChar(value); }
 	void readFrom(TMessage &msg) { msg.ReadChar(value); }
 	TString toString() const { return TString(Form("%i", (int)(value))); }
@@ -257,7 +240,7 @@ class Int16Value: public AtomicValue {
 public:
 	Short_t value;
 	void createBranch(TTree &tree, const TString &name) { tree.Branch(name.Data(), &value); }
-	void openBranch(TTree &tree, const TString &name) { if (tree.FindBranch(name.Data()) == 0 ) debug(Form("Branch %s does not exist, using default values", name.Data())); else tree.SetBranchAddress(name.Data(), &value); }
+	void openBranch(TTree &tree, const TString &name) { if (tree.FindBranch(name.Data()) == 0 ) log_debug(Form("Branch %s does not exist, using default values", name.Data())); else tree.SetBranchAddress(name.Data(), &value); }
 	void writeTo(TMessage &msg) const { msg.WriteShort(value); }
 	void readFrom(TMessage &msg) { msg.ReadShort(value); }
 	TString toString() const { return TString(Form("%i", (int)(value))); }
@@ -269,7 +252,7 @@ class Int32Value: public AtomicValue {
 public:
 	Int_t value;
 	void createBranch(TTree &tree, const TString &name) { tree.Branch(name.Data(), &value); }
-	void openBranch(TTree &tree, const TString &name) { if (tree.FindBranch(name.Data()) == 0 ) debug(Form("Branch %s does not exist, using default values", name.Data())); else tree.SetBranchAddress(name.Data(), &value); }
+	void openBranch(TTree &tree, const TString &name) { if (tree.FindBranch(name.Data()) == 0 ) log_debug(Form("Branch %s does not exist, using default values", name.Data())); else tree.SetBranchAddress(name.Data(), &value); }
 	void writeTo(TMessage &msg) const { msg.WriteInt(value); }
 	void readFrom(TMessage &msg) { msg.ReadInt(value); }
 	TString toString() const { return TString(Form("%li", (long)(value))); }
@@ -281,7 +264,7 @@ class Int64Value: public AtomicValue {
 public:
 	Long_t value;
 	void createBranch(TTree &tree, const TString &name) { tree.Branch(name.Data(), &value); }
-	void openBranch(TTree &tree, const TString &name) { if (tree.FindBranch(name.Data()) == 0 ) debug(Form("Branch %s does not exist, using default values", name.Data())); else tree.SetBranchAddress(name.Data(), &value); }
+	void openBranch(TTree &tree, const TString &name) { if (tree.FindBranch(name.Data()) == 0 ) log_debug(Form("Branch %s does not exist, using default values", name.Data())); else tree.SetBranchAddress(name.Data(), &value); }
 	void writeTo(TMessage &msg) const { msg.WriteLong(value); }
 	void readFrom(TMessage &msg) { msg.ReadLong(value); }
 	TString toString() const { return TString(Form("%lli", (long long)(value))); }
@@ -293,7 +276,7 @@ class FloatValue: public AtomicValue {
 public:
 	Float_t value;
 	void createBranch(TTree &tree, const TString &name) { tree.Branch(name.Data(), &value); }
-	void openBranch(TTree &tree, const TString &name) { if (tree.FindBranch(name.Data()) == 0 ) debug(Form("Branch %s does not exist, using default values", name.Data())); else tree.SetBranchAddress(name.Data(), &value); }
+	void openBranch(TTree &tree, const TString &name) { if (tree.FindBranch(name.Data()) == 0 ) log_debug(Form("Branch %s does not exist, using default values", name.Data())); else tree.SetBranchAddress(name.Data(), &value); }
 	void writeTo(TMessage &msg) const { msg.WriteFloat(value); }
 	void readFrom(TMessage &msg) { msg.ReadFloat(value); }
 	TString toString() const { return TString(Form("%f", float(value))); }
@@ -305,7 +288,7 @@ class DoubleValue: public AtomicValue {
 public:
 	Double_t value;
 	void createBranch(TTree &tree, const TString &name) { tree.Branch(name.Data(), &value); }
-	void openBranch(TTree &tree, const TString &name) { if (tree.FindBranch(name.Data()) == 0 ) debug(Form("Branch %s does not exist, using default values", name.Data())); else tree.SetBranchAddress(name.Data(), &value); }
+	void openBranch(TTree &tree, const TString &name) { if (tree.FindBranch(name.Data()) == 0 ) log_debug(Form("Branch %s does not exist, using default values", name.Data())); else tree.SetBranchAddress(name.Data(), &value); }
 	void writeTo(TMessage &msg) const { msg.WriteDouble(value); }
 	void readFrom(TMessage &msg) { msg.ReadDouble(value); }
 	TString toString() const { return TString(Form("%lf", double(value))); }
@@ -317,7 +300,7 @@ class StringValue: public AtomicValue {
 public:
 	TString *value;
 	void createBranch(TTree &tree, const TString &name) { tree.Branch(name.Data(), &value, 32000, 0); }
-	void openBranch(TTree &tree, const TString &name) { if (tree.FindBranch(name.Data()) == 0 ) debug(Form("Branch %s does not exist, using default values", name.Data())); else tree.SetBranchAddress(name.Data(), &value); }
+	void openBranch(TTree &tree, const TString &name) { if (tree.FindBranch(name.Data()) == 0 ) log_debug(Form("Branch %s does not exist, using default values", name.Data())); else tree.SetBranchAddress(name.Data(), &value); }
 	void writeTo(TMessage &msg) const { msg.WriteTString(*value); }
 	void readFrom(TMessage &msg) { msg.ReadTString(*value); }
 	TString toString() const { return TString(*value); }
@@ -330,7 +313,7 @@ class UUIDValue: public AtomicValue {
 public:
 	TUUID *value;
 	void createBranch(TTree &tree, const TString &name) { tree.Branch(name.Data(), &value, 32000, 0); }
-	void openBranch(TTree &tree, const TString &name) { if (tree.FindBranch(name.Data()) == 0 ) debug(Form("Branch %s does not exist, using default values", name.Data())); else tree.SetBranchAddress(name.Data(), &value); }
+	void openBranch(TTree &tree, const TString &name) { if (tree.FindBranch(name.Data()) == 0 ) log_debug(Form("Branch %s does not exist, using default values", name.Data())); else tree.SetBranchAddress(name.Data(), &value); }
 	void writeTo(TMessage &msg) const {
 		unsigned long f1; unsigned int f2, f3, f4; unsigned long f5a; unsigned int f5b;
 		sscanf(value->AsString(), "%08lx-%04x-%04x-%04x-%08lx%04x", &f1, &f2, &f3, &f4, &f5a, &f5b);
@@ -367,7 +350,7 @@ class CharVectorValue: public AtomicValue {
 public:
 	vector<Char_t> *value;
 	void createBranch(TTree &tree, const TString &name) { tree.Branch(name.Data(), &value); }
-	void openBranch(TTree &tree, const TString &name) { if (tree.FindBranch(name.Data()) == 0 ) debug(Form("Branch %s does not exist, using default values", name.Data())); else tree.SetBranchAddress(name.Data(), &value); }
+	void openBranch(TTree &tree, const TString &name) { if (tree.FindBranch(name.Data()) == 0 ) log_debug(Form("Branch %s does not exist, using default values", name.Data())); else tree.SetBranchAddress(name.Data(), &value); }
 	void writeTo(TMessage &msg) const { msg.WriteInt(value->size()); if (value->size() > 0) msg.WriteFastArray(&(value->at(0)), value->size()); }
 	void readFrom(TMessage &msg) { Int_t size = 0; msg.ReadInt(size); if (size > Int_t(value->capacity())) value->reserve(size); value->resize(size); if (size > 0) msg.ReadFastArray(&(value->at(0)), size); }
 	TString toString() const { return TString(Form("vector<int8>(size = %li)", (long)(value->size()))); }
@@ -380,7 +363,7 @@ class ShortVectorValue: public AtomicValue {
 public:
 	vector<Short_t> *value;
 	void createBranch(TTree &tree, const TString &name) { tree.Branch(name.Data(), &value); }
-	void openBranch(TTree &tree, const TString &name) { if (tree.FindBranch(name.Data()) == 0 ) debug(Form("Branch %s does not exist, using default values", name.Data())); else tree.SetBranchAddress(name.Data(), &value); }
+	void openBranch(TTree &tree, const TString &name) { if (tree.FindBranch(name.Data()) == 0 ) log_debug(Form("Branch %s does not exist, using default values", name.Data())); else tree.SetBranchAddress(name.Data(), &value); }
 	void writeTo(TMessage &msg) const { msg.WriteInt(value->size()); if (value->size() > 0) msg.WriteFastArray(&(value->at(0)), value->size()); }
 	void readFrom(TMessage &msg) { Int_t size = 0; msg.ReadInt(size); if (size > Int_t(value->capacity())) value->reserve(size); value->resize(size); if (size > 0) msg.ReadFastArray(&(value->at(0)), size); }
 	TString toString() const { return TString(Form("vector<int16>(size = %li)", (long)(value->size()))); }
@@ -393,7 +376,7 @@ class IntVectorValue: public AtomicValue {
 public:
 	vector<Int_t> *value;
 	void createBranch(TTree &tree, const TString &name) { tree.Branch(name.Data(), &value); }
-	void openBranch(TTree &tree, const TString &name) { if (tree.FindBranch(name.Data()) == 0 ) debug(Form("Branch %s does not exist, using default values", name.Data())); else tree.SetBranchAddress(name.Data(), &value); }
+	void openBranch(TTree &tree, const TString &name) { if (tree.FindBranch(name.Data()) == 0 ) log_debug(Form("Branch %s does not exist, using default values", name.Data())); else tree.SetBranchAddress(name.Data(), &value); }
 	void writeTo(TMessage &msg) const { msg.WriteInt(value->size()); if (value->size() > 0) msg.WriteFastArray(&(value->at(0)), value->size()); }
 	void readFrom(TMessage &msg) { Int_t size = 0; msg.ReadInt(size); if (size > Int_t(value->capacity())) value->reserve(size); value->resize(size); if (size > 0) msg.ReadFastArray(&(value->at(0)), size); }
 	TString toString() const { return TString(Form("vector<int32>(size = %li)", (long)(value->size()))); }
@@ -406,7 +389,7 @@ class LongVectorValue: public AtomicValue {
 public:
 	vector<Long_t> *value;
 	void createBranch(TTree &tree, const TString &name) { tree.Branch(name.Data(), &value); }
-	void openBranch(TTree &tree, const TString &name) { if (tree.FindBranch(name.Data()) == 0 ) debug(Form("Branch %s does not exist, using default values", name.Data())); else tree.SetBranchAddress(name.Data(), &value); }
+	void openBranch(TTree &tree, const TString &name) { if (tree.FindBranch(name.Data()) == 0 ) log_debug(Form("Branch %s does not exist, using default values", name.Data())); else tree.SetBranchAddress(name.Data(), &value); }
 	void writeTo(TMessage &msg) const { msg.WriteInt(value->size()); if (value->size() > 0) msg.WriteFastArray(&(value->at(0)), value->size()); }
 	void readFrom(TMessage &msg) { Int_t size = 0; msg.ReadInt(size); if (size > Int_t(value->capacity())) value->reserve(size); value->resize(size); if (size > 0) msg.ReadFastArray(&(value->at(0)), size); }
 	TString toString() const { return TString(Form("vector<int64>(size = %li)", (long)(value->size()))); }
@@ -419,7 +402,7 @@ class FloatVectorValue: public AtomicValue {
 public:
 	vector<float> *value;
 	void createBranch(TTree &tree, const TString &name) { tree.Branch(name.Data(), &value); }
-	void openBranch(TTree &tree, const TString &name) { if (tree.FindBranch(name.Data()) == 0 ) debug(Form("Branch %s does not exist, using default values", name.Data())); else tree.SetBranchAddress(name.Data(), &value); }
+	void openBranch(TTree &tree, const TString &name) { if (tree.FindBranch(name.Data()) == 0 ) log_debug(Form("Branch %s does not exist, using default values", name.Data())); else tree.SetBranchAddress(name.Data(), &value); }
 	void writeTo(TMessage &msg) const { msg.WriteInt(value->size()); if (value->size() > 0) msg.WriteFastArray(&(value->at(0)), value->size()); }
 	void readFrom(TMessage &msg) { Int_t size = 0; msg.ReadInt(size); if (size > Int_t(value->capacity())) value->reserve(size); value->resize(size); if (size > 0) msg.ReadFastArray(&(value->at(0)), size); }
 	TString toString() const { return TString(Form("vector<float>(size = %li)", (long)(value->size()))); }
@@ -432,7 +415,7 @@ class DoubleVectorValue: public AtomicValue {
 public:
 	vector<double> *value;
 	void createBranch(TTree &tree, const TString &name) { tree.Branch(name.Data(), &value); }
-	void openBranch(TTree &tree, const TString &name) { if (tree.FindBranch(name.Data()) == 0 ) debug(Form("Branch %s does not exist, using default values", name.Data())); else tree.SetBranchAddress(name.Data(), &value); }
+	void openBranch(TTree &tree, const TString &name) { if (tree.FindBranch(name.Data()) == 0 ) log_debug(Form("Branch %s does not exist, using default values", name.Data())); else tree.SetBranchAddress(name.Data(), &value); }
 	void writeTo(TMessage &msg) const { msg.WriteInt(value->size()); if (value->size() > 0) msg.WriteFastArray(&(value->at(0)), value->size()); }
 	void readFrom(TMessage &msg) { Int_t size = 0; msg.ReadInt(size); if (size > Int_t(value->capacity())) value->reserve(size); value->resize(size); if (size > 0) msg.ReadFastArray(&(value->at(0)), size); }
 	TString toString() const { return TString(Form("vector<double>(size = %li)", (long)(value->size()))); }
@@ -487,38 +470,38 @@ public:
 	Int_t size() const { return m_tree->GetEntriesFast(); }
 
 	void createBranch(const TString &name, Value* value) {
-		trace(Form("ActiveTree::createBranch(%s, %s)", name.Data(), value->type().Data()));
+		log_trace(Form("ActiveTree::createBranch(%s, %s)", name.Data(), value->type().Data()));
 		Field *field = new Field(name, value);
 		field->createBranch(*m_tree);
 		m_fields.push_back(field);
 	}
 
 	void openBranch(const TString &name, Value* value) {
-		trace(Form("ActiveTree::openBranch(%s, %s)", name.Data(), value->type().Data()));
+		log_trace(Form("ActiveTree::openBranch(%s, %s)", name.Data(), value->type().Data()));
 		Field *field = new Field(name, value);
 		field->openBranch(*m_tree);
 		m_fields.push_back(field);
 	}
 	
 	void addEntry(TMessage &req) {
-		trace(Form("ActiveTree::addTreeEntry(...)"));
+		log_trace(Form("ActiveTree::addTreeEntry(...)"));
 		for (Iterator it = m_fields.begin(); it != m_fields.end(); ++it) {
 			Field &field = *(Field*)(*it);
 			field.value().readFrom(req);
-			trace(Form("Field %s", field.toString().Data()));
+			log_trace(Form("Field %s", field.toString().Data()));
 		}
 		m_tree->Fill();
 	}
 
 	void getEntry(Int_t index, TMessage &resp) {
-		trace(Form("ActiveTree::getTreeEntry(%i)", index));
+		log_trace(Form("ActiveTree::getTreeEntry(%i)", index));
 		assert(index < size());
 		Int_t nBytes = m_tree->GetEntry(index);
 		assert(nBytes > 0);
-		trace(Form("Read %li bytes from tree entry", (long)(nBytes)));
+		log_trace(Form("Read %li bytes from tree entry", (long)(nBytes)));
 		for (Iterator it = m_fields.begin(); it != m_fields.end(); ++it) {
 			Field &field = *(Field*)(*it);
-			trace(Form("Field %s", field.toString().Data()));
+			log_trace(Form("Field %s", field.toString().Data()));
 			field.value().writeTo(resp);
 		}
 	}
@@ -592,7 +575,7 @@ protected:
 	PtrMap m_map;
 	
 	void closeFile(TFile* file) {
-		debug(Form("Closing TFile \"%s\"", file->GetName()));
+		log_debug(Form("Closing TFile \"%s\"", file->GetName()));
 		file->Write();
 		file->Close();
 		delete file;
@@ -632,7 +615,7 @@ TFileMap m_tfiles;
 
 
 void srvGetIdn(TMessage &resp) {
-	debug("getIdn()");
+	log_debug("getIdn()");
 
 	TString manufacturer("DAQCorE");
 	TString model("ROOT-System-Server");
@@ -650,7 +633,7 @@ void srvOpenTFile(TMessage &req) {
 	Int_t id; req.ReadInt(id); // ID to assign to TFile
 	TString name; req.ReadTString(name);
 	TString mode; req.ReadTString(mode);
-	debug(Form("openTFile(%i, %s, %s)", id, name.Data(), mode.Data()));
+	log_debug(Form("openTFile(%i, %s, %s)", id, name.Data(), mode.Data()));
 
 	TDirectory *currentDir = gDirectory;
 	m_tfiles.add(id, new TFile(name.Data(), mode.Data()));
@@ -660,7 +643,7 @@ void srvOpenTFile(TMessage &req) {
 
 void srvCloseTFile(TMessage &req) {
 	Int_t id; req.ReadInt(id);
-	debug(Form("closeTFile(%i)", id));
+	log_debug(Form("closeTFile(%i)", id));
 
 	m_tfiles.del(id);
 }
@@ -671,7 +654,7 @@ void srvCreateTree(TMessage &req) {
 	Int_t fileId; req.ReadInt(fileId);
 	TString name; req.ReadTString(name);
 	TString title; req.ReadTString(title);
-	debug(Form("createTree(%i, %i, %s, %s)", id, fileId, name.Data(), title.Data()));
+	log_debug(Form("createTree(%i, %i, %s, %s)", id, fileId, name.Data(), title.Data()));
 	
 	TDirectory *currentDir = gDirectory;
 	TFile *file = m_tfiles[fileId];
@@ -687,7 +670,7 @@ void srvOpenTree(TMessage &req) {
 	Int_t id; req.ReadInt(id); // ID to assign to TTree
 	Int_t fileId; req.ReadInt(fileId);
 	TString name; req.ReadTString(name);
-	debug(Form("openTree(%i, %i, %s)", id, fileId, name.Data()));
+	log_debug(Form("openTree(%i, %i, %s)", id, fileId, name.Data()));
 	
 	TFile *file = m_tfiles[fileId];
 	assert(file != 0);
@@ -702,7 +685,7 @@ void srvGetTreeSize(TMessage &req, TMessage &resp) {
 	Int_t treeId; req.ReadInt(treeId);
 
 	const Int_t logEvery = 1000; static int counter = 0;
-	if (counter % logEvery == 0) { debug(Form("getTreeSize(%i) [logging every %i's call]", treeId, logEvery)); }
+	if (counter % logEvery == 0) { log_debug(Form("getTreeSize(%i) [logging every %i's call]", treeId, logEvery)); }
 	++counter;
 	
 	ActiveTree *tree = m_trees[treeId];
@@ -716,7 +699,7 @@ void srvCreateBranch(TMessage &req) {
 	Int_t treeId; req.ReadInt(treeId);
 	TString name; req.ReadTString(name);
 	TString type; req.ReadTString(type);
-	debug(Form("createBranch(%i, %s, %s)", treeId, name.Data(), type.Data()));
+	log_debug(Form("createBranch(%i, %s, %s)", treeId, name.Data(), type.Data()));
 	
 	ActiveTree *tree = m_trees[treeId];
 	
@@ -728,7 +711,7 @@ void srvOpenBranch(TMessage &req) {
 	Int_t treeId; req.ReadInt(treeId);
 	TString name; req.ReadTString(name);
 	TString type; req.ReadTString(type);
-	debug(Form("openBranch(%i, %s, %s)", treeId, name.Data(), type.Data()));
+	log_debug(Form("openBranch(%i, %s, %s)", treeId, name.Data(), type.Data()));
 	
 	ActiveTree *tree = m_trees[treeId];
 	
@@ -740,7 +723,7 @@ void srvAddTreeEntry(TMessage &req) {
 	Int_t treeId; req.ReadInt(treeId);
 
 	const Int_t logEvery = 1000; static int counter = 0;
-	if (counter % logEvery == 0) { debug(Form("addTreeEntry(%i, ...) [logging every %i's call]", treeId, logEvery)); }
+	if (counter % logEvery == 0) { log_debug(Form("addTreeEntry(%i, ...) [logging every %i's call]", treeId, logEvery)); }
 	++counter;
 	
 	ActiveTree *tree = m_trees[treeId];
@@ -753,7 +736,7 @@ void srvGetTreeEntry(TMessage &req, TMessage &resp) {
 	Int_t index; req.ReadInt(index);
 
 	const Int_t logEvery = 1000; static int counter = 0;
-	if (counter % logEvery == 0) { debug(Form("getTreeEntry(%i, %i) [logging every %i's call]", treeId, index, logEvery)); }
+	if (counter % logEvery == 0) { log_debug(Form("getTreeEntry(%i, %i) [logging every %i's call]", treeId, index, logEvery)); }
 	++counter;
 	
 	ActiveTree *tree = m_trees[treeId];
@@ -765,7 +748,7 @@ void processInstruction(TMessage &req, TMessage &resp) {
 	assert( resp.What() == MSG_RESPONSE );
 	TString header; req.ReadTString(header);
 
-	trace(Form("Received instruction %s", header.Data()));
+	log_trace(Form("Received instruction %s", header.Data()));
 	
 	if      (header == "GetIdn") srvGetIdn(resp);
 	else if (header == "OpenTFile") srvOpenTFile(req);
@@ -782,14 +765,16 @@ void processInstruction(TMessage &req, TMessage &resp) {
 
 
 void shutdown() {
-	info("Shutting down");
+	log_info("Shutting down");
 	m_tfiles.clear();
 	exit(0);
 }
 
 
-void rootSysServer() {
-	info("Ready");
+void rootSysServer(Int_t logLevel = LL_INFO) {
+	g_logLevel = logLevel;
+
+	log_info("Ready");
 
 	Input in(&cin);
 	Output out(&cout);
@@ -811,7 +796,7 @@ void rootSysServer() {
 		resp.SetWhat(MSG_RESPONSE);
 		resp.WriteInt(reqIdx);
 
-		trace(Form("Received request %i", reqIdx));
+		log_trace(Form("Received request %i", reqIdx));
 		
 		processInstruction(req, resp);
 		
