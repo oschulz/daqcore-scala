@@ -191,6 +191,8 @@ class RootSystemProcess extends Server with KeepAlive with PostInit with Closeab
   }
 
   override def postInit() = {
+    import scala.collection.JavaConversions._
+
     super.postInit()
     withCleanup {
       val logLevel: Int = (
@@ -202,9 +204,9 @@ class RootSystemProcess extends Server with KeepAlive with PostInit with Closeab
         else 0x7fffffff
       )
 
-      log.debug("Starting new ROOT-System process with logLevel %s".format(logLevel))
-
-      process = new ProcessBuilder("root", "-l", "-b", "-q", "%s+(%s)".format(tmpRootIOSrc.getPath, logLevel)).start
+      val pb = new ProcessBuilder("root", "-l", "-b", "-q", "%s+(%s)".format(tmpRootIOSrc.getPath, logLevel))
+      log.debug("Starting new ROOT-System process: " + pb.command.mkString(" "))
+      process = pb.start
       
       // Since these actors are temporary, they have to be started in postInit to prevent them
       // from being shut down again instantly on a restart
