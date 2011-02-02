@@ -58,6 +58,7 @@ trait SIS3300 extends EventSource with Device {
   def getBankBusy(): Future[Boolean] = srv !!> GetBankBusy()
   def getBankFull(): Future[Boolean] =  srv !!> GetBankFull()
   def getNEvents(): Future[Int] =  srv !!> GetNEvents()
+  def getBankStates(): Future[BankStates] =  srv !!> GetBankStates()
 }
 
 
@@ -97,6 +98,8 @@ object SIS3300 {
   case class MNPTriggerMode (m: Int = 0x8, n: Int = 0x8, p: Int = 0x8) extends TriggerMode
   case class FIRTriggerMode (nGap: Int = 0x20, nPeak: Int = 0x20, p: Int = 0x8, test: Int = 0) extends TriggerMode
 
+  case class BankState(nevents: Int, busy: Boolean, full: Boolean)
+  case class BankStates(currentBank: Int, states: Map[Int, BankState])
   
   case class ResetModule() extends ActorCmd
   case class InitModule() extends ActorCmd
@@ -125,6 +128,7 @@ object SIS3300 {
   case class GetBankBusy() extends ActorQuery[Boolean]
   case class GetBankFull() extends ActorQuery[Boolean]
   case class GetNEvents() extends ActorQuery[Int]
+  case class GetBankStates() extends ActorQuery[BankStates]
 }
 
 

@@ -98,6 +98,7 @@ abstract class SIS3300Server(val vmeBus: VMEBus, val baseAddress: Int) extends E
     case op @ GetBankBusy() => debug(op); reply(srvGetBankBusy())
     case op @ GetBankFull() => debug(op); reply(srvGetBankFull())
     case op @ GetNEvents() => debug(op); reply(srvGetNEvents())
+    case op @ GetBankStates() => debug(op); reply(srvGetBankStates())
   }
 
 
@@ -386,6 +387,33 @@ abstract class SIS3300Server(val vmeBus: VMEBus, val baseAddress: Int) extends E
   def srvStopCapture() = stopCapture()
 
 
+  def getBankStates(): BankStates = {
+    import memory._
+    
+    val neventBits = (BANK1_EVENT_CNT_ADC12.NEVENTS, BANK2_EVENT_CNT_ADC12.NEVENTS)
+    val busyBits = (ACQUISITION_CONTROL.BANK1_BUSY, ACQUISITION_CONTROL.BANK2_BUSY)
+    val fullBits = (ACQUISITION_CONTROL.BANK1_FULL, ACQUISITION_CONTROL.BANK2_FULL)
+    
+    run { for {
+      n1 <- neventBits._1 get()
+      busy1 <- busyBits._1 get()
+      full1 <- fullBits._1 get()
+      n2 <- neventBits._2 get()
+      busy2 <- busyBits._2 get()
+      full2 <- fullBits._2 get()
+      _ <- sync()
+    } yield {
+      val (isFull1, isFull2) = (full1() == 1, full2() == 1)
+      BankStates(currentBank, Map(
+        1 -> BankState(if (isFull1) n1() else (n1() - 1), busy1() == 1, isFull1),
+        2 -> BankState(if (isFull2) n2() else (n2() - 1), busy2() == 1, isFull2)
+      ) )
+    } }
+  }
+
+  def srvGetBankStates() = getBankStates()
+
+
   def getBankBusy(): Boolean = {
     import memory._
     val bit = if (currentBank == 1) ACQUISITION_CONTROL.BANK1_BUSY else ACQUISITION_CONTROL.BANK2_BUSY
@@ -429,6 +457,7 @@ abstract class SIS3300Server(val vmeBus: VMEBus, val baseAddress: Int) extends E
 
 
   def clearBankFull(): Unit = {
+    log.trace("pre-clear:  " + getBankStates.toString)
     import memory._
     val reg = if (currentBankVar == 1) KEY_BANK1_FULL_FLAG else KEY_BANK2_FULL_FLAG
     run { for {
@@ -436,6 +465,7 @@ abstract class SIS3300Server(val vmeBus: VMEBus, val baseAddress: Int) extends E
       _ <- sync()
     } yield {} }
     currentBankVar = if (currentBankVar ==1) 2 else 1
+    log.trace("post-clear: " + getBankStates.toString)
   }
 
 
