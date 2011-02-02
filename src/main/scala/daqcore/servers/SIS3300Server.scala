@@ -1317,14 +1317,14 @@ object SIS3300Server extends Logging {
     /** Event counter register, Bank 1, ADC group 7/8 (0x380010, read-only) */
     val BANK1_EVENT_CNT_ADC78 = new EventCounterRegister(0x380010)
 
-    /** Event counter register, Bank 2, ADC group 1/2 (0x200010, read-only) */
-    val BANK2_EVENT_CNT_ADC12 = new EventCounterRegister(0x200010)
-    /** Event counter register, Bank 2, ADC group 3/4 (0x280010, read-only) */
-    val BANK2_EVENT_CNT_ADC34 = new EventCounterRegister(0x280010)
-    /** Event counter register, Bank 2, ADC group 5/6 (0x300010, read-only) */
-    val BANK2_EVENT_CNT_ADC56 = new EventCounterRegister(0x300010)
-    /** Event counter register, Bank 2, ADC group 7/8 (0x380010, read-only) */
-    val BANK2_EVENT_CNT_ADC78 = new EventCounterRegister(0x380010)
+    /** Event counter register, Bank 2, ADC group 1/2 (0x200014, read-only) */
+    val BANK2_EVENT_CNT_ADC12 = new EventCounterRegister(0x200014)
+    /** Event counter register, Bank 2, ADC group 3/4 (0x280014, read-only) */
+    val BANK2_EVENT_CNT_ADC34 = new EventCounterRegister(0x280014)
+    /** Event counter register, Bank 2, ADC group 5/6 (0x300014, read-only) */
+    val BANK2_EVENT_CNT_ADC56 = new EventCounterRegister(0x300014)
+    /** Event counter register, Bank 2, ADC group 7/8 (0x380014, read-only) */
+    val BANK2_EVENT_CNT_ADC78 = new EventCounterRegister(0x380014)
 
 
     /** Actual Sample register, ADC group specific (read/write) */
