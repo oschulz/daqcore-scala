@@ -544,22 +544,24 @@ abstract class SIS3300Server(val vmeBus: VMEBus, val baseAddress: Int) extends E
         val SAMEVEN = BankMemoryEntry.SAMEVEN
         val USRIN = BankMemoryEntry.USRIN
         
-        val usrinArray = Array.ofDim[Int](nSamples)
+        var usrinArray = Array.empty[Int]
         
         for { (group, raws) <- rawGroupEvData.toSeq } yield {
           if (!settingsVar.daq.trigOnly || trig.contains(group.chOdd) || trig.contains(group.chEven)) {
             val trigPos = nSamples - settings.daq.stopDelay / settings.daq.nAverage
             
-            val oddArray = Array.ofDim[Int](nSamples)
-            val evenArray = Array.ofDim[Int](nSamples)
-            val fillUserIn = (!settingsVar.daq.trigOnly && userInMap.isEmpty)
-
             val rawParts = {
               val (a,b) = raws.iterator.drop(i * nSamples).take(nSamples).duplicate
               if (wrapped == 1) Seq(a.drop(end), b.take(end))
-              else Seq(a.drop(0), b.take(0))
+              else Seq(a.take(end))
             }
-            assert(nSamples == (rawParts map {_.length} sum))
+
+            val n = rawParts map {_.length} sum
+            val oddArray = Array.ofDim[Int](n)
+            val evenArray = Array.ofDim[Int](n)
+            if (usrinArray.size != n) usrinArray = Array.ofDim[Int](n)
+
+            val fillUserIn = (!settingsVar.daq.trigOnly && userInMap.isEmpty)
 
             var j = 0
             for (part <- rawParts; w <- part) {
