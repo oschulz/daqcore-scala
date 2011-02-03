@@ -22,7 +22,7 @@ import scala.tools.nsc.io.Process.Pipe._
 import java.io.{File, InputStream, OutputStream, IOException}
 import java.lang.{Process}
 
-import akka.actor._, akka.actor.Actor._, akka.dispatch.Future
+import akka.actor._, akka.actor.Actor._, akka.dispatch.{Future, Dispatchers}
 import akka.config.Supervision.{LifeCycle, UndefinedLifeCycle, Temporary, OneForOneStrategy, AllForOneStrategy}
 
 import daqcore.actors._
@@ -78,6 +78,8 @@ class RootSystemProcess extends Server with KeepAlive with PostInit with Closeab
 
 
   class StdoutReader(input: InputStream) extends CascadableServer {
+    srv.setDispatcher(Dispatchers.newThreadBasedDispatcher(srv))
+
     override def profiles = super.profiles.+[RawMsgInput]
 
     override def init() = {
@@ -134,6 +136,8 @@ class RootSystemProcess extends Server with KeepAlive with PostInit with Closeab
 
   class StderrReader(input: InputStream) extends CascadableServer with PostInit {
     import java.io.{InputStreamReader, BufferedReader}
+
+    srv.setDispatcher(Dispatchers.newThreadBasedDispatcher(srv))
 
     val logExpr = """([^:]*):\s*(.*)""".r
     val in = new BufferedReader(new InputStreamReader(input))
