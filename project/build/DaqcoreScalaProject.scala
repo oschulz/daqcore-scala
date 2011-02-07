@@ -10,6 +10,8 @@ class DaqcoreScalaProject(info: ProjectInfo) extends DefaultProject(info) with A
   val tuDoE4Releases = "TU-Do Physik E4 Releases" at "http://maven.e4.physik.uni-dortmund.de/maven2/releases/"
   val tuDoE4Snapshots = "TU-Do Physik E4 Releases" at "http://maven.e4.physik.uni-dortmund.de/maven2/snapshots/"
 
+  val jBossRepo = "jBoss" at "http://repository.jboss.org/nexus/content/groups/public/"
+
   val scala_continuations = compilerPlugin("org.scala-lang.plugins" % "continuations" % "2.8.1")
 
   val scala_swing = "org.scala-lang" % "scala-swing" % "2.8.1"
