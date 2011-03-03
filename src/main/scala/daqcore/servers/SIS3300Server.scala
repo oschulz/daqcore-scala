@@ -688,7 +688,7 @@ object SIS3300Server extends Logging {
       else {
         trace("reading from 0x%s, 0x%s bytes".format(hex(addr), hex(sizeOf[Int])))
         val bytes = mem.read(addr, sizeOf[Int])
-        val word = (LittleEndian.fromBytes[Int](bytes)).head
+        val word = (BigEndian.fromBytes[Int](bytes)).head
         this.copy(contents = contents + (addr -> word))
       }
     }
@@ -745,7 +745,7 @@ object SIS3300Server extends Logging {
       
       for ((addr, word) <- allWrites) {
         trace("exec(): writing to 0x%s: 0x%s".format(hex(addr), hex(word)))
-        mem.write(addr, ByteSeq(LittleEndian.toBytes(ArrayVec(word)): _*))
+        mem.write(addr, ByteSeq(BigEndian.toBytes(ArrayVec(word)): _*))
       }
 
       for ((addr, reaction) <- reads) reaction(cache(addr))
@@ -945,10 +945,7 @@ object SIS3300Server extends Logging {
 
     def read(range: Range): ArrayVec[Word] = {
       val bytes = mem.read(range.head + base, range.last - range.head + sizeOf[Word])
-      // Why does the endianess depend on read size here? Property of the VME interface or the
-      // SIS3300?
-      if (range.size <= 8) LittleEndian.fromBytes[Word](bytes).toArrayVec
-      else BigEndian.fromBytes[Word](bytes).toArrayVec
+      BigEndian.fromBytes[Word](bytes).toArrayVec
     }
 
 
