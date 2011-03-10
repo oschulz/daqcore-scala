@@ -369,9 +369,7 @@ abstract class SIS3300Server(val vmeBus: VMEBus, val baseAddress: Int) extends E
     debug("Stopping acquisition")
 
     import memory._
-    
-    srvEmit(RunStop(currentTime - daqState.startTime))
-    runStart = None
+  
     daqState = daqState.copy(running = false, startTime = -1)
     
     run { for {
@@ -382,7 +380,17 @@ abstract class SIS3300Server(val vmeBus: VMEBus, val baseAddress: Int) extends E
       _ <- ACQUISITION_CONTROL.AUTOBANK_EN set 0
       _ <- sync()
     } yield {} }
+
+    val runStop = RunStop(currentTime - daqState.startTime)
+  
+    val events = getEvents()
+    clearBankFull()
+    srvEmit(Events(events: _*))
+
+    srvEmit(runStop)
+    runStart = None
   }
+
 
   def srvStopCapture() = stopCapture()
 
