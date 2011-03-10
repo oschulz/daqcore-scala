@@ -444,12 +444,16 @@ abstract class SIS3300Server(val vmeBus: VMEBus, val baseAddress: Int) extends E
 
   def getNEvents(): Int = {
     import memory._
-    val bits = if (currentBank == 1) BANK1_EVENT_CNT_ADC12.NEVENTS else BANK2_EVENT_CNT_ADC12.NEVENTS
+    val neventBits = if (currentBank == 1) BANK1_EVENT_CNT_ADC12.NEVENTS else BANK2_EVENT_CNT_ADC12.NEVENTS
+    val fullBits = if (currentBank == 1) ACQUISITION_CONTROL.BANK1_FULL else ACQUISITION_CONTROL.BANK2_FULL
+
     run { for {
-      v <- bits get()
+      n <- neventBits get()
+      full <- fullBits get()
       _ <- sync()
     } yield {
-      v()
+      val isFull = full() == 1
+      if (isFull) n() else (n() - 1)
     } }
   }
 
