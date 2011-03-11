@@ -107,10 +107,7 @@ abstract class SIS3300Server(val vmeBus: VMEBus, val baseAddress: Int) extends E
   protected def onAcquireNext: Unit = {
     if (getBankFull) {
       trace("Bank %s full".format(currentBank))
-      val events = getEvents()
-      clearBankFull()
-      srvEmit(Events(events: _*))
-      events foreach { srvEmit(_) }
+      emitEvents(getEvents())
     }
     else {
       trace("%s events in Bank %s".format(getNEvents(), currentBank))
@@ -383,9 +380,7 @@ abstract class SIS3300Server(val vmeBus: VMEBus, val baseAddress: Int) extends E
 
     val runStop = RunStop(currentTime - daqState.startTime)
   
-    val events = getEvents()
-    clearBankFull()
-    srvEmit(Events(events: _*))
+    emitEvents(getEvents())
 
     srvEmit(runStop)
     runStart = None
@@ -481,7 +476,7 @@ abstract class SIS3300Server(val vmeBus: VMEBus, val baseAddress: Int) extends E
   }
 
 
-  def getEvents() = {
+  def getEvents(): Seq[Event] = {
     import memory._
     
     val systime = currentTime
@@ -521,99 +516,111 @@ abstract class SIS3300Server(val vmeBus: VMEBus, val baseAddress: Int) extends E
     import currentBankMemCfg._
     
     val nSamples = settings.daq.nSamples
-    val nEvents = getNEvents
+    val BankState(nEvents, bankBusy, _) = getBankStates().states(currentBank)
+    assert(!bankBusy)
 
-    val evDir = read(evDirRegs take nEvents)
-    val tsDir = read(tsDirRegs take nEvents)
-    val rawGroupEvData = for {
-      (group, mem) <- groupMem
-      if (!settingsVar.daq.trigOnly || trigEnabled(group.chOdd) || trigEnabled(group.chEven))      
-    } yield {
-      val raw = read(mem take nEvents * nSamples).toArrayVec
-      group -> raw
-    }
- 
-    val events = for {i <- 0 to nEvents - 1} yield {
-      val time = {
-        val ts = TimestampDirEntry.TIMESTAMP(tsDir(i))
-        if (ts < lastTimeStampVar) TimeStampNOverflowsVar += 1
-        lastTimeStampVar = ts
-        val timeStampCycle = 1 << memory.TimestampDirEntry.TIMESTAMP.size
-  
-        settings.daq.tsBase * TimeStampNOverflowsVar * timeStampCycle  +
-          settings.daq.tsBase * ts
+    if (nEvents == 0) Nil
+    else {
+      log.trace("Getting %s events.".format(nEvents))
+
+      val evDir = read(evDirRegs take nEvents)
+      val tsDir = read(tsDirRegs take nEvents)
+      val rawGroupEvData = for {
+        (group, mem) <- groupMem
+        if (!settingsVar.daq.trigOnly || trigEnabled(group.chOdd) || trigEnabled(group.chEven))      
+      } yield {
+        val raw = read(mem take nEvents * nSamples).toArrayVec
+        group -> raw
       }
-      
-      val end = TriggerEventDirEntry.EVEND(evDir(i)) - i * nSamples
-      val wrapped = TriggerEventDirEntry.WRAPPED(evDir(i))
-      val trigInfo = TriggerEventDirEntry.TRIGGED(evDir(i))
-      val trig = for { ch <- channels; if Bit(8-ch)(trigInfo) == 1 } yield ch
-      
-      var userInMap = Map[Int, Transient]()
-
-      val transSeq: Seq[Seq[(Int, Transient)]] = {
-        val SAMODD = BankMemoryEntry.SAMODD
-        val SAMEVEN = BankMemoryEntry.SAMEVEN
-        val USRIN = BankMemoryEntry.USRIN
+   
+      val events = for {i <- 0 to nEvents - 1} yield {
+        val time = {
+          val ts = TimestampDirEntry.TIMESTAMP(tsDir(i))
+          if (ts < lastTimeStampVar) TimeStampNOverflowsVar += 1
+          lastTimeStampVar = ts
+          val timeStampCycle = 1 << memory.TimestampDirEntry.TIMESTAMP.size
+    
+          settings.daq.tsBase * TimeStampNOverflowsVar * timeStampCycle  +
+            settings.daq.tsBase * ts
+        }
         
-        var usrinArray = Array.empty[Int]
+        val end = TriggerEventDirEntry.EVEND(evDir(i)) - i * nSamples
+        val wrapped = TriggerEventDirEntry.WRAPPED(evDir(i))
+        val trigInfo = TriggerEventDirEntry.TRIGGED(evDir(i))
+        val trig = for { ch <- channels; if Bit(8-ch)(trigInfo) == 1 } yield ch
         
-        for { (group, raws) <- rawGroupEvData.toSeq } yield {
-          if (!settingsVar.daq.trigOnly || trig.contains(group.chOdd) || trig.contains(group.chEven)) {
-            val trigPos = nSamples - settings.daq.stopDelay / settings.daq.nAverage
-            
-            val rawParts = {
-              val (a,b) = raws.iterator.drop(i * nSamples).take(nSamples).duplicate
-              if (wrapped == 1) Seq(a.drop(end), b.take(end))
-              else Seq(a.take(end))
+        var userInMap = Map[Int, Transient]()
+
+        val transSeq: Seq[Seq[(Int, Transient)]] = {
+          val SAMODD = BankMemoryEntry.SAMODD
+          val SAMEVEN = BankMemoryEntry.SAMEVEN
+          val USRIN = BankMemoryEntry.USRIN
+          
+          var usrinArray = Array.empty[Int]
+          
+          for { (group, raws) <- rawGroupEvData.toSeq } yield {
+            if (!settingsVar.daq.trigOnly || trig.contains(group.chOdd) || trig.contains(group.chEven)) {
+              val trigPos = nSamples - settings.daq.stopDelay / settings.daq.nAverage
+              
+              val rawParts = {
+                val (a,b) = raws.iterator.drop(i * nSamples).take(nSamples).duplicate
+                if (wrapped == 1) Seq(a.drop(end), b.take(end))
+                else Seq(a.take(end))
+              }
+
+              val n = rawParts map {_.length} sum
+              val oddArray = Array.ofDim[Int](n)
+              val evenArray = Array.ofDim[Int](n)
+              if (usrinArray.size != n) usrinArray = Array.ofDim[Int](n)
+
+              val fillUserIn = (!settingsVar.daq.trigOnly && userInMap.isEmpty)
+
+              var j = 0
+              for (part <- rawParts; w <- part) {
+                oddArray(j) = SAMODD(w)
+                evenArray(j) = SAMEVEN(w)
+                usrinArray(j) = USRIN(w)
+                j += 1
+              }
+              if (fillUserIn) userInMap = Map(9 -> Transient(trigPos, ArrayVec.wrap(usrinArray)))
+              
+              Seq(
+                group.chOdd -> Transient(trigPos, ArrayVec.wrap(oddArray)),
+                group.chEven -> Transient(trigPos, ArrayVec.wrap(evenArray))
+              )
+            } else {
+              Seq()
             }
-
-            val n = rawParts map {_.length} sum
-            val oddArray = Array.ofDim[Int](n)
-            val evenArray = Array.ofDim[Int](n)
-            if (usrinArray.size != n) usrinArray = Array.ofDim[Int](n)
-
-            val fillUserIn = (!settingsVar.daq.trigOnly && userInMap.isEmpty)
-
-            var j = 0
-            for (part <- rawParts; w <- part) {
-              oddArray(j) = SAMODD(w)
-              evenArray(j) = SAMEVEN(w)
-              usrinArray(j) = USRIN(w)
-              j += 1
-            }
-            if (fillUserIn) userInMap = Map(9 -> Transient(trigPos, ArrayVec.wrap(usrinArray)))
-            
-            Seq(
-              group.chOdd -> Transient(trigPos, ArrayVec.wrap(oddArray)),
-              group.chEven -> Transient(trigPos, ArrayVec.wrap(evenArray))
-            )
-          } else {
-            Seq()
           }
         }
-      }
-      
-      val transients = Map(transSeq.flatten: _*) ++ userInMap
+        
+        val transients = Map(transSeq.flatten: _*) ++ userInMap
 
-      val ev = Event (
-        info = Event.Info (
-          idx = nextEventNoVar + i,
-          run = runStart.get.uuid,
-          time = time,
-          systime = systime
-        ),
-        raw = Event.Raw (
-          trig = trig,
-          trans = transients
+        val ev = Event (
+          info = Event.Info (
+            idx = nextEventNoVar + i,
+            run = runStart.get.uuid,
+            time = time,
+            systime = systime
+          ),
+          raw = Event.Raw (
+            trig = trig,
+            trans = transients
+          )
         )
-      )
-      
-      ev
-    }
-    nextEventNoVar += events.size
+        
+        ev
+      }
+      nextEventNoVar += events.size
 
-    events
+      events
+    }
+  }
+  
+  def emitEvents(events: Seq[Event]): Unit = if (!events.isEmpty) {
+      clearBankFull()
+      srvEmit(Events(events: _*))
+      events foreach { srvEmit(_) }
   }
 }
 
