@@ -367,8 +367,6 @@ abstract class SIS3300Server(val vmeBus: VMEBus, val baseAddress: Int) extends E
 
     import memory._
   
-    daqState = daqState.copy(running = false, startTime = -1)
-    
     run { for {
       _ <- KEY_STOP_AUTO_BANK_SWITCH set()
       _ <- sync()
@@ -379,7 +377,8 @@ abstract class SIS3300Server(val vmeBus: VMEBus, val baseAddress: Int) extends E
     } yield {} }
 
     val runStop = RunStop(currentTime - daqState.startTime)
-  
+    daqState = daqState.copy(running = false, startTime = -1)
+
     emitEvents(getEvents())
 
     srvEmit(runStop)
