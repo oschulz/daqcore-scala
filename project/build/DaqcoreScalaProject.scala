@@ -8,7 +8,7 @@ class DaqcoreScalaProject(info: ProjectInfo) extends DefaultProject(info) with A
   val mavenLocal = "Local Maven Repository" at "file://"+Path.userHome+"/.m2/repository"
 
   val tuDoE4Releases = "TU-Do Physik E4 Releases" at "http://maven.e4.physik.uni-dortmund.de/maven2/releases/"
-  val tuDoE4Snapshots = "TU-Do Physik E4 Releases" at "http://maven.e4.physik.uni-dortmund.de/maven2/snapshots/"
+  val tuDoE4Snapshots = "TU-Do Physik E4 Snapshots" at "http://maven.e4.physik.uni-dortmund.de/maven2/snapshots/"
 
   val jBossRepo = "jBoss" at "http://repository.jboss.org/nexus/content/groups/public/"
 
