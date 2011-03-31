@@ -23,7 +23,7 @@ import java.net.InetAddress
 import java.util.concurrent.TimeoutException
 
 import akka.actor.Actor.actorOf, akka.actor._, akka.dispatch.Future
-import akka.config.Supervision.{OneForOneStrategy, AllForOneStrategy, Temporary, Permanent}
+import akka.config.Supervision.{OneForOneStrategy, AllForOneStrategy}
 
 import org.acplt.oncrpc.OncRpcProtocols
 
@@ -38,22 +38,30 @@ class RTVXI11Client(val address: InetAddress, timeout: Long) extends CloseableSe
 
   override def profiles = super.profiles.+[VXI11Client]
   
+  case class GetSelf() extends ActorCmd
   case class Crash(e: Throwable) extends ActorCmd
   
-  class Link(val device: String, val timeout: Long, id: Int) extends CloseableServer {
-    val lnk = SrvLid(self, id)
+  class Link(val device: String, val timeout: Long) extends CloseableServer with PostInit {
+    var id: Int = 0
+    def lnk = SrvLid(self, id)
     
     override def profiles = super.profiles.+[VXI11ClientLink]
     
     override def init() = {
       super.init()
-      self.lifeCycle = Permanent
       atCleanup{ try { client ! LinkClose(lnk) } catch { case e: ActorInitializationException => } }
+    }
+
+    override def postInit() = {
+      super.postInit()
+      
+      id = new ActorRefOps(client).!>(LinkOpenInt(device, timeout))
     }
     
     override def serve = super.serve orElse {
       case RawMsgInput.Recv() => client forward LinkRead(lnk, timeout)
       case RawMsgOutput.Send(data) => client ! LinkWrite(lnk, timeout, data)
+      case GetSelf() => reply(self)
       case Crash(e) => throw(e)
     }
   }
@@ -68,13 +76,13 @@ class RTVXI11Client(val address: InetAddress, timeout: Long) extends CloseableSe
 
   case class LinkRead(lnk: SrvLid , timeout: Long) extends ActorQuery[ByteSeq]
   case class LinkWrite(lnk: SrvLid, timeout: Long, data: ByteSeq) extends ActorCmd
+  case class LinkOpenInt(device: String, timeout: Long) extends ActorQuery[Int]
   case class LinkClose(lnk: SrvLid) extends ActorCmd
 
 
   override def init() = {
     super.init()
 
-    self.lifeCycle = Permanent
     self.faultHandler = OneForOneStrategy(List(classOf[Throwable]), 3, 1000)
     
     withCleanup {
@@ -106,6 +114,7 @@ class RTVXI11Client(val address: InetAddress, timeout: Long) extends CloseableSe
     case LinkRead(lnk, timeout) => srvRead(lnk, timeout)
     case LinkWrite(lnk, timeout, data) => srvWrite(lnk, timeout, data)
     case LinkClose(lnk) => srvCloseLink(lnk)
+    case LinkOpenInt(device, timeout) => srvLinkOpenInt(device, timeout)
     case VXI11Client.OpenLink(device, timeout) => srvOpenLink(device, timeout)
   }
 
@@ -116,7 +125,7 @@ class RTVXI11Client(val address: InetAddress, timeout: Long) extends CloseableSe
   }
 
 
-  protected def srvOpenLink(device: String, timeout: Long): Unit = {
+  protected def srvLinkOpenInt(device: String, timeout: Long): Unit = {
     log.debug("Creating new VXI11 link to %s, device %s".format(address, device))
     require(rtlinks.get(device) == None)
     require(timeout <= Int.MaxValue)
@@ -139,10 +148,17 @@ class RTVXI11Client(val address: InetAddress, timeout: Long) extends CloseableSe
     val maxRecvSize = if (lresp.maxRecvSize > 0) lresp.maxRecvSize else defaultMaxRecvSize
     
     val lnkId = lresp.lid.value
-    val lnkSrv = actorOf(new Link(device, timeout, lnkId))
+
+    rtlinks += device -> SrvLid(srv.sender.get, lnkId)
+    
+    reply(lnkId)
+  }
+
+
+  protected def srvOpenLink(device: String, timeout: Long): Unit = {
+    val lnkSrv = actorOf(new Link(device, timeout))
     self.link(lnkSrv); lnkSrv.start
-    rtlinks += device -> SrvLid(lnkSrv, lnkId)
-    reply(lnkSrv)
+    lnkSrv forward GetSelf()
   }
 
 
