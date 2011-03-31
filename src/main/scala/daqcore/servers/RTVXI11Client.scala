@@ -212,7 +212,7 @@ class RTVXI11Client(val address: InetAddress, timeout: Long) extends CloseableSe
             readImpl(timeout)
           }
 
-        case 4|15|17 => // Timeout
+        case 4|15|17 => throw new java.util.concurrent.TimeoutException("VXI11 read timed out")
         case 11 => throw new IOException("VXI11 read: Device locked by another link")
         case 23 => throw new IOException("VXI11 read: Abort")
         case _ => throw new IOException("VXI11 read: Unknown error")
