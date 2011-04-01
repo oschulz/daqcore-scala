@@ -21,7 +21,7 @@ import akka.actor._
 
 
 trait PostInit extends Server {
-  case object RunPostInit
+  import PostInit._
 
   protected[actors] var postInitDone = false
   
@@ -51,4 +51,9 @@ trait PostInit extends Server {
     super.preStart
     self ! RunPostInit
   }
+}
+
+
+object PostInit {
+  case object RunPostInit
 }
