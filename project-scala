@@ -52,7 +52,7 @@ if [ ! -d "${SBT_TARGET}" ] ; then
 	echo "ERROR: Missing target directory \"${SBT_TARGET}\"." 1>&2
 else
 	# Need sbt-launcher JAR in the classpath to get jline
-	export CLASSPATH=".:${SBT_TARGET}/*:${SBT_LIB}:${SBT_LIB_MANAGED}:${SBT_LIB_SCALA}:${SBT_JAR}"
+	export CLASSPATH=".:${PROJECT_DIR}:${SBT_TARGET}/*:${SBT_LIB}:${SBT_LIB_MANAGED}:${SBT_LIB_SCALA}:${SBT_JAR}"
 fi
 
 
