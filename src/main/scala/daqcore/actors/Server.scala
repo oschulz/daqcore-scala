@@ -164,7 +164,13 @@ trait Server extends Actor with Logging with Profiling {
   }
 
 
-  def receive = profilingTimer("EventLoop") wrap { handleDefaults orElse serve }
+  protected[actors] val defaultReceive = {
+    val recv = handleDefaults orElse serve
+    if (Server.timing) profilingTimer("EventLoop") wrap { recv }
+    else recv
+  }
+
+  def receive = defaultReceive
 
   override def preStart = {
     log.debug("preStart")
@@ -204,6 +210,8 @@ object Server {
   case class AddClientLink(client: ActorRef, instance: Uuid) extends ActorQuery[Unit]
   case class RemoveClientLink(client: ActorRef, instance: Uuid) extends ActorCmd
   case class ServerExit(server: ActorRef, reason: Option[Throwable]) extends ActorCmd
+  
+  @volatile var timing: Boolean =  akka.config.Config.config.getBool("daqcore.server.timing", false)
 }
 
 
