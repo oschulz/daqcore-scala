@@ -46,7 +46,7 @@ fi
 
 SBT_TARGET="${PROJECT_DIR}/target/scala_${SCALA_VERSION}"
 SBT_LIB="${PROJECT_DIR}/lib/*"
-SBT_LIB_MANAGED="${PROJECT_DIR}/lib_managed/scala_${SCALA_VERSION}/compile/*:${PROJECT_DIR}/lib_managed/scala_${SCALA_VERSION}/plugin/*"
+SBT_LIB_MANAGED="${PROJECT_DIR}/lib_managed/scala_${SCALA_VERSION}/compile/*:${PROJECT_DIR}/lib_managed/scala_${SCALA_VERSION}/runtime/*:${PROJECT_DIR}/lib_managed/scala_${SCALA_VERSION}/plugin/*"
 SBT_LIB_SCALA="${PROJECT_DIR}/project/boot/scala-${SCALA_VERSION}/lib/*"
 if [ ! -d "${SBT_TARGET}" ] ; then
 	echo "ERROR: Missing target directory \"${SBT_TARGET}\"." 1>&2
