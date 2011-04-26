@@ -35,6 +35,8 @@ class DaqcoreScalaProject(info: ProjectInfo) extends DefaultProject(info) with A
   val colt = "colt" % "colt" % "1.2.0"
   val remotetea_oncrpc = "org.acplt" % "remotetea-oncrpc" % "1.0.7"
   val snmp4j = "org.snmp4j" % "snmp4j" % "1.11.3"
+  val mibble_parser = "net.percederberg.mibble" % "mibble-parser" % "2.9.2"
+  val mibble_mibs = "net.percederberg.mibble" % "mibble-mibs" % "2.9.2" % "runtime"
 
   def javaSrcDir = "src" / "main" / "java"
 
