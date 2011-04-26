@@ -11,6 +11,7 @@ class DaqcoreScalaProject(info: ProjectInfo) extends DefaultProject(info) with A
   val tuDoE4Snapshots = "TU-Do Physik E4 Snapshots" at "http://maven.e4.physik.uni-dortmund.de/maven2/snapshots/"
 
   val jBossRepo = "jBoss" at "http://repository.jboss.org/nexus/content/groups/public/"
+  val snmp4jRepo = "SNMP4J" at "https://server.oosnmp.net/dist/release/"
 
   val scala_continuations = compilerPlugin("org.scala-lang.plugins" % "continuations" % "2.8.1")
 
@@ -33,6 +34,7 @@ class DaqcoreScalaProject(info: ProjectInfo) extends DefaultProject(info) with A
 
   val colt = "colt" % "colt" % "1.2.0"
   val remotetea_oncrpc = "org.acplt" % "remotetea-oncrpc" % "1.0.7"
+  val snmp4j = "org.snmp4j" % "snmp4j" % "1.11.3"
 
   def javaSrcDir = "src" / "main" / "java"
 
