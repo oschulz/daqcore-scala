@@ -22,6 +22,8 @@ class DaqcoreScalaProject(info: ProjectInfo) extends DefaultProject(info) with A
   val akka_remote = akkaModule("remote")
   val akka_stm = akkaModule("stm")
 
+  val log4j_over_slf4j = "org.slf4j" % "log4j-over-slf4j" % "1.6.0" % "runtime" intransitive()
+
   val netty = "org.jboss.netty" % "netty" % "3.2.1.Final" % "compile"
 
   val jfreechart = "jfree" % "jfreechart" % "1.0.13"
