@@ -26,7 +26,7 @@ import scala.collection.mutable.{Builder,ArrayBuffer,ArrayBuilder}
 final class ArrayVec[@specialized A: ClassManifest](array: Array[A]) extends
   collection.immutable.IndexedSeq[A] with IndexedSeqLike[A, ArrayVec[A]]
 {
-  private def classMf = classManifest[A]
+  final def classMf = classManifest[A]
   
   @inline def length = array.length
   @inline override def size = length
