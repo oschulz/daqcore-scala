@@ -1,9 +1,9 @@
 ----------------------------------------------------------------------------------------------------
 -- $HeadURL: http://svn.wiener-d.com/src/enet/trunk/mibs/WIENER-CRATE-MIB.txt $
--- $LastChangedDate: 2010-10-22 05:43:46 +0200 (Fr, 22. Okt 2010) $                                                                            
--- $LastChangedRevision: 1207 $                                                                        
+-- $LastChangedDate: 2011-03-14 17:33:58 +0100 (Mo, 14. Mrz 2011) $                                                                            
+-- $LastChangedRevision: 1326 $                                                                        
 -- $LastChangedBy: koester (roemer)$                                                                              
--- Copyright © 2005-2007 W-IE-NE-R Plein & Baus GmbH, Burscheid, Germany   xyz                         
+-- Copyright © 2005-2007 W-IE-NE-R Plein & Baus GmbH, Burscheid, Germany                            
 ----------------------------------------------------------------------------------------------------
 WIENER-CRATE-MIB DEFINITIONS ::= BEGIN
 
@@ -207,10 +207,12 @@ System ::= SEQUENCE {
     sysVmeSysReset                INTEGER,
     sysConfigDoMeasurementCurrent BITS,
     sysOperatingTime              Integer32,
+
     sysDebugMemory8               Integer32,
     sysDebugMemory16              Integer32,
     sysDebugMemory32              Integer32,
-    sysMemoryAccess               OCTET STRING
+    sysDebug                      OCTET STRING,
+    sysDebugDisplay               OCTET STRING
 }
 
 sysMainSwitch OBJECT-TYPE
@@ -329,13 +331,25 @@ sysDebugMemory32 OBJECT-TYPE
             "Debug 32-bit memory access."
     ::= { system 1026 }
 
-sysMemoryAccess OBJECT-TYPE
-    SYNTAX  OCTET STRING (SIZE (516))
+sysDebug OBJECT-TYPE
+    SYNTAX  OCTET STRING (SIZE (520))
     MAX-ACCESS  read-write
     STATUS  current
     DESCRIPTION
-            "Use it for update the Firmware of Display or other devices."
-    ::= { system 127 }
+            "Debug communication with the MPOD.
+             This is a direct map to the ancient functions which are accessible
+             via USB (without SLIP/SNMP).
+            "
+    ::= { system 1027 }
+    
+sysDebugDisplay OBJECT-TYPE
+    SYNTAX  OCTET STRING
+    MAX-ACCESS  read-write
+    STATUS  current
+    DESCRIPTION
+            "Debug communication with the MPOD display."
+    ::= { system 1028 }
+    
 -------------------------------------------------------------------------------
 -- input
 -------------------------------------------------------------------------------
