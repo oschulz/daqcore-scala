@@ -1386,7 +1386,7 @@ snmp OBJECT-IDENTITY
 SnmpCommunityEntry ::= SEQUENCE {
     snmpAccessRight            INTEGER,
     snmpCommunityName          OCTET STRING,
-    snmpCommunityTable         SnmpCommunityEntry,
+    --snmpCommunityTable         SnmpCommunityEntry,
     snmpPort                   INTEGER,
     ipDynamicAddress           IpAddress, 
     --OCTET STRING,
@@ -1610,7 +1610,7 @@ psAuxiliaryNumber OBJECT-TYPE
     ::= { powersupply 4 }
 
 psAuxiliaryTable OBJECT-TYPE
-    SYNTAX  SEQUENCE OF PsAuxiliarytEntry
+    SYNTAX  SEQUENCE OF PsAuxiliaryEntry
     MAX-ACCESS  not-accessible
     STATUS  current
     DESCRIPTION
@@ -1638,7 +1638,7 @@ psAuxiliaryEntry OBJECT-TYPE
     INDEX   { psAuxiliaryIndex }
     ::= { psAuxiliaryTable 1 }
 
-OutputEntry ::= SEQUENCE {
+PsAuxiliaryEntry ::= SEQUENCE {
         psAuxiliaryIndex                    INTEGER,
         psAuxiliaryMeasurementVoltage         Float,
         psAuxiliaryMeasurementCurrent         Float
