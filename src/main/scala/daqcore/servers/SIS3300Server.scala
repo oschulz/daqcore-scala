@@ -635,6 +635,12 @@ object SIS3300Server extends Logging {
   def EmptyMemMap = IntMap.empty[Word]
   def WordFullBitmask = (Word.MaxValue+Word.MinValue)
   val nWordBits = (8 * sizeOf[Word])
+
+  val (sctMode, bltMode, mbltMode, tevmeMode) = {
+    import VMEBus._
+    import AddressSpace._, DataWidth._, VMECycle._
+    ( Mode(A32, D32, SCT), Mode(A32, D32, BLT), Mode(A32, D32, MBLT), Mode(A32, D32, TeVME) )
+  }
   
   object RegisterRange { def apply(start: Address, end: Address) = Range(start, end, sizeOf[Word]) }
 
@@ -754,12 +760,12 @@ object SIS3300Server extends Logging {
 
 
 
-  case class MemCache(mem: MemoryLink, contents: MemMap = IntMap.empty[Word]) extends Logging {
+  case class MemCache(mem: VMEBus, contents: MemMap = IntMap.empty[Word]) extends Logging {
     def cache(addr: Address): MemCache = {
       if (contents contains addr) this
       else {
         trace("reading from 0x%s, 0x%s bytes".format(hex(addr), hex(sizeOf[Int])))
-        val bytes = mem.read(addr, sizeOf[Int])
+        val bytes = mem.read(addr, sizeOf[Int], sctMode)
         val word = (BigEndian.fromBytes[Int](bytes)).head
         this.copy(contents = contents + (addr -> word))
       }
@@ -790,19 +796,19 @@ object SIS3300Server extends Logging {
   val DoOnMemoryNothing = DoOnMemory(collection.immutable.Queue.empty[(Address, Word => Unit)], IntMap.empty[Word], MemChanges())
   
   case class DoOnMemory(reads: MemResultOps, writes: MemMap, changes: MemChanges) extends Logging {
-    def pause(mem: MemoryLink): DoOnMemory = {
+    def pause(mem: VMEBus): DoOnMemory = {
       val r = exec(mem)
       mem.pause()
       r
     }
   
-    def sync(mem: MemoryLink): DoOnMemory = {
+    def sync(mem: VMEBus): DoOnMemory = {
       val r = exec(mem)
       mem.sync()
       r
     }
   
-    def exec(mem: MemoryLink): DoOnMemory = {
+    def exec(mem: VMEBus): DoOnMemory = {
       val mustRead = reads.map{_._1} ++ changes.mods.keys
       val cache = mustRead.foldLeft(MemCache(mem)) { (cache, addr) => cache.cache(addr) }
       
@@ -817,7 +823,7 @@ object SIS3300Server extends Logging {
       
       for ((addr, word) <- allWrites) {
         trace("exec(): writing to 0x%s: 0x%s".format(hex(addr), hex(word)))
-        mem.write(addr, ByteSeq(BigEndian.toBytes(ArrayVec(word)): _*))
+        mem.write(addr, ByteSeq(BigEndian.toBytes(ArrayVec(word)): _*), sctMode)
       }
 
       for ((addr, reaction) <- reads) reaction(cache(addr))
@@ -827,7 +833,7 @@ object SIS3300Server extends Logging {
   }
 
 
-  case class MemOperator(mem: MemoryLink, timeout: Long = 10000) extends Logging {
+  case class MemOperator(mem: VMEBus, timeout: Long = 10000) extends Logging {
     protected def transform[R](f: DoOnMemory => (DoOnMemory, R)) = RespStates.transform[StateMap, R] { s =>
       val ops = s.get[DoOnMemory](mem) getOrElse DoOnMemoryNothing
       val (newOps, result) = f(ops)
@@ -1012,11 +1018,11 @@ object SIS3300Server extends Logging {
   }
 
 
-  abstract class SISMemory(val mem: MemoryLink, base: Address, timeout: Long = 10000) extends MemRegion(MemOperator(mem, timeout), base) {
+  abstract class SISMemory(val mem: VMEBus, base: Address, timeout: Long = 10000) extends MemRegion(MemOperator(mem, timeout), base) {
     def majorFirmwareRevision: Int
 
     def read(range: Range): ArrayVec[Word] = {
-      val bytes = mem.read(range.head + base, range.last - range.head + sizeOf[Word])
+      val bytes = mem.read(range.head + base, range.last - range.head + sizeOf[Word], vmeMode(range.head + base))
       BigEndian.fromBytes[Word](bytes).toArrayVec
     }
 
@@ -1438,6 +1444,20 @@ object SIS3300Server extends Logging {
     val MEM_BANK2_ADC56 = RegisterRange(0x700000, 0x780000)
     /** Sample Memory, Bank 2, ADC group 7/8 (0x780000, read-only) */
     val MEM_BANK2_ADC78 = RegisterRange(0x780000, 0x800000)
+
+    
+    def vmeMode(addr: Address) = {
+        val a = addr - base;
+        if ( MEM_BANK1.contains(a) || MEM_BANK2.contains(a) ) mbltMode
+        else if (
+          EVENT_TIMESTAMP_DIR_BANK1.contains(a) ||
+          EVENT_TIMESTAMP_DIR_BANK2.contains(a) ||
+          EVENT_DIRECTORY_BANK1.contains(a) ||
+          EVENT_DIRECTORY_BANK1.contains(a)
+        ) bltMode
+        else sctMode
+    }
+
 
     val sampleRange = 0 to 0xfff
 

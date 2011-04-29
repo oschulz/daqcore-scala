@@ -154,7 +154,7 @@ object SIS3300_11_Server {
   def apply(vmeBus: VMEBus, baseAddress: Int, sv: Supervising = defaultSupervisor, lc: LifeCycle = UndefinedLifeCycle): SIS3300_11 =
     new ServerProxy(sv.linkStart(actorOf(new SIS3300_11_Server(vmeBus, baseAddress)), lc)) with SIS3300_11
 
-  class SISMemory11(mem: MemoryLink, base: Address, timeout: Long = 10000) extends SISMemory(mem, base, timeout) {
+  class SISMemory11(mem: VMEBus, base: Address, timeout: Long = 10000) extends SISMemory(mem, base, timeout) {
     val majorFirmwareRevision = 0x11
   
     // /** Trigger Threshold Register, all ADCs (0x100004, write-only) */

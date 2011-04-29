@@ -52,9 +52,9 @@ class VMESCPIClient(dev: SCPIClientLink, timeout: Long) extends CascadableServer
     }
 
     def serve = {
-      case op @ Fwd(repl, MemoryLink.Read(address, count)) => {
+      case op @ Fwd(repl, VMEBus.Read(address, count, mode)) => {
         trace(op)
-        query(~VME~READ?(NR1(address.toInt), NR1(count.toInt))) {
+        query(~VME~READ?(NR1(mode.space.id), NR1(mode.width.id), NR1(mode.cycle.id), NR1(address.toInt), NR1(count.toInt))) {
           case Response(Result(value)) => value match {
             case BlockData(bytes) => {
               trace("Read data: " + bytes)
@@ -71,7 +71,7 @@ class VMESCPIClient(dev: SCPIClientLink, timeout: Long) extends CascadableServer
         dev.cmd(WAI!)
         reply()
       }
-      case op @ MemoryLink.Sync() => {
+      case op @ VMEBus.Sync() => {
         val repl = replyTarget
         query(WAI!, ESR?) {
           case Response(Result(NR1(esr))) =>
@@ -100,20 +100,20 @@ class VMESCPIClient(dev: SCPIClientLink, timeout: Long) extends CascadableServer
 
 
   override def serve = super.serve orElse {
-    case op: MemoryLink.Read => {
+    case op: VMEBus.Read => {
       trace(op)
       readQueue.forward(Fwd(replyTarget, op))
     }
-    case op @ MemoryLink.Write(address, bytes) => {
+    case op @ VMEBus.Write(address, bytes, mode) => {
       trace(op)
-      dev.cmd(~VME~WRITe!(NR1(address.toInt), BlockData(bytes)))  //!! toIndexedSeq not optimal
+      dev.cmd(~VME~WRITe!(NR1(mode.space.id), NR1(mode.width.id), NR1(mode.cycle.id), NR1(address.toInt), BlockData(bytes)))  //!! toIndexedSeq not optimal
     }
-    case op @ MemoryLink.Pause() => {
+    case op @ VMEBus.Pause() => {
       trace(op)
       readQueue.!>(RQPause())
       trace("%s executed" format op)
     }
-    case op @ MemoryLink.Sync() => {
+    case op @ VMEBus.Sync() => {
       trace(op)
       val repl = replyTarget
       val a = readQueue.!>(op)

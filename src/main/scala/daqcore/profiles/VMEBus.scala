@@ -17,6 +17,8 @@
 
 package daqcore.profiles
 
+import akka.dispatch.Future
+
 import daqcore.util._
 import daqcore.actors._
 
@@ -24,10 +26,55 @@ import daqcore.actors._
 case class VMEInterrupt(vector: Int, missed: Int = 0)
 
 
-trait VMEBus extends MemoryLink {
+trait VMEBus extends Profile {
+  def read(address: Long, count: Long, mode: VMEBus.Mode, timeout: Long = defaultTimeout): ByteSeq =
+    readF(address, count, mode, timeout).apply()
+
+  def readF(address: Long, count: Long, mode: VMEBus.Mode, timeout: Long = defaultTimeout): Future[ByteSeq] =
+    srv.!!>(VMEBus.Read(address, count, mode), timeout)
+
+  def write(address: Long, data: ByteSeq, mode: VMEBus.Mode) : Unit =
+    srv ! VMEBus.Write(address: Long, data, mode)
+  
+  def pause(): Unit = srv ! VMEBus.Pause()
+
+  def sync(timeout: Long = defaultTimeout): Unit = syncF(timeout).apply
+
+  def syncF(timeout: Long = defaultTimeout): Future[Unit] =
+    srv.!!>(VMEBus.Sync(), timeout)
 
 }
 
 
 object VMEBus {
+  object AddressSpace extends Enumeration {
+      val A16 = Value(16, "A16")
+      val A24 = Value(24, "A24")
+      val A32 = Value(32, "A32")
+      val A64 = Value(64, "A64")
+  }
+
+  object DataWidth extends Enumeration {
+      val  D8 = Value( 8,  "D8")
+      val D16 = Value(16, "D16")
+      val D32 = Value(32, "D32")
+      val D64 = Value(64, "D64")
+  }
+  
+  object VMECycle extends Enumeration {
+      val SCT     = Value(0,  "SCT")
+      val BLT     = Value(1,  "BLT")
+      val MBLT    = Value(2, "MBLT")
+      val TeVME = Value(3, "2eVME")
+  }
+  
+  case class Mode(space: AddressSpace.Value, width: DataWidth.Value, cycle: VMECycle.Value)
+
+  case class Read(address: Long, count: Long, mode: Mode) extends ActorQuery[ByteSeq]
+
+  case class Write(address: Long, data: ByteSeq, mode: Mode) extends ActorCmd
+
+  case class Pause() extends ActorCmd
+
+  case class Sync() extends ActorQuery[Unit]
 }
