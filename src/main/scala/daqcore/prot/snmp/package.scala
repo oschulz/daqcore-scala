@@ -15,10 +15,33 @@
 // Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 
-package daqcore.prot.snmp
+package daqcore.prot
 
 
-case class OID(values: Int*) {
-  def ~(i: Int): OID = OID((values :+ i): _*)
-  override def toString = values.mkString(".")
+package object snmp {
+
+import daqcore.util._
+
+import java.net.InetAddress
+
+
+type VariableBindings = Seq[(OID, SMIValue)]
+
+
+implicit def int2SMI(x: Int) = Integer32(x)
+implicit def smi2Int(x: Integer32) = x.toInt
+
+implicit def string2SMI(x: String) = OctetString(x)
+implicit def smi2String(x: OctetString) = x.toString
+
+implicit def iaddr2SMI(x: InetAddress) = IpAddress(ByteSeq.wrap(x.getAddress.clone))
+implicit def smi2iaddr2SMI(x: IpAddress) = InetAddress.getByAddress(x.toByteSeq.toArray)
+
+implicit def float2SMI(x: Float) = OpaqueFloat(x)
+implicit def smi2Float(x: OpaqueFloat) = x.toFloat
+
+implicit def double2SMI(x: Double) = OpaqueDouble(x)
+implicit def smi2Double(x: OpaqueDouble) = x.toDouble
+
+
 }
