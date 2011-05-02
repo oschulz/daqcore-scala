@@ -36,16 +36,13 @@ import org.snmp4j.security._
 import org.snmp4j.mp.SnmpConstants
 import org.snmp4j.transport._
 import org.snmp4j.util.DefaultPDUFactory
+import org.snmp4j.event.{ResponseListener, ResponseEvent}
 
-
-class SNMPv2MgrServer() extends Server /*with QueueingServer*/ with CloseableServer {
+class SNMPv2MgrServer() extends Server with CloseableServer {
   override def profiles = super.profiles.+[SNMPv2Manager]
 
   val tcpTransport: Boolean = false
   val snmpVersion = SnmpConstants.version2c
-
-  // val recvQueue = new ReplyQueue
-
 
   implicit def OID2S4J(oid: OID): s4jsmi.OID = new s4jsmi.OID(oid.values.toArray)
   implicit def S4J2OID(oid: s4jsmi.OID): OID = OID(oid.getValue.toArrayVec: _*)
@@ -158,8 +155,8 @@ class SNMPv2MgrServer() extends Server /*with QueueingServer*/ with CloseableSer
     target.setVersion(snmpVersion)
     target.setCommunity(new s4jsmi.OctetString(community))
     target.setAddress(snmpAddr)
-    target.setRetries(2)
-    target.setTimeout(5000)
+    target.setRetries(0)
+    target.setTimeout(srv.timeout)
     target
   }
 
@@ -171,66 +168,84 @@ class SNMPv2MgrServer() extends Server /*with QueueingServer*/ with CloseableSer
   }
 
 
-  def sendPDU(address: InetSockAddr, community: String, pdu: PDU): Seq[(OID, SMIValue)] = {
+  def sendPDU(address: InetSockAddr, community: String, pdu: PDU): Unit = {
     val trg = target(address, community)
-    val response = snmp.send(pdu, trg)
-
-    response.getError match {
-      case null =>
-      case err => throw(err)
-    }
-    
-    response.getResponse match {
-      case null => throw new java.io.IOException("No response to SNMP PDU from " + address)
-      case rpdu => for (i <- Range(0, rpdu.size)) yield {
-        val vb = rpdu.get(i)
-        val oid: OID = vb.getOid
-        val variable = vb.getVariable
-        if (variable.isException) throw new java.io.IOException("SNMP reponse contains exception: %s = %s".format(oid.toString, variable.toString))
-
-        val S4JVariable(value) = variable
-        oid -> value
-      }
-    }
+    snmp.send(pdu, trg, null, new RespListener(replyTarget))
   }
 
   def srvSNMPGet(address: InetSockAddr, community: String, oids: OID*) = {
     val pdu = newPDU(PDU.GET)
     for (oid <- oids) pdu.add(new s4jsmi.VariableBinding(oid))
-    reply(sendPDU(address, community, pdu))
+    sendPDU(address, community, pdu)
   }
 
   def srvSNMPGetNext(address: InetSockAddr, community: String, oids: OID*) = {
     val pdu = newPDU(PDU.GETNEXT)
     for (oid <- oids) pdu.add(new s4jsmi.VariableBinding(oid))
-    reply(sendPDU(address, community, pdu))
+    sendPDU(address, community, pdu)
   }
 
   def srvSNMPGetBulk(address: InetSockAddr, community: String, maxN: Int, oids: OID*) = {
     val pdu = newPDU(PDU.GETBULK)
     pdu.setMaxRepetitions(maxN) 
     for (oid <- oids) pdu.add(new s4jsmi.VariableBinding(oid))
-    reply(sendPDU(address, community, pdu))
+    sendPDU(address, community, pdu)
   }
 
   def srvSNMPSet(address: InetSockAddr, community: String, bindings: (OID, SMIValue)*) = {
     val pdu = newPDU(PDU.SET)
     for ((oid, value) <- bindings) pdu.add(new s4jsmi.VariableBinding(oid, S4JVariable(value)))
-    reply(sendPDU(address, community, pdu))
+    sendPDU(address, community, pdu)
   }
 
-  
 
+  case class S4JResponse(target: MsgTarget, event: ResponseEvent)
   
-  override def init() = {
-    super.init()
+  class RespListener(val target: MsgTarget) extends ResponseListener {
+    // respListener seems to be always called twice, the second time with an
+    // empty ResponseEvent
+    
+    var done = false
+    def onResponse(event: ResponseEvent): Unit = {
+      if (! done) {
+        done = true
+        srv ! S4JResponse(target, event)
+      } else {
+        assert ((event.getError == null) && (event.getResponse == null))
+      }
+    }
   }
+
+  def onResponse(target: MsgTarget, response: ResponseEvent): Unit = {
+      response.getError match {
+        case null =>
+        case err => throw(err)
+      }
+      
+      response.getResponse match {
+        case null => // throw new java.io.IOException("No response to SNMP PDU from " + event.getPeerAddress)
+        case rpdu => {
+          val bindings: VariableBindings = for (i <- Range(0, rpdu.size)) yield {
+            val vb = rpdu.get(i)
+            val oid: OID = vb.getOid
+            val variable = vb.getVariable
+            if (variable.isException) throw new java.io.IOException("SNMP reponse contains exception: %s = %s".format(oid.toString, variable.toString))
+
+            val S4JVariable(value) = variable
+            oid -> value
+          }
+          target ! bindings
+        }
+      }
+  }
+  
 
   override def serve = super.serve orElse {
     case op @ SNMPv2Manager.SNMPGet(address, community, oids @ _*) => debug(op); srvSNMPGet(address, community, oids: _*)
     case op @ SNMPv2Manager.SNMPGetNext(address, community, oids @ _*) => debug(op); srvSNMPGetNext(address, community, oids: _*)
     case op @ SNMPv2Manager.SNMPGetBulk(address, community, n, oids @ _*) => debug(op); srvSNMPGetBulk(address, community, n, oids: _*)
     case op @ SNMPv2Manager.SNMPSet(address, community, bindings @ _*) => debug(op); srvSNMPSet(address, community, bindings: _*)
+    case ev @ S4JResponse(target, event) => debug(ev); onResponse(target, event)
   }
 }
 
