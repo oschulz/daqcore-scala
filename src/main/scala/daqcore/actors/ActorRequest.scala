@@ -23,9 +23,7 @@ import scala.actors._
 trait ActorRequest[R] extends Product
 
 
-abstract class ActorQuery[R: ClassManifest] extends ActorRequest[R] {
-  val replyMF = classManifest[R]
-}
+abstract class ActorQuery[R] extends ActorRequest[R]
 
 
 abstract class ActorCmd extends ActorRequest[Nothing]

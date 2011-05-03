@@ -50,6 +50,7 @@ sealed trait RootSysRequest {
 
 
 abstract class RootSysQuery[R: ClassManifest] extends ActorQuery[R] with RootSysRequest {
+  val replyMF = classManifest[R]
   def readResponse(in: BasicInput)(implicit serializerCache: ContentSerCache): R = {
     serializerCache.forType[R](replyMF).read(in)
   }
