@@ -56,11 +56,11 @@ else
 fi
 
 
-[ -n "$JAVA_OPTIONS" ] || JAVA_OPTIONS="-Xmx512M -Xms32M"
+[ -n "$JAVA_OPTS" ] || JAVA_OPTS="-Xmx512M -Xms32M"
 
 for i; do
   case "$i" in
-    -D*) JAVA_OPTIONS="$JAVA_OPTIONS $i" ;;
+    -D*) JAVA_OPTS="$JAVA_OPTS $i" ;;
     *) ;;
   esac
 done 
