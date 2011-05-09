@@ -23,7 +23,7 @@ import scala.actors._
 trait ActorRequest[R] extends Product
 
 
-abstract class ActorQuery[R] extends ActorRequest[R]
+trait ActorQuery[R] extends ActorRequest[R]
 
 
-abstract class ActorCmd extends ActorRequest[Nothing]
+trait ActorCmd extends ActorRequest[Nothing]
