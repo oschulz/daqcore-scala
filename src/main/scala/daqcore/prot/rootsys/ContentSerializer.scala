@@ -51,7 +51,7 @@ object ContentSerializer {
       else if (mf == classManifest[String]) StringIO
       else if (mf == classManifest[UUID]) UUIDIO
       /*else if (cl.isArray) {
-        val cmf = ReflectionOps.manifestFromClass(cl.getComponentType)
+        val cmf = ClassOps.manifestFromClass(cl.getComponentType)
         
         if (cmf == classManifest[Boolean]) BooleanArrayIO
         else if (cmf == classManifest[Byte]) ByteArrayIO

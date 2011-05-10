@@ -74,7 +74,7 @@ object ProductSerializer {
         case java.lang.Float.TYPE => "float"
         case java.lang.Double.TYPE => "double"
         case cl => {
-          if (cl.isArray) getTypeName(ReflectionOps.manifestFromClass(cl.getComponentType))
+          if (cl.isArray) getTypeName(ClassOps.manifestFromClass(cl.getComponentType))
           else if (classOf[String] == cl) "string"
           else if (classOf[UUID] == cl) "uuid"
           else if (classOf[Seq[_]].isAssignableFrom(cl) && cl.isAssignableFrom(classOf[ArrayVec[_]]))

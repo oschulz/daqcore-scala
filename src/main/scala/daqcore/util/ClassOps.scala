@@ -18,11 +18,11 @@
 package daqcore.util
 
 
-class ReflectionOps(cl: Class[_]) {
+class ClassOps(cl: Class[_]) {
   import java.lang.Class
   import java.lang.reflect.{Field, ParameterizedType}
 
-  import ReflectionOps._
+  import ClassOps._
 
   def inheritance: List[Class[_]] = {
     def impl(cl: Class[_]): List[Class[_]] = cl :: (Option(cl.getSuperclass) map {impl(_)} getOrElse Nil)
@@ -41,7 +41,7 @@ class ReflectionOps(cl: Class[_]) {
 }
 
 
-object ReflectionOps {
+object ClassOps {
   val shortClassNameExpr = """(.*[$.])?([^$.]*)""".r
 
   import java.lang.reflect.{Type => JType, Array => _, _}
