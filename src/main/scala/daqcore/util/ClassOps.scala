@@ -33,7 +33,12 @@ class ClassOps(cl: Class[_]) {
     def fields = inheritance flatMap {_.getDeclaredFields}
     for { f <- fields } yield { f -> manifestOf(f.getGenericType) }
   }
-  
+
+  def wrapperClass: Class[_] = {
+    if (cl.isPrimitive) wrapperClasses(cl)
+    else cl
+  }
+
   def shortName = {
     val shortClassNameExpr(_, name) = cl.getName
     name
@@ -42,11 +47,23 @@ class ClassOps(cl: Class[_]) {
 
 
 object ClassOps {
-  val shortClassNameExpr = """(.*[$.])?([^$.]*)""".r
-
   import java.lang.reflect.{Type => JType, Array => _, _}
   import scala.reflect.Manifest.{classType, intersectionType, arrayType, wildcardType}
   import scala.reflect.Manifest
+
+  val shortClassNameExpr = """(.*[$.])?([^$.]*)""".r
+
+  def wrapperClasses = Map[Class[_], Class[_]] (
+    classOf[Boolean] -> classOf[java.lang.Boolean],
+    classOf[Byte] -> classOf[java.lang.Byte],
+    classOf[Short] -> classOf[java.lang.Short],
+    classOf[Int] -> classOf[java.lang.Integer],
+    classOf[Long] -> classOf[java.lang.Long],
+    classOf[Float] -> classOf[java.lang.Float],
+    classOf[Double] -> classOf[java.lang.Double],
+    classOf[Char] -> classOf[java.lang.Character],
+    classOf[Unit] -> classOf[java.lang.Void]
+  )
 
   protected def typeArgManifest(tp: JType): Manifest[_] = tp match {
     case cl: Class[_] => {
