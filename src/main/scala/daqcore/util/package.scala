@@ -30,7 +30,8 @@ implicit def arrayOps[A: ClassManifest](array: Array[A]) = new ArrayOps(array)
 
 implicit def urlOps(url: java.net.URL) = new URLOps(url)
 
-implicit def reflectionOps(cl: java.lang.Class[_]) = new ReflectionOps(cl)
+implicit def classOps(cl: java.lang.Class[_]) = new ClassOps(cl)
+implicit def methodOps(m: java.lang.reflect.Method) = new MethodOps(m)
 
 implicit def randomOps(rnd: scala.util.Random) = new RandomOps(rnd)
 implicit val defaultRandom = scala.util.Random
