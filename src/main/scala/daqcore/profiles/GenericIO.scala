@@ -60,7 +60,7 @@ trait GenericInput extends Profile with Closeable with Logging {
     }
   }
 
-  def recv(timeout: Long = defaultTimeout): InputData = recvF(timeout).apply()
+  def recv(timeout: Long = defaultTimeout): InputData = recvF(timeout)get
   
   def recvF(timeout: Long = defaultTimeout): Future[InputData] =
     tryIn { srv.!!>(Recv(), timeout) map { _.data } }
@@ -71,7 +71,7 @@ trait GenericInput extends Profile with Closeable with Logging {
   def clearInput(timeout: Long = defaultTimeout): Unit = {
     @tailrec def clearInputImpl(): Unit = {
       log.trace("Clearing input")
-      recvF(timeout).get match {
+      recvF(timeout).getOpt match {
         case Some(data) => clearInputImpl()
         case None =>
       }

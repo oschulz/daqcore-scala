@@ -23,13 +23,13 @@ import akka.dispatch.Future
 
 class ActorRefOps(aref: ActorRef) {
   def !>>[R](msg: Any, timeout: Long = aref.timeout)(implicit sender: Option[ActorRef] = None): R = 
-    aref.!!![R](msg, timeout)(sender).apply()
+    aref.!!![R](msg, timeout)(sender).get
 
   def !!>>[R](msg: Any, timeout: Long = aref.timeout)(implicit sender: Option[ActorRef] = None): Future[R] =
     aref.!!![R](msg, timeout)(sender)
 
   def !>[R](msg: ActorQuery[R], timeout: Long = aref.timeout)(implicit sender: Option[ActorRef] = None): R = 
-    aref.!!![R](msg, timeout)(sender).apply()
+    aref.!!![R](msg, timeout)(sender).get
 
   def !!>[R](msg: ActorQuery[R], timeout: Long = aref.timeout)(implicit sender: Option[ActorRef] = None): Future[R] =
     aref.!!![R](msg, timeout)(sender)

@@ -27,7 +27,7 @@ trait Syncable extends Profile {
 
   def pause(): Unit = srv ! Pause()
 
-  def sync(timeout: Long = defaultTimeout): Unit = syncF(timeout).apply()
+  def sync(timeout: Long = defaultTimeout): Unit = syncF(timeout)get
 
   def syncF(timeout: Long = defaultTimeout): Future[Unit] =
     srv.!!>(Sync(), timeout)

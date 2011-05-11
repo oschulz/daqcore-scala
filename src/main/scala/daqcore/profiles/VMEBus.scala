@@ -28,7 +28,7 @@ case class VMEInterrupt(vector: Int, missed: Int = 0)
 
 trait VMEBus extends Profile {
   def read(address: Long, count: Long, mode: VMEBus.Mode, timeout: Long = defaultTimeout): ByteSeq =
-    readF(address, count, mode, timeout).apply()
+    readF(address, count, mode, timeout)get
 
   def readF(address: Long, count: Long, mode: VMEBus.Mode, timeout: Long = defaultTimeout): Future[ByteSeq] =
     srv.!!>(VMEBus.Read(address, count, mode), timeout)
@@ -38,7 +38,7 @@ trait VMEBus extends Profile {
   
   def pause(): Unit = srv ! VMEBus.Pause()
 
-  def sync(timeout: Long = defaultTimeout): Unit = syncF(timeout).apply
+  def sync(timeout: Long = defaultTimeout): Unit = syncF(timeout).get
 
   def syncF(timeout: Long = defaultTimeout): Future[Unit] =
     srv.!!>(VMEBus.Sync(), timeout)

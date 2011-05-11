@@ -46,7 +46,7 @@ class VMESCPIClient(dev: SCPIClientLink, timeout: Long) extends CascadableServer
     }
   
     def query(instr: Instruction*)(body: PartialFunction[Response, Unit]) = {
-      val response = (dev.queryF(instr: _*)(timeout)).apply()
+      val response = (dev.queryF(instr: _*)(timeout)).get
       trace("Processing response: " + response)
       (body orElse unexpectedResponse)(response)
     }

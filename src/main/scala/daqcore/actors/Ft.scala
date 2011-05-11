@@ -25,11 +25,11 @@ import daqcore.monads._
 trait Ft[A] {
   ft =>
 
-  def get: Option[A]
+  def getOpt: Option[A]
 
-  def apply(): A
+  def get: A
 
-  def foreach(k: A => Unit): Unit = k(apply())
+  def foreach(k: A => Unit): Unit = k(get)
   
   def map[B](f: A => B): Ft[B]
 
@@ -44,14 +44,12 @@ trait Ft[A] {
 class AkkaFt[A](future: Future[A]) extends Ft[A] {
   ft =>
 
-  def get: Option[A] = {
-    try { future.await } 
+  def getOpt: Option[A] = {
+    try { Some(get) } 
     catch { case e: FutureTimeoutException => None }
-    if (future.exception.isDefined) throw future.exception.get
-    else future.result
   }
 
-  def apply(): A = {
+  def get: A = {
     try { future.await } 
     catch { case e: FutureTimeoutException => throw e }
     if (future.exception.isDefined) throw future.exception.get
