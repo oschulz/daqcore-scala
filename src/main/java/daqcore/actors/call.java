@@ -1,4 +1,4 @@
-// Copyright (C) 2010 Oliver Schulz <oliver.schulz@tu-dortmund.de>
+// Copyright (C) 2011 Oliver Schulz <oliver.schulz@tu-dortmund.de>
 
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -14,23 +14,14 @@
 // along with this program; if not, write to the Free Software
 // Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
+package daqcore.actors;
 
-package daqcore.actors
+import java.lang.annotation.*;
+import static java.lang.annotation.RetentionPolicy.*;
+import static java.lang.annotation.ElementType.*;
 
-import scala.actors._
-
-
-trait ActorRequest[R] extends Product
-
-
-trait ActorQuery[R] extends ActorRequest[R]
-
-
-trait ActorCmd extends ActorRequest[Nothing]
-
-
-trait SReq[R] extends ActorRequest[R]
-
-case class SQry[R](func: Symbol, args: Any*) extends ActorQuery[R] with SReq[R]
-
-case class SCmd(func: Symbol, args: Any*) extends ActorCmd with SReq[Nothing]
+@Retention(RUNTIME)
+@Target(METHOD)
+public @interface call {
+	public Class mc() default SReq.class;
+}

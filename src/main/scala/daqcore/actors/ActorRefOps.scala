@@ -33,4 +33,14 @@ class ActorRefOps(aref: ActorRef) {
 
   def !!>[R](msg: ActorQuery[R], timeout: Long = aref.timeout)(implicit sender: Option[ActorRef] = None): Future[R] =
     aref.!!![R](msg, timeout)(sender)
+
+
+  def cmd[R](func: Symbol, args: Any*)(implicit sender: Option[ActorRef] = None): Unit =
+    aref ! SCmd(func, args: _*)
+
+  def qryF[R](func: Symbol, args: Any*)(implicit sender: Option[ActorRef] = None): Future[R] =
+    aref.!!![R](SQry(func, args: _*))(sender)
+
+  def qry[R](func: Symbol, args: Any*)(implicit sender: Option[ActorRef] = None): R =
+    aref.!!![R](SQry(func, args: _*))(sender).get
 }
