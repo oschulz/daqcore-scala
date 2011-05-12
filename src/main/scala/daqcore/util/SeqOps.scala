@@ -20,8 +20,8 @@ package daqcore.util
 import scala.collection.mutable.ArrayBuilder
 
 
-class SeqOps[A: ClassManifest](seq: Seq[A]) {
-  def toIISeq = seq.toArray.toSeq.asInstanceOf[IndexedSeq[A]]
+class SeqOps[A: ClassManifest](thisSeq: Seq[A]) {
+  def toIISeq = thisSeq.toArray.toSeq.asInstanceOf[IndexedSeq[A]]
 }
 
 
@@ -31,21 +31,21 @@ object IISeq {
 }
 
 
-class NestedSeqOps[A: ClassManifest](seq: Seq[Seq[A]]) extends SeqOps[Seq[A]](seq) {
-  def flat: Seq[A] = seq.view.flatMap{a=>a}
-  def flatWithSep(sep: Seq[A]): Seq[A] = new FlattenedWithSep(seq, sep)
+class NestedSeqOps[A: ClassManifest](thisSeq: Seq[Seq[A]]) extends SeqOps[Seq[A]](thisSeq) {
+  def flat: Seq[A] = thisSeq.view.flatMap{a=>a}
+  def flatWithSep(sep: Seq[A]): Seq[A] = new FlattenedWithSep(thisSeq, sep)
 }
 
 
-class FlattenedWithSep[A: ClassManifest](val seq: Seq[Seq[A]], val sep: Seq[A]) extends Seq[A] {
-  lazy val length: Int = (seq.view map {_.length} sum) + (0 max ((seq.length - 1) * sep.length))
+class FlattenedWithSep[A: ClassManifest](val thisSeq: Seq[Seq[A]], val sep: Seq[A]) extends Seq[A] {
+  lazy val length: Int = (thisSeq.view map {_.length} sum) + (0 max ((thisSeq.length - 1) * sep.length))
   
   lazy val contents: IndexedSeq[A] = toArray(classManifest[A]).toSeq.asInstanceOf[IndexedSeq[A]]
   
   override def toArray[B >: A](implicit arg0: ClassManifest[B]): Array[B] = {
     val builder = ArrayBuilder.make[B]
     var first = true
-    for (s <- seq) {
+    for (s <- thisSeq) {
       if (!first) builder ++= sep
       else first = false
       builder ++= s
@@ -56,7 +56,7 @@ class FlattenedWithSep[A: ClassManifest](val seq: Seq[Seq[A]], val sep: Seq[A]) 
   def apply(idx: Int): A = contents(idx)
   
   def iterator: Iterator[A] = new Iterator[A] {
-    val seqIt = seq.iterator
+    val seqIt = thisSeq.iterator
     var elemIt = seqIt.next.iterator
     
     private def proceed =

@@ -24,7 +24,8 @@ import scala.collection.mutable.{Builder,ArrayBuffer,ArrayBuilder}
 
 @serializable
 final class ArrayVec[@specialized A: ClassManifest](array: Array[A]) extends
-  collection.immutable.IndexedSeq[A] with IndexedSeqLike[A, ArrayVec[A]]
+  collection.immutable.IndexedSeq[A] with IndexedSeqLike[A, ArrayVec[A]] with
+  Serializable
 {
   final def classMf = classManifest[A]
   

@@ -13,16 +13,19 @@ class DaqcoreScalaProject(info: ProjectInfo) extends DefaultProject(info) with A
   val jBossRepo = "jBoss" at "http://repository.jboss.org/nexus/content/groups/public/"
   val snmp4jRepo = "SNMP4J" at "https://server.oosnmp.net/dist/release/"
 
-  val scala_continuations = compilerPlugin("org.scala-lang.plugins" % "continuations" % "2.8.1")
+  val scala_continuations = compilerPlugin("org.scala-lang.plugins" % "continuations" % "2.9.0")
 
-  val scala_swing = "org.scala-lang" % "scala-swing" % "2.8.1"
+  val scala_swing = "org.scala-lang" % "scala-swing" % "2.9.0"
 
-  val scalatest = "org.scalatest" % "scalatest" % "1.2" % "test"
+  val scalatest = "org.scalatest" % "scalatest_2.9.0" % "1.4.1" % "test"
 
   val akka_actor = akkaModule("actor")
   val akka_remote = akkaModule("remote")
   val akka_stm = akkaModule("stm")
+  val akka_slf4j = akkaModule("slf4j")
 
+  val logback_core = "ch.qos.logback" % "logback-core" % "0.9.28"
+  val logback_classic = "ch.qos.logback" % "logback-classic" % "0.9.28" % "runtime" intransitive()
   val log4j_over_slf4j = "org.slf4j" % "log4j-over-slf4j" % "1.6.0" % "runtime" intransitive()
 
   val netty = "org.jboss.netty" % "netty" % "3.2.1.Final" % "compile"

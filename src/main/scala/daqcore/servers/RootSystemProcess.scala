@@ -17,10 +17,9 @@
 
 package daqcore.servers
 
-import scala.tools.nsc.io.Process.Pipe._
-
 import java.io.{File, InputStream, OutputStream, IOException}
 import java.lang.{Process}
+import scala.sys.process.{Process => SProcess}
 
 import akka.actor._, akka.actor.Actor._, akka.dispatch.{Future, Dispatchers}
 import akka.config.Supervision.{LifeCycle, UndefinedLifeCycle, Temporary, OneForOneStrategy, AllForOneStrategy}
@@ -200,11 +199,11 @@ class RootSystemProcess extends Server with KeepAlive with PostInit with Closeab
     super.postInit()
     withCleanup {
       val logLevel: Int = (
-        if (rspLog.trace_?) 1000
-        else if (rspLog.debug_?) 2000
-        else if (rspLog.info_?) 3000
-        else if (rspLog.warning_?) 4000
-        else if (rspLog.error_?) 5000
+        if (rspLog.traceEnabled) 1000
+        else if (rspLog.debugEnabled) 2000
+        else if (rspLog.infoEnabled) 3000
+        else if (rspLog.warnEnabled) 4000
+        else if (rspLog.errorEnabled) 5000
         else 0x7fffffff
       )
 
@@ -246,7 +245,7 @@ class RootSystemProcess extends Server with KeepAlive with PostInit with Closeab
 object RootSystemProcess extends Logging {
   val msgHeader = ByteSeq(0x10.toByte, 0x9B.toByte) // DLE CSI
   
-  val rootExe = new java.io.File((Nil | "root-config --bindir").head + "/root.exe")
+  val rootExe = new java.io.File(SProcess("root-config --bindir").lines.head + "/root.exe")
 
   assert(rootExe.exists)
   

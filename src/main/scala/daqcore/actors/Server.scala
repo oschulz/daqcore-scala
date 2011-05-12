@@ -199,7 +199,13 @@ trait Server extends Actor with Logging with Profiling {
       runShutdownActions()
     } finally {
       processClientLinks(None)
-      self.shutdownLinkedActors()
+      // Stop linked actors
+      val laIt = self.linkedActors.values.iterator
+      while (laIt.hasNext) {
+        val a = laIt.next
+        try { a.stop() }
+        catch { case e => log.error("Failed to stop linked actor %s: %s".format(a, e)) }
+      }
     }
   }
 }

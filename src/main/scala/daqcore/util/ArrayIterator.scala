@@ -90,7 +90,7 @@ final class ArrayIterator[@specialized A: ClassManifest](private val array: Arra
     this
   }
 
-  def span(p: A => Boolean): (ArrayIterator[A], ArrayIterator[A]) = {
+  override def span(p: A => Boolean): (ArrayIterator[A], ArrayIterator[A]) = {
     val prev = if (!isReversed) from else until
     dropWhile(p)
     val that = {

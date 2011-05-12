@@ -19,11 +19,13 @@ package daqcore.actors
 
 import akka.actor._, akka.actor.Actor._
 
+import daqcore.util._
+
 
 // Workaround to make sure a supervising actor get's restarted even
 // if all children are temporary - for some reason it get's shut
 // down instead on restart
-trait KeepAlive extends Actor {
+trait KeepAlive extends Actor with Logging {
   protected[actors] class KeepAliveDummy extends Actor {
     def receive = { case null => }
   }
