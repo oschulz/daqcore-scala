@@ -70,7 +70,8 @@ class ArrayVecSpec extends WordSpec with MustMatchers {
 
           val refArray = Array.ofDim[Int](n)
           val seqArray = Array.ofDim[Int](n)
-          refIt.copyToArray(refArray, arrayOffs, arrayCpLen)
+          refIt.copyToArray(refArray, arrayOffs, arrayCpLen  min (refArray.length - arrayOffs))  // Workaround for
+            // bug in scala-2.9.0: generic scala-2.9.0 iterator tries to write past the end of the array on copyToArray
           seqIt.copyToArray(seqArray, arrayOffs, arrayCpLen)
           
           assert(refIt.toList === seqIt.toList)
