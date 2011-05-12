@@ -19,5 +19,4 @@ package daqcore.util
 
 
 class IterableOps[A](coll: Iterable[A]) {
-  def toLazyStream: LazyStream[A] = coll.iterator.toLazyStream
 }

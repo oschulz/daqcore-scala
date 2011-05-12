@@ -19,11 +19,4 @@ package daqcore.util
 
 
 class IteratorOps[A](it: Iterator[A]) {
-  def toLazyStream: LazyStream[A] = {
-    def stream[A](it: Iterator[A]): LazyStream[A] = {
-      if (it.hasNext) LazyStream.cons(it.next, stream(it))
-      else LazyStream.empty[A]
-    }
-    stream(it)
-  }
 }
