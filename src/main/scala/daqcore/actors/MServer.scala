@@ -29,8 +29,6 @@ abstract trait MServer extends CascadableServer {
   import MServer._
   import srvMMaps._
 
-  // @call def methods = pubMethods
-  
   protected def srvSCmd(func: Symbol, args: Any*): Unit = {
     val m = scmdMethod(SCallSignature.fromCall(func, args: _*))
     m.invoke(this, args.asInstanceOf[Seq[AnyRef]]: _*)
@@ -47,12 +45,12 @@ abstract trait MServer extends CascadableServer {
   }
 
   protected def srvACmd(op: ActorCmd): Unit = {
-    val m = acmdMap(op.getClass)
+    val m = mcallCmdMap(op.getClass)
     m.invoke(this, op.productIterator.toArray.asInstanceOf[Array[AnyRef]]: _*)
   }
 
   protected def srvAQry(op: ActorQuery[_]): Unit = {
-    val m = aqryMap(op.getClass)
+    val m = mcallQryMap(op.getClass)
     val result = m.invoke(this, op.productIterator.toArray.asInstanceOf[Array[AnyRef]]: _*)
     val target = replyTarget
     result match {
@@ -76,8 +74,8 @@ abstract trait MServer extends CascadableServer {
   override def serve = super.serve orElse {
     case SCmd(func, args @ _*) if scmdMethod isDefinedAt SCallSignature.fromCall(func, args: _*) => srvSCmd(func, args: _*)
     case SQry(func, args @ _*) if sqryMethod isDefinedAt SCallSignature.fromCall(func, args: _*) => srvSQry(func, args: _*)
-    case op: ActorCmd if acmdMap.isDefinedAt(op.getClass) => srvACmd(op)
-    case op: ActorQuery[_] if aqryMap.isDefinedAt(op.getClass) => srvAQry(op)
+    case op: ActorCmd if mcallCmdMap.isDefinedAt(op.getClass) => srvACmd(op)
+    case op: ActorQuery[_] if mcallQryMap.isDefinedAt(op.getClass) => srvAQry(op)
     case msg: AnyRef if msgMethod  isDefinedAt msg.getClass => srvMsg(msg)
   }
 }
@@ -101,10 +99,8 @@ object MServer {
 
 
   case class MethodMaps(cl: Class[AnyRef]) {
-    val pubMethods = cl.getMethods.toList filter { m => m.findAnnotation[call] != None }
+    val sreqMethods = cl.getMethods.toList filter { m => m.findAnnotation[sreq] != None }
 
-    val (sreqMethods, areqMethods) = pubMethods partition { m => classOf[SReq[_]].isAssignableFrom(m.findAnnotation[call].get.mc) }
-    
     def mNameSym(s: String): Symbol = s match {
       case s if s.endsWith(MethodOps.setterSuffix) => Symbol(s.dropRight(MethodOps.setterSuffix.length) + "_set")
       case s => Symbol(s)
@@ -131,17 +127,19 @@ object MServer {
     val sqryMethod = OptResultCache { sig: SCallSignature => findSMethod(sqryMap, sig) }
 
 
+    val mcallMethods = cl.getMethods.toList filter { m => m.findAnnotation[mcall] != None }
+
     protected case class ClassMethodPair(cl: Class[_], m: Method)
 
-    val acmdMap: Map[Class[_], Method] = ( ( for {
-      m <- areqMethods
-      mc <- Seq(m.findAnnotation[call].get.mc)
+    val mcallCmdMap: Map[Class[_], Method] = ( ( for {
+      m <- mcallMethods
+      mc <- Seq(m.findAnnotation[mcall].get.mc)
       if (classOf[ActorCmd].isAssignableFrom(mc))
     } yield { ClassMethodPair(mc, m) } ) map { p => p.cl -> p.m } ).toMap
 
-    val aqryMap: Map[Class[_], Method] = ( ( for {
-      m <- areqMethods
-      mc <- Seq(m.findAnnotation[call].get.mc)
+    val mcallQryMap: Map[Class[_], Method] = ( ( for {
+      m <- mcallMethods
+      mc <- Seq(m.findAnnotation[mcall].get.mc)
       if (classOf[ActorQuery[_]].isAssignableFrom(mc))
     } yield { ClassMethodPair(mc, m) } ) map { p => p.cl -> p.m } ).toMap
 

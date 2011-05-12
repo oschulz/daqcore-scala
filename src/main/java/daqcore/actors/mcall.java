@@ -22,6 +22,6 @@ import static java.lang.annotation.ElementType.*;
 
 @Retention(RUNTIME)
 @Target(METHOD)
-public @interface call {
-	public Class mc() default SReq.class;
+public @interface mcall {
+	public Class mc();
 }
