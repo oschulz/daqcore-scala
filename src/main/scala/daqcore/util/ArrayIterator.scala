@@ -33,17 +33,19 @@ final class ArrayIterator[@specialized A: ClassManifest](private val array: Arra
   
   private def unsliced = (from == 0) && (until == array.length) && (!isReversed)
   
-  override def length = until - from
-  override def size = length
+  def len = until - from
+
+  override def length = { val l = len; drop(len); l }
+  override def size = len
   
   override def toArray [B >: A] (implicit arg0: ClassManifest[B]) : Array[B] = {
-    val target = Array.ofDim[B](length)
+    val target = Array.ofDim[B](len)
     copyToArray(target)
     target
   }
 
   override def copyToArray [B >: A] (xs: Array[B], start: Int, len: Int) : Unit = {
-    val n = 0 max ( (xs.length - start) min this.length min len )
+    val n = 0 max ( (xs.length - start) min this.len min len )
     if (!isReversed) ArrayOps.arrayCopy(this.array, from, xs, start, n)
     else ArrayOps.reverseArrayCopy(this.array, until-n, xs, start, n)
     this.drop(n)
@@ -116,7 +118,7 @@ final class ArrayIterator[@specialized A: ClassManifest](private val array: Arra
 
   def toArrayVec: ArrayVec[A] = {
     val target = if (unsliced) array else toArray
-    drop(length)
+    drop(len)
     ArrayVec.wrap(target)
   }
 

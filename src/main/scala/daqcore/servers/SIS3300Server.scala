@@ -566,8 +566,8 @@ abstract class SIS3300Server(val vmeBus: VMEBus, val baseAddress: Int) extends E
                 if (wrapped == 1) Seq(a.drop(end), b.take(end))
                 else Seq(a.take(end))
               }
-
-              val n = rawParts map {_.length} sum
+              
+              val n = rawParts map {_.len} sum
               val oddArray = Array.ofDim[Int](n)
               val evenArray = Array.ofDim[Int](n)
               if (usrinArray.size != n) usrinArray = Array.ofDim[Int](n)

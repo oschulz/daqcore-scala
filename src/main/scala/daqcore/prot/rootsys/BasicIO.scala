@@ -75,7 +75,7 @@ case class RootEncInput(val source: ByteSeqIterator) extends BasicInput {
       if (l < 0xff) l else readInt()
     }
     val a = Array.ofDim[Byte](length)
-    require(source.length >= length)
+    require(source.len >= length)
     source.copyToArray(a)
     new String(a)
   }

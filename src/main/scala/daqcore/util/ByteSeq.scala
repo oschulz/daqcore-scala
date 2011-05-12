@@ -94,7 +94,7 @@ final class ByteSeqBuilder(val defaultChunkSize: Int) extends Builder[Byte, Byte
     xs match {
       case it: ArrayIterator[_] => {
         val xs = it.asInstanceOf[ArrayIterator[Byte]]
-        val len = xs.length
+        val len = xs.len
         if (len <= chunkCapacity - pos) {
           xs.copyToArray(chunk, pos)
           assert(!xs.hasNext)
