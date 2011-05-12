@@ -62,14 +62,20 @@ object ContentSerializer {
         else if (cmf == classManifest[Double]) DoubleArrayIO
         else throw unsupported
       }*/
-      else if (classOf[Seq[_]].isAssignableFrom(mf.erasure)) {
-        if (mf >:> classManifest[ArrayVec[Boolean]]) BooleanSeqIO
-        else if (mf >:> classManifest[ArrayVec[Byte]]) ByteSeqIO
-        else if (mf >:> classManifest[ArrayVec[Short]]) ShortSeqIO
-        else if (mf >:> classManifest[ArrayVec[Int]]) IntSeqIO
-        else if (mf >:> classManifest[ArrayVec[Long]]) LongSeqIO
-        else if (mf >:> classManifest[ArrayVec[Float]]) FloatSeqIO
-        else if (mf >:> classManifest[ArrayVec[Double]]) DoubleSeqIO
+      else if (
+        (classOf[Seq[_]].isAssignableFrom(mf.erasure)) &&
+        (mf.erasure.isAssignableFrom(classOf[ArrayVec[_]])) &&
+        (mf.typeArguments.length == 1)
+      ) {
+        val argType = mf.typeArguments(0)
+
+        if (argType == classManifest[Boolean]) BooleanSeqIO
+        else if (argType == classManifest[Byte]) ByteSeqIO
+        else if (argType == classManifest[Short]) ShortSeqIO
+        else if (argType == classManifest[Int]) IntSeqIO
+        else if (argType == classManifest[Long]) LongSeqIO
+        else if (argType == classManifest[Float]) FloatSeqIO
+        else if (argType == classManifest[Double]) DoubleSeqIO
         else throw unsupported
       }
       else if (classOf[Product].isAssignableFrom(mf.erasure)) ProductSerializer.forType[Product](mf.asInstanceOf[ClassManifest[Product]])
