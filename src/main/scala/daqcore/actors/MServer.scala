@@ -105,15 +105,20 @@ object MServer {
 
     val (sreqMethods, areqMethods) = pubMethods partition { m => classOf[SReq[_]].isAssignableFrom(m.findAnnotation[call].get.mc) }
     
+    def mNameSym(s: String): Symbol = s match {
+      case s if s.endsWith(MethodOps.setterSuffix) => Symbol(s.dropRight(MethodOps.setterSuffix.length) + "_set")
+      case s => Symbol(s)
+    }
+    
     val scmdMap: Map[Symbol, Seq[Method]] = ( for {
       m <- sreqMethods
       if (m.getReturnType == classOf[Unit])
-    } yield { Symbol(m.getName) -> m } ) groupBy { e => e._1} map { case (k,v) => (k, v.map{_._2}) }
+    } yield { mNameSym(m.getName) -> m } ) groupBy { e => e._1} map { case (k,v) => (k, v.map{_._2}) }
 
     val sqryMap: Map[Symbol, Seq[Method]] = ( for {
       m <- sreqMethods
       if (m.getReturnType != classOf[Unit])
-    } yield { Symbol(m.getName) -> m } ) groupBy {e => e._1} map { case (k,v) => (k, v.map{_._2}) }
+    } yield { mNameSym(m.getName) -> m } ) groupBy {e => e._1} map { case (k,v) => (k, v.map{_._2}) }
     
     def findSMethod(map: Map[Symbol, Seq[Method]], sig: SCallSignature): Option[Method] = {
       map.get(sig.func) match {
