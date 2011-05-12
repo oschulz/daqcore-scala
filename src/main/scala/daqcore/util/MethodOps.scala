@@ -22,35 +22,61 @@ import java.lang.annotation.{Annotation => JAnnotation}
 
 
 class MethodOps(m: Method) {
+  import MethodOps._
+
   def findSameIn[A](that: Class[A]): Option[Method] = {
     try { Some(that.getMethod(m.getName, m.getParameterTypes: _*)) }
     catch { case e: NoSuchMethodException => None }
   }
 
   def findAnnotation[A <: JAnnotation : ClassManifest]: Option[A] = {
+    val cl = m.getDeclaringClass
     val annotClass: Class[JAnnotation] = classManifest[A].erasure.asInstanceOf[Class[JAnnotation]]
+
+    def directAnnot = Option(m.getAnnotation(annotClass)) map {_.asInstanceOf[A]}
+
+    def fieldSetterAnnot = if ((m.getName endsWith setterSuffix) && (m.getParameterTypes.length == 1)) {
+      for {
+        baseName <- Some(m.getName.dropRight(setterSuffix.length))
+        field <- try { Some(cl.getDeclaredField(baseName)) } catch { case e: NoSuchFieldException => None }
+        if (m.getParameterTypes()(0) == field.getType)
+        getter <- try { Some(cl.getMethod(baseName)) } catch { case e: NoSuchMethodException => None }
+        if (m.getParameterTypes()(0) == getter.getReturnType)
+        annot <- Option(field.getAnnotation(annotClass)) map {_.asInstanceOf[A]}
+      } yield { annot }
+    } else None
+
+    def fieldGetterAnnot = if (m.getParameterTypes.length == 0) {
+      for {
+        baseName <- Some(m.getName)
+        field <- try { Some(cl.getDeclaredField(baseName)) } catch { case e: NoSuchFieldException => None }
+        if (m.getReturnType == field.getType)
+        annot <- Option(field.getAnnotation(annotClass)) map {_.asInstanceOf[A]}
+      } yield { annot }
+    } else None
     
-    m.getAnnotation(annotClass) match {
-      case null => (
-        for {
-          s <- m.getDeclaringClass.getSuperclass match {
-            case null => None
-            case scl => findSameIn(scl)
-          }
-          a <- new MethodOps(s).findAnnotation[A]
-        } yield a
-      ) match {
-        case r @ Some(a) => r
-        case None => {
-          val ifaceAnnots = for {
-            iface <- m.getDeclaringClass.getInterfaces.toStream
-            ifaceMethod <- findSameIn(iface)
-            ifaceAnnot <- new MethodOps(ifaceMethod).findAnnotation[A]
-          } yield { ifaceAnnot }
-          if (ifaceAnnots.isEmpty) None else Some(ifaceAnnots.head)
-        }
+    def superclassAnnot = for {
+      s <- cl.getSuperclass match {
+        case null => None
+        case scl => findSameIn(scl)
       }
-      case annot => Some(annot.asInstanceOf[A])
+      a <- s.findAnnotation[A]
+    } yield a
+    
+    def interfaceAnnot = {
+      val ifaceAnnots = for {
+        iface <- cl.getInterfaces.toStream
+        ifaceMethod <- findSameIn(iface)
+        ifaceAnnot <- ifaceMethod.findAnnotation[A]
+      } yield { ifaceAnnot }
+      if (ifaceAnnots.isEmpty) None else Some(ifaceAnnots.head)
     }
+    
+    directAnnot orElse fieldSetterAnnot orElse fieldGetterAnnot orElse superclassAnnot orElse interfaceAnnot
   }
+}
+
+
+object MethodOps {
+    val setterSuffix = "_$eq"
 }
