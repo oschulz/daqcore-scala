@@ -47,6 +47,15 @@ implicit def longArrayVecOpt(seq: ArrayVec[Long]) = new LongArrayVecOpt(seq)
 implicit def floatArrayVecOpt(seq: ArrayVec[Float]) = new FloatArrayVecOpt(seq)
 implicit def doubleArrayVecOpt(seq: ArrayVec[Double]) = new DoubleArrayVecOpt(seq)
 
+implicit def arrayVecToArrayVecBoolean(v: ArrayVec[Boolean]) = new ArrayVecBoolean(v)
+implicit def arrayVecToArrayVecByte(v: ArrayVec[Byte]) = new ArrayVecByte(v)
+implicit def arrayVecToArrayVecChar(v: ArrayVec[Char]) = new ArrayVecChar(v)
+implicit def arrayVecToArrayVecShort(v: ArrayVec[Short]) = new ArrayVecShort(v)
+implicit def arrayVecToArrayVecInt(v: ArrayVec[Int]) = new ArrayVecInt(v)
+implicit def arrayVecToArrayVecLong(v: ArrayVec[Long]) = new ArrayVecLong(v)
+implicit def arrayVecToArrayVecFloat(v: ArrayVec[Float]) = new ArrayVecFloat(v)
+implicit def arrayVecToArrayVecDouble(v: ArrayVec[Double]) = new ArrayVecDouble(v)
+
 implicit def byteSeqIteratorOps(it: ByteSeqIterator) = new ByteSeqIteratorOps(it)
 implicit def byteCharSeqToByteSeq(bcs: ByteCharSeq) = bcs.getBytes
 
