@@ -19,6 +19,7 @@ package daqcore.profiles
 
 import java.net.InetAddress
 
+import akka.dispatch.Future
 import akka.config.Supervision.{LifeCycle, UndefinedLifeCycle}
 import akka.config.Supervision.{OneForOneStrategy, AllForOneStrategy}
 
@@ -29,7 +30,7 @@ import daqcore.prot.scpi._
 
 
 trait SCPIClientLink extends Profile with Closeable {
-  def queryF(instr: Instruction*)(timeout: Long = defaultTimeout): Ft[Response] =
+  def queryF(instr: Instruction*)(timeout: Long = defaultTimeout): Future[Response] =
     srv.!!>(SCPIClientLink.CmdQuery(instr: _*), timeout)
 
   def cmd(instr: Instruction*) : Unit =

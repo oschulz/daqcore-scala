@@ -27,16 +27,6 @@ trait Ft[A] {
 
   def getOpt: Option[A]
 
-  def get: A
-
-  def foreach(k: A => Unit): Unit = k(get)
-  
-  def map[B](f: A => B): Ft[B]
-
-  /*def flatMap[B](f: A => Ft[B]): Ft[B] = new Ft[B] {
-    def get = ft.get flatMap { f(_).get }
-  }*/
-  
   override def toString = "Ft[]"
 }
 
@@ -45,18 +35,9 @@ class AkkaFt[A](future: Future[A]) extends Ft[A] {
   ft =>
 
   def getOpt: Option[A] = {
-    try { Some(get) } 
+    try { Some(future.get) } 
     catch { case e: FutureTimeoutException => None }
   }
-
-  def get: A = {
-    try { future.await } 
-    catch { case e: FutureTimeoutException => throw e }
-    if (future.exception.isDefined) throw future.exception.get
-    else future.result.get
-  }
-  
-  def map[B](f: A => B): Ft[B] = new AkkaFt(future.map(f))
 
   override def toString = "AkkaFt(%s)".format(future.toString)
 }
