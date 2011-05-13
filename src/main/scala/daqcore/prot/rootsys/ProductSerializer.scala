@@ -26,7 +26,7 @@ class ProductSerializer[A <: Product : ClassManifest]() extends ContentSerialize
   import ProductSerializer._
 
   val mfInfo = ManifestInfo(mf)
-  val ctor = cl.getConstructors().last
+  val ctor = cl.getConstructors().head
 
   val fields: Seq[FieldIO[_]] = {
     val ctorMFs = ctor.getGenericParameterTypes map mfInfo.manifestOf toList
@@ -79,6 +79,13 @@ object ProductSerializer {
           else if (classOf[UUID] == cl) "uuid"
           else if (classOf[Seq[_]].isAssignableFrom(cl) && cl.isAssignableFrom(classOf[ArrayVec[_]]))
             "vector<" + getTypeName(mf.typeArguments.head.asInstanceOf[ClassManifest[_]]) + ">"
+          else if (classOf[ArrayVecBoolean] == cl) getTypeName(classManifest[Seq[Boolean]])
+          else if (classOf[ArrayVecByte] == cl) getTypeName(classManifest[Seq[Byte]])
+          else if (classOf[ArrayVecShort] == cl) getTypeName(classManifest[Seq[Short]])
+          else if (classOf[ArrayVecInt] == cl) getTypeName(classManifest[Seq[Int]])
+          else if (classOf[ArrayVecLong] == cl) getTypeName(classManifest[Seq[Long]])
+          else if (classOf[ArrayVecFloat] == cl) getTypeName(classManifest[Seq[Float]])
+          else if (classOf[ArrayVecDouble] == cl) getTypeName(classManifest[Seq[Double]])
           else if (classOf[Product].isAssignableFrom(cl)) cl.shortName
           else throw unsupported
         }

@@ -62,20 +62,16 @@ object ContentSerializer {
         else if (cmf == classManifest[Double]) DoubleArrayIO
         else throw unsupported
       }*/
-      else if (
-        (classOf[Seq[_]].isAssignableFrom(mf.erasure)) &&
-        (mf.erasure.isAssignableFrom(classOf[ArrayVec[_]])) &&
-        (mf.typeArguments.length == 1)
-      ) {
-        val argType = mf.typeArguments(0)
+      else if (classOf[Seq[_]].isAssignableFrom(cl)) {
+        val cl = mf.erasure
 
-        if (argType == classManifest[Boolean]) BooleanSeqIO
-        else if (argType == classManifest[Byte]) ByteSeqIO
-        else if (argType == classManifest[Short]) ShortSeqIO
-        else if (argType == classManifest[Int]) IntSeqIO
-        else if (argType == classManifest[Long]) LongSeqIO
-        else if (argType == classManifest[Float]) FloatSeqIO
-        else if (argType == classManifest[Double]) DoubleSeqIO
+        if (cl == classOf[ArrayVecBoolean]) ArrayVecBooleanIO
+        else if (cl == classOf[ArrayVecByte]) ArrayVecByteIO
+        else if (cl == classOf[ArrayVecShort]) ArrayVecShortIO
+        else if (cl == classOf[ArrayVecInt]) ArrayVecIntIO
+        else if (cl == classOf[ArrayVecLong]) ArrayVecLongIO
+        else if (cl == classOf[ArrayVecFloat]) ArrayVecFloatIO
+        else if (cl == classOf[ArrayVecDouble]) ArrayVecDoubleIO
         else throw unsupported
       }
       else if (classOf[Product].isAssignableFrom(mf.erasure)) ProductSerializer.forType[Product](mf.asInstanceOf[ClassManifest[Product]])
@@ -154,4 +150,39 @@ object ContentSerializer {
   object LongSeqIO extends SeqIO[Long]
   object FloatSeqIO extends SeqIO[Float]
   object DoubleSeqIO extends SeqIO[Double]
+  
+  object ArrayVecBooleanIO extends ContentSerializer[ArrayVecBoolean] {
+    def write(out: BasicOutput, x: ArrayVecBoolean) = out.writeSeq(x)
+    def read(in: BasicInput) = in.readSeq[Boolean]()
+  }
+
+  object ArrayVecByteIO extends ContentSerializer[ArrayVecByte] {
+    def write(out: BasicOutput, x: ArrayVecByte) = out.writeSeq(x)
+    def read(in: BasicInput) = in.readSeq[Byte]()
+  }
+
+  object ArrayVecShortIO extends ContentSerializer[ArrayVecShort] {
+    def write(out: BasicOutput, x: ArrayVecShort) = out.writeSeq(x)
+    def read(in: BasicInput) = in.readSeq[Short]()
+  }
+
+  object ArrayVecIntIO extends ContentSerializer[ArrayVecInt] {
+    def write(out: BasicOutput, x: ArrayVecInt) = out.writeSeq(x)
+    def read(in: BasicInput) = in.readSeq[Int]()
+  }
+
+  object ArrayVecLongIO extends ContentSerializer[ArrayVecLong] {
+    def write(out: BasicOutput, x: ArrayVecLong) = out.writeSeq(x)
+    def read(in: BasicInput) = in.readSeq[Long]()
+  }
+
+  object ArrayVecFloatIO extends ContentSerializer[ArrayVecFloat] {
+    def write(out: BasicOutput, x: ArrayVecFloat) = out.writeSeq(x)
+    def read(in: BasicInput) = in.readSeq[Float]()
+  }
+
+  object ArrayVecDoubleIO extends ContentSerializer[ArrayVecDouble] {
+    def write(out: BasicOutput, x: ArrayVecDouble) = out.writeSeq(x)
+    def read(in: BasicInput) = in.readSeq[Double]()
+  }
 }
