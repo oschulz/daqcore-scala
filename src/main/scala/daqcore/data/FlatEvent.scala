@@ -34,6 +34,7 @@ case class FlatEvent (
 
 
 object FlatEvent {
+  implicit private def seqIntToArrayVecInt(seq: Seq[Int]): ArrayVecInt = seq.toArrayVec
 
   def apply(event: Event): FlatEvent = {
     FlatEvent(
@@ -44,7 +45,7 @@ object FlatEvent {
 
 
   case class FlatRaw (
-    trig: Seq[Int],
+    trig: ArrayVecInt,
     trans: FlatRaw.FlatTransients
   ) {
     def toRaw = Event.Raw(
@@ -64,10 +65,10 @@ object FlatEvent {
 
 
     case class FlatTransients (
-      trigPos: Seq[Int],
-      samples_ch: Seq[Int],
-      samples_val_n: Seq[Int],
-      samples_val: ArrayVec[Short]
+      trigPos: ArrayVecInt,
+      samples_ch: ArrayVecInt,
+      samples_val_n: ArrayVecInt,
+      samples_val: ArrayVecShort
     ) {
       def toTransients: Map[Int, Transient] = {
         val channelIt = samples_ch.iterator
