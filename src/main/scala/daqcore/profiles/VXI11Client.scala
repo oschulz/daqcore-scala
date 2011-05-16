@@ -24,9 +24,9 @@ import daqcore.servers._
 
 
 trait VXI11Client extends Closeable {
-  def openLink(device:String, timeout: Long = defaultTimeout): Future[VXI11ClientLink] = {
-    val ft: Future[ActorRef] = srv.!!>(VXI11Client.OpenLink(device, timeout), timeout)
-    ft map { aref => (new ServerProxy(aref) with VXI11ClientLink) }
+  def openLink(device:String, timeout: Long = defaultTimeout): VXI11ClientLink = {
+    val aref = srv.!!>(VXI11Client.OpenLink(device, timeout), timeout).get
+    new ServerProxy(aref) with VXI11ClientLink
   }
 }
 
