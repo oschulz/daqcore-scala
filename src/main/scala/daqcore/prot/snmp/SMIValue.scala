@@ -26,10 +26,31 @@ sealed trait SMIValue
 
 case class Null() extends SMIValue    
 
-case class OID(values: Int*) extends SMIValue {
+
+case class OID(values: Int*) extends SMIValue with Ordered[OID] {
   def ~(i: Int): OID = OID((values :+ i): _*)
+  
+  def compare(that: OID) = {
+    var res = 0
+    val (a,b) = (this.values.iterator, that.values.iterator)
+    while ((res == 0) && a.hasNext && b.hasNext) {
+      val (i,j) = (a.next, b.next)
+      if (i > j) res = 1 else if (i < j) res = -1
+    }
+    if (res != 0) res else if (a.hasNext) 1 else if(b.hasNext) -1 else 0
+  }
+  
+  def isChildOf(that: OID) = (this.values startsWith that.values) && (this.values.length > that.values.length)
+
   override def toString = values.mkString(".")
+  
+  def this(values: String) = this(values.split('.') map {_.toInt}: _*)
 }
+
+case object OID {
+  def apply(values: String): OID = new OID(values)
+}
+
 
 case class Integer32(value: Int) extends SMIValue { def toInt = value }
 
