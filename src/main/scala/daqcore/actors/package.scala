@@ -54,6 +54,18 @@ package object actors {
     sv
   }
 
+  val alwaysRestartSupervisor = {
+    val sv = Supervisor(SupervisorConfig(OneForOneStrategy(List(classOf[Throwable]), None, None), Nil))
+    object ShutdownHook extends Thread with Logging {
+      override def run() = {
+        log.info("Shutting down always-restart supervisor")
+        sv.shutdown()
+      }
+    }
+    Runtime.getRuntime.addShutdownHook(ShutdownHook)
+    sv
+  }
+
   /*
 
   /** execute code in an actor, then wait for it to exit.
