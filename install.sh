@@ -52,6 +52,8 @@ if cd "${PROJECT_DIR}" ; then
 		"${INSTALL_TARGET}/lib/"
 	
 	rsync -rlptvP src/main/resources/sh/scala "${INSTALL_TARGET}/bin/"
+
+	rsync -rlptvP akka.conf logback.xml "${INSTALL_TARGET}/conf/"
 else
 	echo "ERROR: Could not cd to project directory \"${PROJECT_DIR}\"" 1>&2
 fi

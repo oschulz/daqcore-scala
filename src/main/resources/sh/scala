@@ -82,6 +82,7 @@ if [ -z "$TOOL_CLASSPATH" ] ; then
             TOOL_CLASSPATH="$TOOL_CLASSPATH:$ext"
         fi
     done
+	TOOL_CLASSPATH=".:$SCALA_HOME/conf:$TOOL_CLASSPATH"
 fi
 
 CYGWIN_JLINE_TERMINAL=
