@@ -38,7 +38,7 @@ trait SNMPv2Manager extends Profile with Closeable with Logging {
   def getBulkF(address: InetSockAddr, community: String, n: Int, oids: OID*): Future[VariableBindings] =
     srv !!> SNMPGetBulk(address, community, n, oids: _*)
 
-  def set(address: InetSockAddr, community: String, bindings: (OID, SMIValue)*): Future[VariableBindings] =
+  def setF(address: InetSockAddr, community: String, bindings: (OID, SMIValue)*): Future[VariableBindings] =
     srv !!> SNMPSet(address, community, bindings: _*)
   
 }

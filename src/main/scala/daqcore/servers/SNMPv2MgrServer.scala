@@ -199,44 +199,35 @@ class SNMPv2MgrServer() extends Server with CloseableServer {
   }
 
 
-  case class S4JResponse(target: MsgTarget, event: ResponseEvent)
-  
   class RespListener(val target: MsgTarget) extends ResponseListener {
-    // respListener seems to be always called twice, the second time with an
-    // empty ResponseEvent
-    
-    var done = false
     def onResponse(event: ResponseEvent): Unit = {
-      if (! done) {
-        done = true
-        srv ! S4JResponse(target, event)
-      } else {
-        assert ((event.getError == null) && (event.getResponse == null))
-      }
-    }
-  }
-
-  def onResponse(target: MsgTarget, response: ResponseEvent): Unit = {
-      response.getError match {
-        case null =>
-        case err => throw(err)
-      }
+      val request = event.getRequest
+      val snmp = event.getSource.asInstanceOf[Snmp]
+      snmp.cancel(request, this)
       
-      response.getResponse match {
-        case null => // throw new java.io.IOException("No response to SNMP PDU from " + event.getPeerAddress)
+      event.getError match { case null =>; case err => throw(err) }
+      
+      event.getResponse match {
+        case null => throw new java.io.IOException("No response to SNMP PDU " + request)
         case rpdu => {
-          val bindings: VariableBindings = for (i <- Range(0, rpdu.size)) yield {
+          val bindings: VariableBindings = Range(0, rpdu.size) flatMap { i =>
             val vb = rpdu.get(i)
             val oid: OID = vb.getOid
             val variable = vb.getVariable
-            if (variable.isException) throw new java.io.IOException("SNMP reponse contains exception: %s = %s".format(oid.toString, variable.toString))
-
-            val S4JVariable(value) = variable
-            oid -> value
+            if (variable.isException) {
+              variable.toString match {
+                case "endOfMibView" => None
+                case msg => throw new java.io.IOException("SNMP reponse contains exception: %s = %s".format(oid.toString, msg))
+              }
+            } else {
+              val S4JVariable(value) = variable
+              Some(oid -> value)
+            }
           }
           target ! bindings
         }
       }
+    }
   }
   
 
@@ -245,7 +236,6 @@ class SNMPv2MgrServer() extends Server with CloseableServer {
     case op @ SNMPv2Manager.SNMPGetNext(address, community, oids @ _*) => debug(op); srvSNMPGetNext(address, community, oids: _*)
     case op @ SNMPv2Manager.SNMPGetBulk(address, community, n, oids @ _*) => debug(op); srvSNMPGetBulk(address, community, n, oids: _*)
     case op @ SNMPv2Manager.SNMPSet(address, community, bindings @ _*) => debug(op); srvSNMPSet(address, community, bindings: _*)
-    case ev @ S4JResponse(target, event) => debug(ev); onResponse(target, event)
   }
 }
 
