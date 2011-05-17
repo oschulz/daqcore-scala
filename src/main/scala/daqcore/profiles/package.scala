@@ -37,4 +37,6 @@ package object profiles {
 
   implicit def inetSockAddr(hostPort: (String, Int)): InetSockAddr = InetSockAddr(hostPort._1, hostPort._2)
   implicit def inetSockAddr(port: Int): InetSockAddr = InetSockAddr(port)
+  
+  lazy val defaultSnmpManager = SNMPv2Manager(sv = actors.alwaysRestartSupervisor)
 }
