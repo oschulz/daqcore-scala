@@ -29,9 +29,12 @@ package object actors {
 
   implicit def supervising(wrapped: ActorRef) = Supervising(wrapped)
   implicit def supervising(wrapped: Supervisor) = Supervising(wrapped)
+  
+  implicit def actorRefToNTActorRef(ref: ActorRef) = NTActorRef(ref)
+  implicit def ntActorRefToActorRef(ref: NTActorRef) = ref.toActorRef
 
-  implicit def ActorRefOps(ref: ActorRef) =
-    new ActorRefOps(ref)
+  implicit def ActorRefOps(ref: ActorRef) = new ActorRefOps(ref)
+  implicit def ActorRefOps(ref: NTActorRef) = new ActorRefOps(ref)
 
   implicit def futureOps[T](future: Future[T]) = new FutureOps(future)
 
