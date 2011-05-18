@@ -33,8 +33,7 @@ package object actors {
   implicit def ActorRefOps(ref: ActorRef) =
     new ActorRefOps(ref)
 
-  implicit def ft[T](future: Future[T]) =
-    new AkkaFt(future)
+  implicit def futureOps[T](future: Future[T]) = new FutureOps(future)
 
   def sendAfter(time: Long, dest: ActorRef, msg: Any) = {
     import akka.actor.Scheduler 
