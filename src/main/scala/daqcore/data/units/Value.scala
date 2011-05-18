@@ -15,29 +15,23 @@
 // Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 
-package daqcore.actors
-
-import akka.actor.{Actor, Supervisor, ActorRef}
-import akka.config.Supervision.{LifeCycle, UndefinedLifeCycle}
+package daqcore.data.units
 
 
-trait Supervising {
-  def link(actorRef: ActorRef): Unit
-  
-  def linkStart(actorRef: ActorRef, lifeCycle: LifeCycle = UndefinedLifeCycle): ActorRef = {
-    if (lifeCycle != UndefinedLifeCycle) actorRef.lifeCycle = lifeCycle
-    link(actorRef)
-    actorRef.start
-  }
+sealed abstract class Value {
+  def v: Double
+  def unit: Option[PhysUnit]
 }
 
 
-object Supervising {
-  def apply(wrapped: ActorRef) = new Supervising {
-    def link(target: ActorRef) = wrapped.link(target)
-  }
+case class Unitless(v:Double) extends Value {
+  def unit = None
+  override def toString = v.toString
+  def ~(u: PhysUnit) = WithUnit(v, u)
+}
 
-  def apply(wrapped: Supervisor) = new Supervising {
-    def link(target: ActorRef) = wrapped.link(target)
-  }
+
+case class WithUnit(v: Double, u: PhysUnit) extends Value {
+  def unit = Some(u)
+  override def toString = v.toString + " " + u.symbol.name
 }

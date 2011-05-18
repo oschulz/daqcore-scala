@@ -17,7 +17,7 @@
 
 import org.acplt.oncrpc.OncRpcProtocols
 import java.net.InetAddress
-import daqcore.oncrpc.vxi11core._
+import daqcore.io.oncrpc.vxi11core._
 
 class VXI11Test {
   val address = InetAddress.getByName("gpib03")

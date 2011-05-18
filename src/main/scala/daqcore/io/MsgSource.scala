@@ -15,29 +15,34 @@
 // Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 
-package daqcore.actors
+package daqcore.io
 
-import akka.actor.{Actor, Supervisor, ActorRef}
-import akka.config.Supervision.{LifeCycle, UndefinedLifeCycle}
+import akka.dispatch.Future
+
+import daqcore.actors._
 
 
-trait Supervising {
-  def link(actorRef: ActorRef): Unit
+trait MsgSource extends Profile {
+  def setReceiver(receiver: MsgTarget, repeat: Boolean = true): Unit =
+    srv ! MsgSource.SetReceiver(receiver, repeat)
   
-  def linkStart(actorRef: ActorRef, lifeCycle: LifeCycle = UndefinedLifeCycle): ActorRef = {
-    if (lifeCycle != UndefinedLifeCycle) actorRef.lifeCycle = lifeCycle
-    link(actorRef)
-    actorRef.start
-  }
+  def getMsgF(timeout: Long = defaultTimeout): Future[Any] =
+    srv.!!>(MsgSource.GetMsg(), timeout)
 }
 
 
-object Supervising {
-  def apply(wrapped: ActorRef) = new Supervising {
-    def link(target: ActorRef) = wrapped.link(target)
-  }
+object MsgSource {
+  case class SetReceiver(receiver: MsgTarget, repeat: Boolean = true) extends ActorCmd
+  case class GetMsg() extends ActorQuery[Any]
+}
 
-  def apply(wrapped: Supervisor) = new Supervising {
-    def link(target: ActorRef) = wrapped.link(target)
-  }
+
+
+trait MsgSender extends Profile {
+  def sendMsg(msg: Any): Unit =
+    srv ! MsgSender.SendMsg(msg)
+}
+
+object MsgSender {
+  case class SendMsg(msg: Any)
 }

@@ -15,29 +15,17 @@
 // Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 
-package daqcore.actors
+package daqcore.io.prot
 
-import akka.actor.{Actor, Supervisor, ActorRef}
-import akka.config.Supervision.{LifeCycle, UndefinedLifeCycle}
+import daqcore.util._
 
 
-trait Supervising {
-  def link(actorRef: ActorRef): Unit
+package object keithley {
+
+  implicit def int2ByteCharSeq(i: Int) = IntVal(i)
+  implicit def double2ByteCharSeq(x: Double) = FPVal(x)
+  implicit def string2ByteCharSeq(s: String) = Chars(s)
   
-  def linkStart(actorRef: ActorRef, lifeCycle: LifeCycle = UndefinedLifeCycle): ActorRef = {
-    if (lifeCycle != UndefinedLifeCycle) actorRef.lifeCycle = lifeCycle
-    link(actorRef)
-    actorRef.start
-  }
-}
-
-
-object Supervising {
-  def apply(wrapped: ActorRef) = new Supervising {
-    def link(target: ActorRef) = wrapped.link(target)
-  }
-
-  def apply(wrapped: Supervisor) = new Supervising {
-    def link(target: ActorRef) = wrapped.link(target)
-  }
+  /** Default message terminator for stream-based connections */
+  val StreamMsgTerm = ByteCharSeq.crlf
 }

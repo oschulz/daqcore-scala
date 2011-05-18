@@ -15,29 +15,26 @@
 // Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 
-package daqcore.actors
+package daqcore.io
 
-import akka.actor.{Actor, Supervisor, ActorRef}
+import akka.actor._
+import akka.dispatch.Future
 import akka.config.Supervision.{LifeCycle, UndefinedLifeCycle}
 
+import daqcore.util._
+import daqcore.actors._
 
-trait Supervising {
-  def link(actorRef: ActorRef): Unit
-  
-  def linkStart(actorRef: ActorRef, lifeCycle: LifeCycle = UndefinedLifeCycle): ActorRef = {
-    if (lifeCycle != UndefinedLifeCycle) actorRef.lifeCycle = lifeCycle
-    link(actorRef)
-    actorRef.start
-  }
+
+trait InetConnection extends ByteStreamIO
+
+
+object InetConnection {
+  def apply(to: InetSockAddr, timeout: Long = 10000, sv: Supervising = defaultSupervisor, lc: LifeCycle = UndefinedLifeCycle): ByteStreamIO =
+    NettyClientConnection(to, timeout, sv)
 }
 
 
-object Supervising {
-  def apply(wrapped: ActorRef) = new Supervising {
-    def link(target: ActorRef) = wrapped.link(target)
-  }
-
-  def apply(wrapped: Supervisor) = new Supervising {
-    def link(target: ActorRef) = wrapped.link(target)
-  }
+object InetServer {
+  def apply(addr: InetSockAddr, sv: Supervising = defaultSupervisor)(body: ByteStreamIO => Unit): Closeable =
+    NettyServer(addr, sv){body}
 }

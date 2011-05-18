@@ -15,29 +15,18 @@
 // Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 
-package daqcore.actors
+package daqcore.io
 
-import akka.actor.{Actor, Supervisor, ActorRef}
-import akka.config.Supervision.{LifeCycle, UndefinedLifeCycle}
+import scala.annotation._
 
-
-trait Supervising {
-  def link(actorRef: ActorRef): Unit
-  
-  def linkStart(actorRef: ActorRef, lifeCycle: LifeCycle = UndefinedLifeCycle): ActorRef = {
-    if (lifeCycle != UndefinedLifeCycle) actorRef.lifeCycle = lifeCycle
-    link(actorRef)
-    actorRef.start
-  }
-}
+import daqcore.util._
+import daqcore.actors._
 
 
-object Supervising {
-  def apply(wrapped: ActorRef) = new Supervising {
-    def link(target: ActorRef) = wrapped.link(target)
-  }
+trait RawMsgInput extends GenericInput { val inputCompanion = RawMsgInput }
+object RawMsgInput extends GenericInputCompanion { type InputData = ByteSeq }
 
-  def apply(wrapped: Supervisor) = new Supervising {
-    def link(target: ActorRef) = wrapped.link(target)
-  }
-}
+trait RawMsgOutput extends GenericOutput { val outputCompanion = RawMsgOutput }
+object RawMsgOutput extends GenericOutputCompanion { type OutputData = ByteSeq }
+
+trait RawMsgIO extends RawMsgInput with RawMsgOutput

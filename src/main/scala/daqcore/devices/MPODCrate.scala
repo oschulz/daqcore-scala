@@ -21,8 +21,8 @@ import akka.actor.Actor.actorOf, akka.actor.ActorRef, akka.dispatch.Future
 
 import daqcore.util._
 import daqcore.actors._
-import daqcore.profiles._
-import daqcore.prot.snmp._
+import daqcore.io._
+import daqcore.io.prot.snmp._
 import akka.dispatch.Future
 
 import collection.immutable.Queue

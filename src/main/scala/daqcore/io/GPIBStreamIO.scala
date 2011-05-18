@@ -15,29 +15,30 @@
 // Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 
-package daqcore.actors
+package daqcore.io
 
-import akka.actor.{Actor, Supervisor, ActorRef}
+import akka.actor.Actor.actorOf
 import akka.config.Supervision.{LifeCycle, UndefinedLifeCycle}
 
+import daqcore.actors._
+import daqcore.util._
 
-trait Supervising {
-  def link(actorRef: ActorRef): Unit
-  
-  def linkStart(actorRef: ActorRef, lifeCycle: LifeCycle = UndefinedLifeCycle): ActorRef = {
-    if (lifeCycle != UndefinedLifeCycle) actorRef.lifeCycle = lifeCycle
-    link(actorRef)
-    actorRef.start
-  }
+
+class GPIBStreamIO(val stream: ByteStreamIO) extends GPIBStreamInput with GPIBStreamOutput {
+  override def profiles = super.profiles.+[RawMsgIO]
+
+  val source = stream
+  val target = stream
 }
 
 
-object Supervising {
-  def apply(wrapped: ActorRef) = new Supervising {
-    def link(target: ActorRef) = wrapped.link(target)
+object GPIBStreamIO {
+  def apply(stream: ByteStreamIO, sv: Supervising = defaultSupervisor, lc: LifeCycle = UndefinedLifeCycle): RawMsgIO = {
+    new ServerProxy(sv.linkStart(actorOf(new GPIBStreamIO(stream)), lc)) with RawMsgIO
   }
-
-  def apply(wrapped: Supervisor) = new Supervising {
-    def link(target: ActorRef) = wrapped.link(target)
+  
+  def overInetStream(addr: InetSockAddr, timeout: Long = 10000, sv: Supervising = defaultSupervisor, lc: LifeCycle = UndefinedLifeCycle): RawMsgIO = {
+    val stream = InetConnection(addr, timeout, sv, lc)
+    GPIBStreamIO(stream, sv, lc)
   }
 }

@@ -15,29 +15,34 @@
 // Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 
-package daqcore.actors
+package daqcore.io
 
-import akka.actor.{Actor, Supervisor, ActorRef}
+import akka.actor.Actor.actorOf
 import akka.config.Supervision.{LifeCycle, UndefinedLifeCycle}
 
+import daqcore.actors._
+import daqcore.util._
 
-trait Supervising {
-  def link(actorRef: ActorRef): Unit
-  
-  def linkStart(actorRef: ActorRef, lifeCycle: LifeCycle = UndefinedLifeCycle): ActorRef = {
-    if (lifeCycle != UndefinedLifeCycle) actorRef.lifeCycle = lifeCycle
-    link(actorRef)
-    actorRef.start
+
+trait IntLenMsgOutput extends OutputFilterServer {
+  override def profiles = super.profiles.+[RawMsgOutput]
+  val outputCompanion = RawMsgOutput
+
+  override def target: ByteStreamOutput
+  val targetCompanion = ByteStreamOutput
+
+  def srvSend(data: ByteSeq): Unit = if (!data.isEmpty) {
+    val bld = ByteSeqBuilder()
+    BigEndian.putInt(bld, data.length.toInt)
+    bld ++= data
+    target.send(bld.result())
   }
 }
 
 
-object Supervising {
-  def apply(wrapped: ActorRef) = new Supervising {
-    def link(target: ActorRef) = wrapped.link(target)
-  }
-
-  def apply(wrapped: Supervisor) = new Supervising {
-    def link(target: ActorRef) = wrapped.link(target)
-  }
+object IntLenMsgOutput {
+  class DefaultIntLenMsgOutput(val target: ByteStreamOutput) extends IntLenMsgOutput
+  
+  def apply(stream: ByteStreamOutput, sv: Supervising = defaultSupervisor, lc: LifeCycle = UndefinedLifeCycle): RawMsgOutput =
+    new ServerProxy(sv.linkStart(actorOf(new DefaultIntLenMsgOutput(stream)), lc)) with RawMsgOutput
 }

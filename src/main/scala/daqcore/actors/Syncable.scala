@@ -17,27 +17,22 @@
 
 package daqcore.actors
 
-import akka.actor.{Actor, Supervisor, ActorRef}
-import akka.config.Supervision.{LifeCycle, UndefinedLifeCycle}
+import akka.actor._, akka.dispatch.Future
 
 
-trait Supervising {
-  def link(actorRef: ActorRef): Unit
-  
-  def linkStart(actorRef: ActorRef, lifeCycle: LifeCycle = UndefinedLifeCycle): ActorRef = {
-    if (lifeCycle != UndefinedLifeCycle) actorRef.lifeCycle = lifeCycle
-    link(actorRef)
-    actorRef.start
-  }
+trait Syncable extends Profile {
+  import Syncable._
+
+  def pause(): Unit = srv ! Pause()
+
+  def sync(timeout: Long = defaultTimeout): Unit = syncF(timeout)get
+
+  def syncF(timeout: Long = defaultTimeout): Future[Unit] =
+    srv.!!>(Sync(), timeout)
 }
 
 
-object Supervising {
-  def apply(wrapped: ActorRef) = new Supervising {
-    def link(target: ActorRef) = wrapped.link(target)
-  }
-
-  def apply(wrapped: Supervisor) = new Supervising {
-    def link(target: ActorRef) = wrapped.link(target)
-  }
+object Syncable {
+  case class Pause() extends ActorCmd
+  case class Sync() extends ActorQuery[Unit]
 }

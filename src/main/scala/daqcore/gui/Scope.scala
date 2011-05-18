@@ -24,8 +24,8 @@ import akka.config.Supervision.{LifeCycle, UndefinedLifeCycle}
 
 import daqcore.util._
 import daqcore.actors._
-import daqcore.servers._
-import daqcore.profiles._
+import daqcore.io._
+import daqcore.devices._
 import daqcore.monads._
 import daqcore.data._
 

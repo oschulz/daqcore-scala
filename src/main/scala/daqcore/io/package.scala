@@ -15,29 +15,28 @@
 // Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 
-package daqcore.actors
-
-import akka.actor.{Actor, Supervisor, ActorRef}
-import akka.config.Supervision.{LifeCycle, UndefinedLifeCycle}
+package daqcore
 
 
-trait Supervising {
-  def link(actorRef: ActorRef): Unit
+package object io {
+  type InetAddr = java.net.InetAddress
+
+  object InetAddr {
+    def apply(host: String): InetAddr = java.net.InetAddress.getByName(host)
+  }
+
+  implicit def inetAddr(host: String): InetAddr = InetAddr(host)
+
+
+  type InetSockAddr = java.net.InetSocketAddress
+
+  object InetSockAddr {
+    def apply(host: String, port: Int): InetSockAddr = new InetSockAddr(host, port)
+    def apply(port: Int): InetSockAddr = new InetSockAddr(port)
+  }
+
+  implicit def inetSockAddr(hostPort: (String, Int)): InetSockAddr = InetSockAddr(hostPort._1, hostPort._2)
+  implicit def inetSockAddr(port: Int): InetSockAddr = InetSockAddr(port)
   
-  def linkStart(actorRef: ActorRef, lifeCycle: LifeCycle = UndefinedLifeCycle): ActorRef = {
-    if (lifeCycle != UndefinedLifeCycle) actorRef.lifeCycle = lifeCycle
-    link(actorRef)
-    actorRef.start
-  }
-}
-
-
-object Supervising {
-  def apply(wrapped: ActorRef) = new Supervising {
-    def link(target: ActorRef) = wrapped.link(target)
-  }
-
-  def apply(wrapped: Supervisor) = new Supervising {
-    def link(target: ActorRef) = wrapped.link(target)
-  }
+  lazy val defaultSnmpManager = SNMPv2Manager(sv = actors.alwaysRestartSupervisor)
 }

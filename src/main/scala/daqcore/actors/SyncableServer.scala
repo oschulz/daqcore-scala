@@ -17,27 +17,26 @@
 
 package daqcore.actors
 
-import akka.actor.{Actor, Supervisor, ActorRef}
-import akka.config.Supervision.{LifeCycle, UndefinedLifeCycle}
+import scala.collection.immutable.Queue
+
+import akka.actor.ActorRef
 
 
-trait Supervising {
-  def link(actorRef: ActorRef): Unit
+trait SyncableServer extends CascadableServer {
+  override def profiles = super.profiles.+[Syncable]
   
-  def linkStart(actorRef: ActorRef, lifeCycle: LifeCycle = UndefinedLifeCycle): ActorRef = {
-    if (lifeCycle != UndefinedLifeCycle) actorRef.lifeCycle = lifeCycle
-    link(actorRef)
-    actorRef.start
-  }
-}
-
-
-object Supervising {
-  def apply(wrapped: ActorRef) = new Supervising {
-    def link(target: ActorRef) = wrapped.link(target)
-  }
-
-  def apply(wrapped: Supervisor) = new Supervising {
-    def link(target: ActorRef) = wrapped.link(target)
+  def srvPause(): Unit = {}
+  
+  def srvSync(): Unit = {}
+  
+  override def serve = super.serve orElse {
+    case op @ Syncable.Pause() => {
+      trace(op)
+      srvPause()
+    }
+    case op @ Syncable.Sync() => {
+      trace(op)
+      reply(srvSync())
+    }
   }
 }

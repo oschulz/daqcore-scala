@@ -17,7 +17,6 @@
 
 package daqcore.actors
 
-
 import akka.actor._
 
 import daqcore.util._

@@ -17,27 +17,25 @@
 
 package daqcore.actors
 
-import akka.actor.{Actor, Supervisor, ActorRef}
-import akka.config.Supervision.{LifeCycle, UndefinedLifeCycle}
+import akka.dispatch.Future
+
+import daqcore.util._
 
 
-trait Supervising {
-  def link(actorRef: ActorRef): Unit
-  
-  def linkStart(actorRef: ActorRef, lifeCycle: LifeCycle = UndefinedLifeCycle): ActorRef = {
-    if (lifeCycle != UndefinedLifeCycle) actorRef.lifeCycle = lifeCycle
-    link(actorRef)
-    actorRef.start
-  }
+trait Repeated extends Profile with Closeable {
+  def pause(): Unit = srv ! Repeated.Pause
+
+  def resume(): Unit = srv ! Repeated.Resume
+
+  def isRunningF(): Future[Boolean] = srv.!!>(Repeated.IsRunning)
+
+  def getCountF(): Future[Int] = srv.!!>(Repeated.GetCount)
 }
 
 
-object Supervising {
-  def apply(wrapped: ActorRef) = new Supervising {
-    def link(target: ActorRef) = wrapped.link(target)
-  }
-
-  def apply(wrapped: Supervisor) = new Supervising {
-    def link(target: ActorRef) = wrapped.link(target)
-  }
+object Repeated {
+  case object Pause extends ActorCmd
+  case object Resume extends ActorCmd
+  case object IsRunning extends ActorQuery[Boolean]
+  case object GetCount extends ActorQuery[Int]
 }

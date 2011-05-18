@@ -15,29 +15,24 @@
 // Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 
-package daqcore.actors
+package daqcore.io.prot.keithley
 
-import akka.actor.{Actor, Supervisor, ActorRef}
-import akka.config.Supervision.{LifeCycle, UndefinedLifeCycle}
+import daqcore.util._
+import daqcore.data.units._
 
 
-trait Supervising {
-  def link(actorRef: ActorRef): Unit
-  
-  def linkStart(actorRef: ActorRef, lifeCycle: LifeCycle = UndefinedLifeCycle): ActorRef = {
-    if (lifeCycle != UndefinedLifeCycle) actorRef.lifeCycle = lifeCycle
-    link(actorRef)
-    actorRef.start
-  }
+abstract class MeasFunc
+case object VAL extends MeasFunc
+case object DC extends MeasFunc
+case object AC extends MeasFunc
+
+
+// Measure Result: Function (e.g. DC, AC, PEAK, ...) of a quantity (e.g. Voltage)
+
+sealed abstract class Result {
+  def v: WithUnit
+  def f: MeasFunc
 }
 
-
-object Supervising {
-  def apply(wrapped: ActorRef) = new Supervising {
-    def link(target: ActorRef) = wrapped.link(target)
-  }
-
-  def apply(wrapped: Supervisor) = new Supervising {
-    def link(target: ActorRef) = wrapped.link(target)
-  }
-}
+case class Normal(v: WithUnit, f: MeasFunc) extends Result
+case class Overflow(v: WithUnit, f: MeasFunc) extends Result
