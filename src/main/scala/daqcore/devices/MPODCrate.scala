@@ -15,7 +15,9 @@
 // Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 
-package daqcore.servers
+package daqcore.devices
+
+import akka.actor.Actor.actorOf, akka.actor.ActorRef, akka.dispatch.Future
 
 import daqcore.util._
 import daqcore.actors._
@@ -24,7 +26,16 @@ import daqcore.prot.snmp._
 import akka.dispatch.Future
 
 import collection.immutable.Queue
-   
+
+
+trait MPODCrate extends PowerSupply {
+}
+
+object MPODCrate {
+  def apply(address: InetSockAddr, sv: Supervising = defaultSupervisor): MPODCrate =
+    new ServerProxy(sv.linkStart(actorOf(new MPODCrateSrv(address)))) with MPODCrate
+}
+
 
 class MPODCrateSrv(address: InetSockAddr) extends MServer {
   override def profiles = super.profiles.+[MPODCrate]
@@ -122,7 +133,7 @@ class MPODCrateSrv(address: InetSockAddr) extends MServer {
     colFloatVals(snmpSet(bindings: _*))
   }
   
-  @sreq val sysDescr: String = {val OctetString(res) = snmpGetNext(oids.sysDescr).head._2; res}
+  @sreq val identity: String = {val OctetString(res) = snmpGetNext(oids.sysDescr).head._2; res}
   
   @sreq val outputs: Seq[Int] = snmpGetChildren(oids.outputIndex) map { _._1.values.last }
 
