@@ -51,7 +51,7 @@ if cd "${PROJECT_DIR}" ; then
 		"target/scala_${SCALA_VERSION}"/*.jar \
 		"${INSTALL_TARGET}/lib/"
 	
-	rsync -rlptvP src/main/resources/sh/scala "${INSTALL_TARGET}/bin/"
+	rsync -rlptvP src/main/shell/scala "${INSTALL_TARGET}/bin/"
 
 	rsync -rlptvP akka.conf logback.xml "${INSTALL_TARGET}/conf/"
 else
