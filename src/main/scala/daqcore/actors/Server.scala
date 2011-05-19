@@ -29,7 +29,16 @@ trait Profile {
   lazy val profiles: ProfileSet = srv !> Server.GetProfiles
 
   protected def supports(cl: Class[_]) = profiles covers cl
+
+  protected def requireProfile(cl: Class[_]): Unit =
+    if (!supports(cl)) throw new IllegalArgumentException("Server does not support profile " + cl)
+
+  for { cl <- this.getClass.getInterfaces; if (ProfileSet.isProfile(cl)) } { requireProfile(cl) }
 }
+
+class ServerProxy(val srv: ActorRef) extends Profile
+
+trait ServerProfile extends Profile
 
 
 trait Server extends Actor with Logging with Profiling {
@@ -218,13 +227,4 @@ object Server {
   case class ServerExit(server: ActorRef, reason: Option[Throwable]) extends ActorCmd
   
   @volatile var timing: Boolean =  akka.config.Config.config.getBool("daqcore.server.timing", false)
-}
-
-
-
-class ServerProxy(val srv: ActorRef) extends Profile {
-  def requireProfile(cl: Class[_]): Unit =
-    if (!supports(cl)) throw new IllegalArgumentException("Server does not support profile " + cl)
-
-  for { cl <- this.getClass.getInterfaces; if (ProfileSet.isProfile(cl)) } { requireProfile(cl) }
 }
