@@ -156,7 +156,7 @@ class SNMPv2MgrServer() extends Server with CloseableServer {
     target.setCommunity(new s4jsmi.OctetString(community))
     target.setAddress(snmpAddr)
     target.setRetries(0)
-    target.setTimeout(srv.timeout)
+    target.setTimeout(defaultTimeout)
     target
   }
 

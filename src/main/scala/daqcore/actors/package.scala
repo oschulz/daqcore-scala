@@ -33,8 +33,8 @@ package object actors {
   implicit def actorRefToNTActorRef(ref: ActorRef) = NTActorRef(ref)
   implicit def ntActorRefToActorRef(ref: NTActorRef) = ref.toActorRef
 
-  implicit def ActorRefOps(ref: ActorRef) = new ActorRefOps(ref)
-  implicit def ActorRefOps(ref: NTActorRef) = new ActorRefOps(ref)
+  implicit def actorRefToActorRefOps(ref: ActorRef) = new ActorRefOps(ref)
+  implicit def ntActorRefToActorRefOps(ref: NTActorRef) = new ActorRefOps(ref)
 
   implicit def futureOps[T](future: Future[T]) = new FutureOps(future)
 

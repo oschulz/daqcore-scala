@@ -22,16 +22,18 @@ import akka.dispatch.Future
 
 
 class ActorRefOps(aref: ActorRef) {
-  def !>>[R](msg: Any, timeout: Long = aref.timeout)(implicit sender: Option[ActorRef] = None): R = 
+  import ActorRefOps.{defaultTimeout => timeout}
+
+  def !>>[R](msg: Any, timeout: Long = timeout)(implicit sender: Option[ActorRef] = None): R = 
     aref.!!![R](msg, timeout)(sender).get
 
-  def !!>>[R](msg: Any, timeout: Long = aref.timeout)(implicit sender: Option[ActorRef] = None): Future[R] =
+  def !!>>[R](msg: Any, timeout: Long = timeout)(implicit sender: Option[ActorRef] = None): Future[R] =
     aref.!!![R](msg, timeout)(sender)
 
-  def !>[R](msg: ActorQuery[R], timeout: Long = aref.timeout)(implicit sender: Option[ActorRef] = None): R = 
+  def !>[R](msg: ActorQuery[R], timeout: Long = timeout)(implicit sender: Option[ActorRef] = None): R = 
     aref.!!![R](msg, timeout)(sender).get
 
-  def !!>[R](msg: ActorQuery[R], timeout: Long = aref.timeout)(implicit sender: Option[ActorRef] = None): Future[R] =
+  def !!>[R](msg: ActorQuery[R], timeout: Long = timeout)(implicit sender: Option[ActorRef] = None): Future[R] =
     aref.!!![R](msg, timeout)(sender)
 
 
@@ -43,4 +45,12 @@ class ActorRefOps(aref: ActorRef) {
 
   def qry[R](func: Symbol, args: Any*)(implicit sender: Option[ActorRef] = None): R =
     aref.!!![R](SQry(func, args: _*))(sender).get
+}
+
+
+object ActorRefOps {
+  import akka.config.Config._
+  import akka.util.Duration
+
+  val defaultTimeout = Duration(config.getInt("akka.actor.timeout", 6), TIME_UNIT).toMillis
 }

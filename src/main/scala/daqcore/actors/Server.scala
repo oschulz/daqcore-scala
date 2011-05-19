@@ -25,7 +25,7 @@ import daqcore.util._
 
 trait Profile {
   def srv: ActorRef
-  def defaultTimeout: Long = srv.timeout
+  def defaultTimeout: Long = ActorRefOps.defaultTimeout
 
   lazy val profiles: ProfileSet = srv !> Server.GetProfiles
 
@@ -38,6 +38,7 @@ trait Server extends Actor with Logging with Profiling {
   import Server._
   
   final def srv: ActorRef = self
+  def defaultTimeout: Long = ActorRefOps.defaultTimeout
   
   def profiles = ProfileSet(classOf[Profile])
  
