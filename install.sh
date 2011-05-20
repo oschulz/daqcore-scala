@@ -1,9 +1,17 @@
-#!/bin/bash --posix
+#!/bin/bash -e
+
+INSTALL_CONFIG="false"
+while getopts c opt
+do
+	case "$opt" in
+		c) INSTALL_CONFIG="true" ;;
+	esac
+done
+shift `expr $OPTIND - 1`
 
 INSTALL_TARGET="$1"
-
 if [ "${INSTALL_TARGET}" == "" ] ; then
-	echo "Syntax: install.sh [TARGET_HOST:]TARGET_DIR" 1>&2
+	echo "Usage: install.sh [-c] [TARGET_HOST:]TARGET_DIR" 1>&2
 	exit 1
 fi
 
@@ -53,7 +61,9 @@ if cd "${PROJECT_DIR}" ; then
 	
 	rsync -rlptvP src/main/shell/scala "${INSTALL_TARGET}/bin/"
 
-	rsync -rlptvP akka.conf logback.xml "${INSTALL_TARGET}/conf/"
+	if [ "$INSTALL_CONFIG" == "true" ] ; then
+		rsync -rlptvP akka.conf logback.xml "${INSTALL_TARGET}/conf/"
+	fi
 else
 	echo "ERROR: Could not cd to project directory \"${PROJECT_DIR}\"" 1>&2
 fi
