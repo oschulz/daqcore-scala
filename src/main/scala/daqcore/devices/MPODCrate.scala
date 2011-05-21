@@ -28,18 +28,18 @@ import akka.dispatch.Future
 import collection.immutable.Queue
 
 
-trait MPODCrate extends PowerSupply {
-}
+trait MPODCrate extends PowerSupply
 
 object MPODCrate {
+  def apply(aref: ActorRef) = SReqProxy[MPODCrate](aref)
+  
   def apply(address: InetSockAddr, sv: Supervising = defaultSupervisor): MPODCrate =
-    new ServerProxy(sv.linkStart(actorOf(new MPODCrateSrv(address)))) with MPODCrate
+    this(sv.linkStart(new MPODCrateSrv(address)))
 }
+
 
 
 class MPODCrateSrv(address: InetSockAddr) extends MServer {
-  override def profiles = super.profiles.+[MPODCrate]
-  
   val snmp = defaultSnmpManager
   
   val maxPDUsPerRequest = 32

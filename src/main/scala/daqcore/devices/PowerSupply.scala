@@ -18,24 +18,25 @@
 package daqcore.devices
 
 import daqcore.actors._
+import akka.dispatch.Future
 
 
-trait PowerSupply extends Profile {
-  def identity() = srv.qryF[String]('identity)
+trait PowerSupply extends ServerInterface {
+  def identity(): Future[String]
   
-  def outputs() = srv.qryF[Seq[Int]]('outputs)
+  def outputs(): Future[Seq[Int]]
 
-  def getOutEnabled() = srv.qryF[Seq[(Int, Boolean)]]('getOutEnabled)
-  def setOutEnabled(vals: (Int, Boolean)*) = srv.qryF[Seq[(Int, Boolean)]]('setOutEnabled, vals)
+  def getOutEnabled(): Future[Seq[(Int, Boolean)]]
+  def setOutEnabled(vals: (Int, Boolean)*): Future[Seq[(Int, Boolean)]]
 
-  def getOutVoltDesired() =  srv.qryF[Seq[(Int, Double)]]('getOutVoltDesired)
-  def setOutVoltDesired(vals: (Int, Double)*) =  srv.qryF[Seq[(Int, Double)]]('setOutVoltDesired, vals)
+  def getOutVoltDesired(): Future[Seq[(Int, Double)]]
+  def setOutVoltDesired(vals: (Int, Double)*): Future[Seq[(Int, Double)]]
 
-  def getOutVoltSensed() = srv.qryF[Seq[(Int, Double)]]('getOutVoltSensed)
+  def getOutVoltSensed(): Future[Seq[(Int, Double)]]
 
-  def getOutVoltRiseRate() =  srv.qryF[Seq[(Int, Double)]]('getOutVoltRiseRate)
-  def setOutVoltRiseRate(vals: (Int, Double)*) =  srv.qryF[Seq[(Int, Double)]]('setOutVoltRiseRate, vals)
+  def getOutVoltRiseRate(): Future[Seq[(Int, Double)]]
+  def setOutVoltRiseRate(vals: (Int, Double)*): Future[Seq[(Int, Double)]]
 
-  def getOutVoltFallRate() =  srv.qryF[Seq[(Int, Double)]]('getOutVoltFallRate)
-  def setOutVoltFallRate(vals: (Int, Double)*) =  srv.qryF[Seq[(Int, Double)]]('setOutVoltFallRate, vals)
+  def getOutVoltFallRate(): Future[Seq[(Int, Double)]]
+  def setOutVoltFallRate(vals: (Int, Double)*): Future[Seq[(Int, Double)]]
 }

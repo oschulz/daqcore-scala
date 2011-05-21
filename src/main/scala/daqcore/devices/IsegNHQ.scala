@@ -28,21 +28,19 @@ import akka.dispatch.Future
 import collection.immutable.Queue
 
 
-trait IseqNHQ extends PowerSupply {
-}
-
+trait IseqNHQ extends PowerSupply
 
 object IseqNHQ {
+  def apply(aref: ActorRef) = SReqProxy[IseqNHQ](aref)
+
   def apply(msgLnk: RawMsgIO, sv: Supervising = defaultSupervisor): IseqNHQ =
-    new ServerProxy(sv.linkStart(actorOf(new IseqNHQSrv(msgLnk)))) with IseqNHQ
+    this(sv.linkStart(new IseqNHQSrv(msgLnk)))
 }
 
 
 
 class IseqNHQSrv(msgLnk: RawMsgIO) extends MServer {
   import IseqNHQSrv._
-
-  override def profiles = super.profiles.+[IseqNHQ]
 
   def isegQry(cmd: String) = {
     msgLnk.send(ByteCharSeq(cmd + "\r\n"))
