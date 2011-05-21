@@ -22,9 +22,26 @@ import akka.actor.Actor.actorOf, akka.actor.ActorRef, akka.dispatch.Future
 import daqcore.actors._
 
 
-case class DummyProfile(srv: ActorRef) extends ServerProfile {
+trait DummyInterface extends ServerInterface {
+  def identity: Future[String]
+  def add(i: Int, j: Int): Future[Int]
+  def echo(a: Any): Any
+  def log_info(msg: String): Unit
+}
+
+object DummyInterface {
+  def apply(srv: ActorRef): DummyInterface =
+    SReqProxy[DummyInterface](srv)
+
+  def apply(sv: Supervising = defaultSupervisor): DummyInterface =
+    DummyInterface(sv.linkStart(new DummyServer()))
+}
+
+
+case class DummyProfile(srv: ActorRef) extends DummyInterface with ServerProfile {
+  def identity = srv.qryF[String]('identity)
   def add(i: Int, j: Int) = srv.qryF[Int]('add, i, j)
-  def echo(a: Any) = srv.qryF[Any]('echo, a)
+  def echo(a: Any) = srv.qry[Any]('echo, a)
   def log_info(msg: String) = srv.cmd('log_info, msg)
 }
 
@@ -37,6 +54,7 @@ object DummyProfile {
 class DummyServer() extends MServer {
   override def profiles = super.profiles.+[DummyProfile]
 
+  @sreq def identity = "DummyServer-" + srv.uuid
   @sreq def add(i: Int, j: Int) = i + j
   @sreq def echo(a: Any) = a
   @sreq def log_info(msg: String) = log.info(msg)
