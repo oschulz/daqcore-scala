@@ -22,12 +22,17 @@ import akka.actor._
 import daqcore.util._
 
 
-trait ServerProfile {
+trait ServerInterface {
   def srv: ActorRef
+  def stop()
+}
+
+
+trait ServerProfile extends ServerInterface {
   def defaultTimeout: Long = ActorRefOps.defaultTimeout
   
   def stop() { srv.stop }
-  def close() { srv.stop }
+  def close() { stop() }
 
   lazy val profiles: ProfileSet = srv !> Server.GetProfiles
 
