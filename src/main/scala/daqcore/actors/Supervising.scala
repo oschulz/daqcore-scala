@@ -18,17 +18,27 @@
 package daqcore.actors
 
 import akka.actor.{Actor, Supervisor, ActorRef}
+import akka.actor.Actor.actorOf
 import akka.config.Supervision.{LifeCycle, UndefinedLifeCycle}
 
 
 trait Supervising {
   def link(actorRef: ActorRef): Unit
   
-  def linkStart(actorRef: ActorRef, lifeCycle: LifeCycle = UndefinedLifeCycle): ActorRef = {
-    if (lifeCycle != UndefinedLifeCycle) actorRef.lifeCycle = lifeCycle
+  def linkStart(actorRef: ActorRef): ActorRef = {
     link(actorRef)
     actorRef.start
   }
+
+  def linkStart(actorRef: ActorRef, lifeCycle: LifeCycle): ActorRef = {
+    actorRef.lifeCycle = lifeCycle
+    linkStart(actorRef)
+  }
+
+  def linkStart(actor: => Actor): ActorRef = linkStart(actorOf(actor))
+
+  def linkStart(actor: => Actor, lifeCycle: LifeCycle): ActorRef =
+    linkStart(actorOf(actor), lifeCycle)
 }
 
 
