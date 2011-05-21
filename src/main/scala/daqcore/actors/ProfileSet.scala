@@ -18,7 +18,7 @@
 package daqcore.actors
 
 
-class ProfileSet(val classes: Set[Class[_]]) {
+case class ProfileSet(val classes: Set[Class[_]]) {
   def +(cl: Class[_]): ProfileSet = {
     require( ProfileSet.isProfile(cl) )
     new ProfileSet(
@@ -36,7 +36,7 @@ class ProfileSet(val classes: Set[Class[_]]) {
 }
 
 
-case object ProfileSet {
+object ProfileSet {
   protected val profClass = classOf[Profile]
 
   val empty = ProfileSet()
