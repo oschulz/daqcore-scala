@@ -51,7 +51,7 @@ object DummyProfile {
 }
 
 
-class DummyServer() extends MServer {
+class DummyServer() extends MServer with DummyInterface {
   override def profiles = super.profiles.+[DummyProfile]
 
   @sreq def identity = "DummyServer-" + srv.uuid

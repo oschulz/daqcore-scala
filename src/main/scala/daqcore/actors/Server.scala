@@ -18,6 +18,7 @@
 package daqcore.actors
 
 import akka.actor._
+import akka.dispatch.{Future, AlreadyCompletedFuture}
 
 import daqcore.util._
 
@@ -52,7 +53,10 @@ trait Server extends Actor with Logging with Profiling {
   import Server._
   
   final def srv: ActorRef = self
+  def stop() = srv.stop
   def defaultTimeout: Long = ActorRefOps.defaultTimeout
+  
+  implicit def constFt[A](x: A): Future[A] = new AlreadyCompletedFuture(Right(x))
   
   def profiles = ProfileSet(classOf[ServerProfile])
  
