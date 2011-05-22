@@ -37,7 +37,7 @@ case class ProfileSet(val classes: Set[Class[_]]) {
 
 
 object ProfileSet {
-  protected val profClass = classOf[Profile]
+  protected val profClass = classOf[ServerProfile]
 
   val empty = ProfileSet()
   

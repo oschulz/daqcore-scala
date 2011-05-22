@@ -22,7 +22,7 @@ import akka.dispatch.Future
 import daqcore.util._
 
 
-trait Repeated extends Profile with Closeable {
+trait Repeated extends ServerProfile {
   def pause(): Unit = srv ! Repeated.Pause
 
   def resume(): Unit = srv ! Repeated.Resume

@@ -28,7 +28,7 @@ import daqcore.actors._
 import daqcore.io.prot.scpi._
 
 
-trait SCPIClientLink extends Profile with Closeable {
+trait SCPIClientLink extends ServerProfile {
   def queryF(instr: Instruction*)(timeout: Long = defaultTimeout): Future[Response] =
     srv.!!>(SCPIClientLink.CmdQuery(instr: _*), timeout)
 

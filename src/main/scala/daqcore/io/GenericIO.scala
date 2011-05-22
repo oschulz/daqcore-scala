@@ -24,7 +24,7 @@ import daqcore.util._
 import daqcore.actors._
 
 
-trait GenericInput extends Profile with Closeable with Logging {
+trait GenericInput extends ServerProfile with Logging {
   val inputCompanion: GenericInputCompanion
   import inputCompanion._
   
@@ -90,7 +90,7 @@ trait GenericInputCompanion {
 
 
 
-trait GenericOutput extends Profile with Closeable {
+trait GenericOutput extends ServerProfile {
   val outputCompanion: GenericOutputCompanion
   import outputCompanion._
 

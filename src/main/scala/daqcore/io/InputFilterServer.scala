@@ -25,7 +25,7 @@ import daqcore.actors._
 import daqcore.util._
 
 
-trait InputFilterServer extends CloseableServer with QueueingServer {
+trait InputFilterServer extends CascadableServer with QueueingServer {
   override def profiles = super.profiles.+[GenericInput]
 
   val inputCompanion: GenericInputCompanion

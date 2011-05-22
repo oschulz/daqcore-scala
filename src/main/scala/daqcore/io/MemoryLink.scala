@@ -23,7 +23,7 @@ import daqcore.util._
 import daqcore.actors._
 
 
-trait MemoryReader extends Profile with Closeable {
+trait MemoryReader extends ServerProfile {
   def read(address: Long, count: Long, timeout: Long = defaultTimeout): ByteSeq =
     readF(address, count, timeout)get
 
@@ -32,7 +32,7 @@ trait MemoryReader extends Profile with Closeable {
 }
 
 
-trait MemoryWriter extends Profile with Closeable {
+trait MemoryWriter extends ServerProfile {
   def write(address: Long, data: ByteSeq) : Unit =
     srv ! MemoryLink.Write(address: Long, data)
   

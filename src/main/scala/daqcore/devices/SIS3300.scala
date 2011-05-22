@@ -133,7 +133,7 @@ object SIS3300 {
 
 
 
-trait SIS3300_03 extends Profile with SIS3300 {
+trait SIS3300_03 extends ServerProfile with SIS3300 {
 }
 
 
@@ -144,7 +144,7 @@ object SIS3300_03 {
 
 
 
-trait SIS3300_11 extends Profile with SIS3300 {
+trait SIS3300_11 extends ServerProfile with SIS3300 {
 }
 
 

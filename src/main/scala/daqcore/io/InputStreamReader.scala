@@ -26,7 +26,7 @@ import daqcore.actors._
 import daqcore.util._
 
 
-class InputStreamReader(input: InputStream) extends CloseableServer {
+class InputStreamReader(input: InputStream) extends CascadableServer {
   override def profiles = super.profiles.+[ByteStreamInput]
 
   val maxChunkSize = 512 * 1024

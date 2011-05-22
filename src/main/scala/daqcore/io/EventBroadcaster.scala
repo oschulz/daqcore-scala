@@ -24,7 +24,7 @@ import daqcore.actors._
 import daqcore.util._
 
 
-class EventBroadcaster(val source: EventInput) extends CloseableServer with EventServer {
+class EventBroadcaster(val source: EventInput) extends EventServer {
   override def profiles = super.profiles.+[EventSource]
 
   val sourceCompanion = EventInput

@@ -28,7 +28,7 @@ import daqcore.actors._
 import daqcore.io.prot.rootsys._
 
 
-trait RootIO extends Profile with Closeable {
+trait RootIO extends ServerProfile {
   import RootIO._
   import RootIO.requests._
 

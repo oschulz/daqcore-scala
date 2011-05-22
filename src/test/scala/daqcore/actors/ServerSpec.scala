@@ -25,7 +25,7 @@ import akka.actor.Actor.actorOf
 class ServerSpec extends WordSpec with MustMatchers {
   "A Server" should {
      object testenv {
-      trait FooDevice extends Profile {
+      trait FooDevice extends ServerProfile {
         import FooDevice._
         def foo(v: Int): Int = srv !> Foo(v)
       }
@@ -35,7 +35,7 @@ class ServerSpec extends WordSpec with MustMatchers {
       }
 
 
-      trait BarDevice extends Profile {
+      trait BarDevice extends ServerProfile {
         import BarDevice._
         def bar(v: Int): Int = srv !> Bar(v)
       }
@@ -45,7 +45,7 @@ class ServerSpec extends WordSpec with MustMatchers {
       }
 
 
-      trait BazDevice extends Profile {
+      trait BazDevice extends ServerProfile {
         def baz(v: Int): Int = srv.!>>[Int](None)
       }
 

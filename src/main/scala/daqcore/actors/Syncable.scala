@@ -20,7 +20,7 @@ package daqcore.actors
 import akka.actor._, akka.dispatch.Future
 
 
-trait Syncable extends Profile {
+trait Syncable extends ServerProfile {
   import Syncable._
 
   def pause(): Unit = srv ! Pause()

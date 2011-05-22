@@ -32,7 +32,7 @@ object EventHandler {
 }
 
 
-trait EventSource extends Closeable {
+trait EventSource extends ServerProfile {
   def addHandler(handler: EventHandler): EventHandler = {
     srv ! EventSource.AddHandler(handler)
     handler
@@ -58,7 +58,7 @@ object EventSource {
 }
 
 
-trait EventSender extends Profile {
+trait EventSender extends ServerProfile {
   def emitEvent(event: Any): Unit =
     srv ! EventSender.Emit(event)
 }

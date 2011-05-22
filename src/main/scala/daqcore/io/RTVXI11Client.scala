@@ -32,7 +32,7 @@ import daqcore.actors._
 import daqcore.util._
 
 
-class RTVXI11Client(val address: InetAddress, timeout: Long) extends CloseableServer {
+class RTVXI11Client(val address: InetAddress, timeout: Long) extends CascadableServer {
   val client = self
 
   override def profiles = super.profiles.+[VXI11Client]
@@ -40,7 +40,7 @@ class RTVXI11Client(val address: InetAddress, timeout: Long) extends CloseableSe
   case class GetSelf() extends ActorCmd
   case class Crash(e: Throwable) extends ActorCmd
   
-  class Link(val device: String, val timeout: Long) extends CloseableServer with PostInit {
+  class Link(val device: String, val timeout: Long) extends CascadableServer with PostInit {
     var id: Int = 0
     def lnk = SrvLid(self, id)
     

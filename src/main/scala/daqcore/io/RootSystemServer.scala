@@ -29,10 +29,8 @@ import daqcore.actors._
 import daqcore.io.prot.rootsys._
 
 
-class RootSystemServer() extends Server with KeepAlive with PostInit with CloseableServer {
+class RootSystemServer() extends CascadableServer with KeepAlive with PostInit {
   import RootSystemServer._
-
-  override def profiles = super.profiles.+[Closeable]
 
   case class ActiveQuery(id: Int, readResp: BasicInput => Any, replyTo: MsgTarget)
   
@@ -104,7 +102,7 @@ object RootSystemServer extends {
   val requestMsgType = 0x52455155
   val responseMsgType = 0x52455350
 
-  def apply(sv: Supervising = defaultSupervisor, lc: LifeCycle = UndefinedLifeCycle): Closeable = {
-    new ServerProxy(sv.linkStart(actorOf(new RootSystemServer()), lc)) with Closeable
+  def apply(sv: Supervising = defaultSupervisor, lc: LifeCycle = UndefinedLifeCycle): ServerProfile = {
+    new ServerProxy(sv.linkStart(actorOf(new RootSystemServer()), lc))
   }
 }

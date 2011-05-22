@@ -30,7 +30,7 @@ import daqcore.util.fileops._
 import daqcore.system._
 
 
-class RootSystemProcess extends Server with KeepAlive with PostInit with CloseableServer {
+class RootSystemProcess extends CascadableServer with KeepAlive with PostInit {
   import RootSystemProcess.{msgHeader}
   implicit val encoding = BigEndian
 

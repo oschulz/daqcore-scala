@@ -22,7 +22,7 @@ import akka.dispatch.Future
 import daqcore.actors._
 
 
-trait MsgSource extends Profile {
+trait MsgSource extends ServerProfile {
   def setReceiver(receiver: MsgTarget, repeat: Boolean = true): Unit =
     srv ! MsgSource.SetReceiver(receiver, repeat)
   
@@ -38,7 +38,7 @@ object MsgSource {
 
 
 
-trait MsgSender extends Profile {
+trait MsgSender extends ServerProfile {
   def sendMsg(msg: Any): Unit =
     srv ! MsgSender.SendMsg(msg)
 }

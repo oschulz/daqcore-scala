@@ -33,7 +33,7 @@ import daqcore.actors._
 
 
 object NettyIO {
-  abstract class NettyChannelSrv extends CloseableServer {
+  abstract class NettyChannelSrv extends CascadableServer {
     var channel: Option[Channel] = None
     
     override def init() = {
@@ -231,6 +231,6 @@ object NettyServer {
   
   protected val channelFactory = new NioServerSocketChannelFactory(Executors.newCachedThreadPool(), Executors.newCachedThreadPool())
 
-  def apply(addr: InetSocketAddress, sv: Supervising = defaultSupervisor, lc: LifeCycle = UndefinedLifeCycle)(body: ByteStreamIO => Unit): Closeable =
-    new ServerProxy(sv.linkStart(actorOf(new NettyServer(addr, body)), lc)) with Closeable
+  def apply(addr: InetSocketAddress, sv: Supervising = defaultSupervisor, lc: LifeCycle = UndefinedLifeCycle)(body: ByteStreamIO => Unit): ServerProfile =
+    new ServerProxy(sv.linkStart(actorOf(new NettyServer(addr, body)), lc)) with ServerProfile
 }

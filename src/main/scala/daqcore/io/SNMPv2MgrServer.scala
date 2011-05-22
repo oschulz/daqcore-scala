@@ -37,7 +37,7 @@ import org.snmp4j.transport._
 import org.snmp4j.util.DefaultPDUFactory
 import org.snmp4j.event.{ResponseListener, ResponseEvent}
 
-class SNMPv2MgrServer() extends Server with CloseableServer {
+class SNMPv2MgrServer() extends Server with CascadableServer {
   override def profiles = super.profiles.+[SNMPv2Manager]
 
   val tcpTransport: Boolean = false

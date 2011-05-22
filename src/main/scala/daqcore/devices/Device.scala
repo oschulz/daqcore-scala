@@ -23,7 +23,7 @@ import daqcore.util._
 import daqcore.actors._
 
 
-trait Device extends Profile with Closeable with Syncable {
+trait Device extends Syncable {
   def getSubDevsF(timeout: Long = defaultTimeout): Future[Map[Symbol, ActorRef]] =
     srv.!!>(Device.GetSubDevs(), timeout)
 }

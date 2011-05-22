@@ -25,7 +25,7 @@ import daqcore.actors._
 import daqcore.util._
 
 
-trait OutputFilterServer extends CloseableServer {
+trait OutputFilterServer extends CascadableServer {
   override def profiles = super.profiles.+[GenericOutput]
 
   val outputCompanion: GenericOutputCompanion

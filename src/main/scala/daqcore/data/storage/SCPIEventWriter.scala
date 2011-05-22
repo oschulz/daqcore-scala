@@ -33,11 +33,9 @@ import daqcore.data._
 import Event.Raw.Transient
 
 
-class SCPIEventWriter(val source: EventSource, val output: SCPIRequestOutput) extends CloseableServer {
+class SCPIEventWriter(val source: EventSource, val output: SCPIRequestOutput) extends CascadableServer {
   import daqcore.io.prot.scpi._
   import SCPIEventWriter.headers._
-
-  override def profiles = super.profiles.+[Closeable]
   
   val handler = EventHandler {
     case ev: RunStart => srv ! ev; true
@@ -129,6 +127,6 @@ object SCPIEventWriter {
     val H_RUN_STOP = ~RUN~STOP
   }
   
-  def apply(source: EventSource, output: SCPIRequestOutput, sv: Supervising = defaultSupervisor, lc: LifeCycle = UndefinedLifeCycle): Closeable =
-    new ServerProxy(sv.linkStart(actorOf(new SCPIEventWriter(source, output)), lc)) with Closeable
+  def apply(source: EventSource, output: SCPIRequestOutput, sv: Supervising = defaultSupervisor, lc: LifeCycle = UndefinedLifeCycle): ServerProfile =
+    new ServerProxy(sv.linkStart(actorOf(new SCPIEventWriter(source, output)), lc)) with ServerProfile
 }

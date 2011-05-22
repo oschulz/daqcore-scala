@@ -25,7 +25,7 @@ import daqcore.actors._
 import daqcore.io.prot.snmp._
 
 
-trait SNMPv2Manager extends Profile with Closeable with Logging {
+trait SNMPv2Manager extends ServerProfile with Logging {
   import SNMPv2Manager._
 
   def getF(address: InetSockAddr, community: String, oids: OID*): Future[VariableBindings] =

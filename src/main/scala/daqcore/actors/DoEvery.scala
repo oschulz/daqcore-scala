@@ -23,7 +23,7 @@ import akka.actor.Actor.actorOf
 import daqcore.util._
 
 
-class DoEvery(action: => Unit, interval: Int, after: Int) extends CloseableServer {
+class DoEvery(action: => Unit, interval: Int, after: Int) extends CascadableServer {
   override def profiles = super.profiles.+[Repeated]
 
   val maxChunkSize = 512 * 1024

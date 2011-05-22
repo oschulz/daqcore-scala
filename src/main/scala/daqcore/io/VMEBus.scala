@@ -26,7 +26,7 @@ import daqcore.actors._
 case class VMEInterrupt(vector: Int, missed: Int = 0)
 
 
-trait VMEBus extends Profile {
+trait VMEBus extends ServerProfile {
   def read(address: Long, count: Long, mode: VMEBus.Mode, timeout: Long = defaultTimeout): ByteSeq =
     readF(address, count, mode, timeout)get
 

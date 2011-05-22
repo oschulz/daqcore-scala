@@ -26,7 +26,7 @@ import daqcore.actors._
 import daqcore.util._
 
 
-class OutputStreamWriter(output: OutputStream) extends CloseableServer {
+class OutputStreamWriter(output: OutputStream) extends CascadableServer {
   override def profiles = super.profiles.+[ByteStreamOutput]
 
   override def init() = {

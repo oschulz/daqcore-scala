@@ -35,6 +35,6 @@ object InetConnection {
 
 
 object InetServer {
-  def apply(addr: InetSockAddr, sv: Supervising = defaultSupervisor)(body: ByteStreamIO => Unit): Closeable =
+  def apply(addr: InetSockAddr, sv: Supervising = defaultSupervisor)(body: ByteStreamIO => Unit): ServerProfile =
     NettyServer(addr, sv){body}
 }

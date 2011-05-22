@@ -34,9 +34,7 @@ import org.jfree.chart.event.ChartProgressEvent
 import daqcore.gui.jfree._
 
 
-class Scope(source: EventSource) extends CloseableServer {
-  override def profiles = super.profiles.+[Closeable]
-
+class Scope(source: EventSource) extends CascadableServer {
   object DrawingFinished
   case class Draw(ev: Event)
 
@@ -108,6 +106,6 @@ class Scope(source: EventSource) extends CloseableServer {
 
 
 object Scope {
-  def apply(source: EventSource, sv: Supervising = defaultSupervisor, lc: LifeCycle = UndefinedLifeCycle): Closeable =
-    new ServerProxy(sv.linkStart(actorOf(new Scope(source)), lc)) with Closeable
+  def apply(source: EventSource, sv: Supervising = defaultSupervisor, lc: LifeCycle = UndefinedLifeCycle): ServerProfile =
+    new ServerProxy(sv.linkStart(actorOf(new Scope(source)), lc)) with ServerProfile
 }

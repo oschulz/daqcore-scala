@@ -34,9 +34,7 @@ import daqcore.data._
 import Event.Raw.Transient
 
 
-class TTreeEventWriter(val source: EventSource, val target: File, timeout: Long = 10000) extends PostInit with CloseableServer {
-  override def profiles = super.profiles.+[Closeable]
-  
+class TTreeEventWriter(val source: EventSource, val target: File, timeout: Long = 10000) extends PostInit with CascadableServer {
   val handler = EventHandler {
     case ev: RunStart => srv ! ev; true
     case ev: RunStop => srv ! ev; true
@@ -118,6 +116,6 @@ class TTreeEventWriter(val source: EventSource, val target: File, timeout: Long 
 
 
 object TTreeEventWriter {
-  def apply(source: EventSource, output: File, timeout: Long = 10000, sv: Supervising = defaultSupervisor): Closeable =
-    new ServerProxy(sv.linkStart(actorOf(new TTreeEventWriter(source, output, timeout)))) with Closeable
+  def apply(source: EventSource, output: File, timeout: Long = 10000, sv: Supervising = defaultSupervisor): ServerProfile =
+    new ServerProxy(sv.linkStart(actorOf(new TTreeEventWriter(source, output, timeout)))) with ServerProfile
 }

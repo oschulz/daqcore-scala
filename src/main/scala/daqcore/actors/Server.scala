@@ -22,9 +22,12 @@ import akka.actor._
 import daqcore.util._
 
 
-trait Profile {
+trait ServerProfile {
   def srv: ActorRef
   def defaultTimeout: Long = ActorRefOps.defaultTimeout
+  
+  def stop() { srv.stop }
+  def close() { srv.stop }
 
   lazy val profiles: ProfileSet = srv !> Server.GetProfiles
 
@@ -36,9 +39,7 @@ trait Profile {
   for { cl <- this.getClass.getInterfaces; if (ProfileSet.isProfile(cl)) } { requireProfile(cl) }
 }
 
-class ServerProxy(val srv: ActorRef) extends Profile
-
-trait ServerProfile extends Profile
+class ServerProxy(val srv: ActorRef) extends ServerProfile
 
 
 trait Server extends Actor with Logging with Profiling {
@@ -48,7 +49,7 @@ trait Server extends Actor with Logging with Profiling {
   final def srv: ActorRef = self
   def defaultTimeout: Long = ActorRefOps.defaultTimeout
   
-  def profiles = ProfileSet(classOf[Profile])
+  def profiles = ProfileSet(classOf[ServerProfile])
  
   def replyTarget: MsgTarget = self.channel
   

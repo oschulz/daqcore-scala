@@ -22,7 +22,7 @@ import akka.actor._, akka.dispatch.Future
 import daqcore.util._, daqcore.actors._
 
 
-trait VXI11Client extends Closeable {
+trait VXI11Client extends ServerProfile {
   def openLink(device:String, timeout: Long = defaultTimeout): VXI11ClientLink = {
     val aref = srv.!!>(VXI11Client.OpenLink(device, timeout), timeout).get
     new ServerProxy(aref) with VXI11ClientLink

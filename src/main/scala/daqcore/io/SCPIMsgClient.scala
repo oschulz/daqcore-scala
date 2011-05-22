@@ -35,7 +35,7 @@ import daqcore.util._
 import daqcore.io.prot.scpi._
 
 
-class SCPIMsgClient(msgLnk: RawMsgIO) extends Server with KeepAlive with PostInit with CloseableServer {
+class SCPIMsgClient(msgLnk: RawMsgIO) extends CascadableServer with KeepAlive with PostInit {
   override def profiles = super.profiles.+[SCPIClientLink]
 
   case class ReadResponse()
