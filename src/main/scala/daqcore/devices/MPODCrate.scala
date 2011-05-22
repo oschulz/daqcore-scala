@@ -39,7 +39,7 @@ object MPODCrate {
 
 
 
-class MPODCrateSrv(address: InetSockAddr) extends MServer {
+class MPODCrateSrv(address: InetSockAddr) extends MServer with MPODCrate {
   val snmp = defaultSnmpManager
   
   val maxPDUsPerRequest = 32
@@ -133,23 +133,25 @@ class MPODCrateSrv(address: InetSockAddr) extends MServer {
     colFloatVals(snmpSet(bindings: _*))
   }
   
-  @sreq val identity: String = {val OctetString(res) = snmpGetNext(oids.sysDescr).head._2; res}
+  val idn: String = {val OctetString(res) = snmpGetNext(oids.sysDescr).head._2; res}
+  @sreq def identity = idn
   
-  @sreq val outputs: Seq[Int] = snmpGetChildren(oids.outputIndex) map { _._1.values.last }
+  val outs: Seq[Int] = snmpGetChildren(oids.outputIndex) map { _._1.values.last }
+  @sreq def outputs = outs
 
 
-  @sreq def getOutEnabled(): Seq[(Int, Boolean)] = getBoolIntCol(oids.outputSwitch)
+  @sreq def getOutEnabled() = getBoolIntCol(oids.outputSwitch)
   @sreq def setOutEnabled(vals: (Int, Boolean)*) = setBoolIntCol(oids.outputSwitch, vals: _*)
 
-  @sreq def getOutVoltDesired(): Seq[(Int, Double)] = getFloatCol(oids.outputVoltage)
+  @sreq def getOutVoltDesired() = getFloatCol(oids.outputVoltage)
   @sreq def setOutVoltDesired(vals: (Int, Double)*) = setFloatCol(oids.outputVoltage, vals: _*)
 
-  @sreq def getOutVoltRiseRate(): Seq[(Int, Double)] = getFloatCol(oids.outputVoltageRiseRate)
+  @sreq def getOutVoltRiseRate() = getFloatCol(oids.outputVoltageRiseRate)
   @sreq def setOutVoltRiseRate(vals: (Int, Double)*) = setFloatCol(oids.outputVoltageRiseRate, vals: _*)
 
-  @sreq def getOutVoltFallRate(): Seq[(Int, Double)] = getFloatCol(oids.outputVoltageFallRate)
+  @sreq def getOutVoltFallRate() = getFloatCol(oids.outputVoltageFallRate)
   @sreq def setOutVoltFallRate(vals: (Int, Double)*) = setFloatCol(oids.outputVoltageFallRate, vals: _*)
 
 
-  @sreq def getOutVoltSensed(): Seq[(Int, Double)] = getFloatCol(oids.outputMeasurementSenseVoltage)
+  @sreq def getOutVoltSensed() = getFloatCol(oids.outputMeasurementSenseVoltage)
 }
