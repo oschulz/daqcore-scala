@@ -39,7 +39,7 @@ object IseqNHQ {
 
 
 
-class IseqNHQSrv(msgLnk: RawMsgIO) extends MServer {
+class IseqNHQSrv(msgLnk: RawMsgIO) extends MServer with IseqNHQ {
   import IseqNHQSrv._
 
   def isegQry(cmd: String) = {
@@ -74,7 +74,7 @@ class IseqNHQSrv(msgLnk: RawMsgIO) extends MServer {
   // def isegQryDouble(cmd: String): Double = { val IsegDouble(x) = isegQry(cmd); x }
 
   def getChannels[A](cmd: String)(f: String => A): Seq[(Int, A)] =
-    for (ch <- outputs) yield { ch -> f(isegQry(cmd + ch)) }
+    for (ch <- outs) yield { ch -> f(isegQry(cmd + ch)) }
 
   def setChannels[A](cmd: String, vals: Seq[(Int, A)])(f: A => String)(g: String => A): Seq[(Int, A)] = {
     for ((ch, x) <- vals) yield {
@@ -97,41 +97,43 @@ class IseqNHQSrv(msgLnk: RawMsgIO) extends MServer {
 
 
   def getIdentity() = isegQry("#")
-  @sreq val identity: String = getIdentity()
+  val idn = getIdentity()
+  @sreq def identity = idn
   
   def triggerConnectionCheck() { sendAfter(15000, self, CheckConnection()) }
   @msg def checkConnection(check: CheckConnection) {
-    assert( getIdentity() == identity )
+    assert( getIdentity() == idn )
     triggerConnectionCheck()
     log.trace("Connection checked")
   }
   triggerConnectionCheck()
   
-  @sreq val outputs: Seq[Int] = {
+  val outs = {
     var nouts = 0
     try { while (nouts < 1000) { val ch = nouts + 1; isegCmd("S" + ch); nouts = ch } } catch { case e: IllegalArgumentException => }
     (1 to nouts)
   }
+  @sreq def outputs = outs
 
-  @sreq def getOutEnabled(): Seq[(Int, Boolean)] =
+  @sreq def getOutEnabled() =
     getChannels("S"){_.drop(3) != "OFF"}
-  // @sreq def setOutEnabled(vals: (Int, Boolean)*) // Unsupported by device
+  @sreq def setOutEnabled(vals: (Int, Boolean)*) = throw new UnsupportedOperationException("setOutEnabled not supported by device")
 
-  @sreq def getOutVoltDesired(): Seq[(Int, Double)] = getChannelsDouble("D")
+  @sreq def getOutVoltDesired() = getChannelsDouble("D")
   
-  @sreq def setOutVoltDesired(vals: (Int, Double)*): Seq[(Int, Double)] = {
+  @sreq def setOutVoltDesired(vals: (Int, Double)*) = {
     val res = setChannelsDouble("D", vals)
     for ((ch, v) <- vals) isegCmd("G" + ch)
     res
   }
 
-  @sreq def getOutVoltRiseRate(): Seq[(Int, Double)] = getChannelsIntDouble("V")
+  @sreq def getOutVoltRiseRate() = getChannelsIntDouble("V")
   @sreq def setOutVoltRiseRate(vals: (Int, Double)*) = setChannelsIntDouble("V", vals)
 
-  @sreq def getOutVoltFallRate(): Seq[(Int, Double)] = getChannelsIntDouble("V")
+  @sreq def getOutVoltFallRate() = getChannelsIntDouble("V")
   @sreq def setOutVoltFallRate(vals: (Int, Double)*) = setChannelsIntDouble("V", vals)
 
-  @sreq def getOutVoltSensed(): Seq[(Int, Double)] = getChannelsDouble("U")
+  @sreq def getOutVoltSensed() = getChannelsDouble("U")
 }
 
 
