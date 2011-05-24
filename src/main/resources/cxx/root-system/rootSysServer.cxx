@@ -232,7 +232,7 @@ public:
 	void writeTo(TMessage &msg) const { msg.WriteChar(value); }
 	void readFrom(TMessage &msg) { msg.ReadChar(value); }
 	TString toString() const { return TString(Form("%i", (int)(value))); }
-	Int8Value() : AtomicValue("int16"), value(0) {}
+	Int8Value() : AtomicValue("int8"), value(0) {}
 };
 
 
