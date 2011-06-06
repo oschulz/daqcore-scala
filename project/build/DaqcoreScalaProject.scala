@@ -13,9 +13,9 @@ class DaqcoreScalaProject(info: ProjectInfo) extends DefaultProject(info) with A
   val jBossRepo = "jBoss" at "http://repository.jboss.org/nexus/content/groups/public/"
   val snmp4jRepo = "SNMP4J" at "https://server.oosnmp.net/dist/release/"
 
-  val scala_continuations = compilerPlugin("org.scala-lang.plugins" % "continuations" % "2.9.0")
+  val scala_continuations = compilerPlugin("org.scala-lang.plugins" % "continuations" % "2.9.0-1")
 
-  val scala_swing = "org.scala-lang" % "scala-swing" % "2.9.0"
+  val scala_swing = "org.scala-lang" % "scala-swing" % "2.9.0-1"
 
   val scalatest = "org.scalatest" % "scalatest_2.9.0" % "1.4.1" % "test"
 
