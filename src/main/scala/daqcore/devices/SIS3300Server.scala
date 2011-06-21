@@ -50,12 +50,29 @@ abstract class SIS3300Server(val vmeBus: VMEBus, val baseAddress: Int) extends E
   var settingsVar: Settings = Settings()
   def settings = settingsVar
 
-  
+  protected var moduleInfoVar: ModuleInfo = null
+  def moduleInfo = moduleInfoVar
+
+  // 48-bit timestamps (currently only in firmware rev. 1185).
+  protected var extendedTimestampsVar: Boolean = false
+  def extendedTimestamps = extendedTimestampsVar
+
   override def init() = {
     super.init
    
     clientLinkTo(vmeBus.srv)
     atShutdown { vmeBus.srv.stop() }
+
+    moduleInfoVar = {
+      import memory._
+      val info = getModuleInfo();
+      debug("Module info: " + info)
+      require(info.fwRevMajor == majorFirmwareRevision)
+      info
+    }
+
+    extendedTimestampsVar = (moduleInfo.fwRevMajor == 0x11) && (moduleInfo.fwRevMinor == 0x85);
+    info("48-bit timestamps: " + extendedTimestamps)
 
     atCleanup {
       try { srvStopCapture }
@@ -137,8 +154,8 @@ abstract class SIS3300Server(val vmeBus: VMEBus, val baseAddress: Int) extends E
   protected var nextEventNoVar = 1
   def nextEventNo = nextEventNoVar
 
-  protected var lastTimeStampVar = 0
-  protected var TimeStampNOverflowsVar = 0
+  protected var lastTimeStampVar: Long = 0
+  protected var timeStampNOverflowsVar: Long = 0
   
 
   protected var currentBankVar = 1
@@ -153,6 +170,8 @@ abstract class SIS3300Server(val vmeBus: VMEBus, val baseAddress: Int) extends E
     } yield {} }
     
     currentBankVar = 1
+    lastTimeStampVar = 0
+    timeStampNOverflowsVar = 0
   }
   
   
@@ -167,12 +186,12 @@ abstract class SIS3300Server(val vmeBus: VMEBus, val baseAddress: Int) extends E
       _ <- CONTROL_STATUS.TRGARMST set 1
       _ <- CONTROL_STATUS.TRGROUTE set 1
       _ <- CONTROL_STATUS.BKFULLOUT2 set 1
+      _ <- CONTROL_STATUS.TSCLRMODE0 set 1
+      _ <- CONTROL_STATUS.TSCLRMODE1 set 1
       _ <- sync()
     } yield {} }
     
-    val info = getModuleInfo()
-    debug("Module initialized, module info: " + info)
-    require(info.fwRevMajor == majorFirmwareRevision)
+    debug("Module initialized")
   }
   
   
@@ -228,7 +247,7 @@ abstract class SIS3300Server(val vmeBus: VMEBus, val baseAddress: Int) extends E
     } }
   }
   
-  def srvGetModuleInfo() = getModuleInfo
+  def srvGetModuleInfo() = moduleInfo
 
 
   def srvSetupIRQ(level: Int, vector: Int): Unit = {
@@ -346,12 +365,15 @@ abstract class SIS3300Server(val vmeBus: VMEBus, val baseAddress: Int) extends E
       _ <- ACQUISITION_CONTROL.SCLOCKB1_EN set 1
       _ <- ACQUISITION_CONTROL.AUTOBANK_EN set 1
       _ <- sync()
+      _ <- if (extendedTimestamps) (KEY_TIMESTAMP_CLEAR set()) else op.nop()
       _ <- KEY_START_AUTO_BANK_SWITCH set()
       _ <- sync()
     } yield {} }
     
     nextEventNoVar = 1
     currentBankVar = 1
+    lastTimeStampVar = 0
+    timeStampNOverflowsVar = 0
     
     daqState = daqState.copy(running = true, startTime = currentTime)
     runStart = Some(RunStart().copy(startTime = daqState.startTime))
@@ -523,7 +545,10 @@ abstract class SIS3300Server(val vmeBus: VMEBus, val baseAddress: Int) extends E
       log.trace("Getting %s events.".format(nEvents))
 
       val evDir = read(evDirRegs take nEvents)
-      val tsDir = read(tsDirRegs take nEvents)
+      val tsDir = {
+        if (extendedTimestamps) read(tsDirRegs take 2*nEvents)
+        else read(tsDirRegs take nEvents)
+      }
       val rawGroupEvData = for {
         (group, mem) <- groupMem
         if (!settingsVar.daq.trigOnly || trigEnabled(group.chOdd) || trigEnabled(group.chEven))      
@@ -534,12 +559,25 @@ abstract class SIS3300Server(val vmeBus: VMEBus, val baseAddress: Int) extends E
    
       val events = for {i <- 0 to nEvents - 1} yield {
         val time = {
-          val ts = TimestampDirEntry.TIMESTAMP(tsDir(i))
-          if (ts < lastTimeStampVar) TimeStampNOverflowsVar += 1
+          val ts: Long = {
+            if (extendedTimestamps) {
+              val tsUpper: Long = TimestampDirEntry.TIMESTAMP(tsDir(2*i+0))
+              val tsLower: Long = TimestampDirEntry.TIMESTAMP(tsDir(2*i+1))
+              (tsUpper << memory.TimestampDirEntry.TIMESTAMP.size) + tsLower
+            } else TimestampDirEntry.TIMESTAMP(tsDir(i))
+          }
+          
+          if (ts < lastTimeStampVar) {
+            debug("Timestamp overflow");
+            timeStampNOverflowsVar += 1
+          }
           lastTimeStampVar = ts
-          val timeStampCycle = 1 << memory.TimestampDirEntry.TIMESTAMP.size
+          val timeStampCycle = {
+            if (extendedTimestamps) 1 << (2*memory.TimestampDirEntry.TIMESTAMP.size)
+            else 1 << memory.TimestampDirEntry.TIMESTAMP.size
+          }
     
-          settings.daq.tsBase * TimeStampNOverflowsVar * timeStampCycle  +
+          settings.daq.tsBase * timeStampNOverflowsVar * timeStampCycle  +
             settings.daq.tsBase * ts
         }
         
@@ -895,6 +933,11 @@ object SIS3300Server extends Logging {
       trace("exec()")
       (ops.exec(mem), ())
     }
+
+    def nop() = transform[Unit] { ops =>
+      trace("nop()")
+      (ops, ())
+    }
   }
 
   
@@ -1050,8 +1093,10 @@ object SIS3300Server extends Logging {
       def BKFULLOUT2 = RWBit(9)
       /** Bank full pulse on LEMO output 3 */
       def BKFULLOUT3 = RWBit(10)
-      /** Time stamp "don't clear" bit */
-      def TSNOCLR = RWBit(12)
+      /** Set Timestamp Clear mode bit 0 */
+      def TSCLRMODE0 = RWBit(12)
+      /** Set Timestamp Clear mode bit 1, not supported by all firmware versions */
+      def TSCLRMODE1 = RWBit(13)
 
       /** Status User Input */
       def USERIN = ROBit(16)
@@ -1195,6 +1240,9 @@ object SIS3300Server extends Logging {
 
     /** Key address VME stop sampling (0x34, write-only) */
     val KEY_STOP = new KeyRegister(0x34)
+
+    /** Key address VME Timestamp Clear (0x38, write-only, not supported by all firmware versions) */
+    val KEY_TIMESTAMP_CLEAR = new KeyRegister(0x38)
 
     /** Key address start Auto Bank Switch mode (0x40, write-only) */
     val KEY_START_AUTO_BANK_SWITCH = new KeyRegister(0x40)
