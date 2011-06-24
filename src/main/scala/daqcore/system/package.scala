@@ -26,7 +26,7 @@ package object system {
   val userName = java.lang.System.getProperty("user.name")
 
   val daqcoreTmpDir = {
-    val dir = tmpDir / "daqcore" / userName
+    val dir = tmpDir / ("daqcore-" + userName)
     dir.mkdirs()
     dir
   }
