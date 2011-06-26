@@ -12,7 +12,6 @@ class DaqcoreScalaProject(info: ProjectInfo) extends DefaultProject(info) with A
 
   val typesafeReso = "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/"
   val jBossRepo = "jBoss" at "http://repository.jboss.org/nexus/content/groups/public/"
-  val snmp4jRepo = "SNMP4J" at "https://server.oosnmp.net/dist/release/"
 
   val scala_continuations = compilerPlugin("org.scala-lang.plugins" % "continuations" % "2.9.0-1")
 
