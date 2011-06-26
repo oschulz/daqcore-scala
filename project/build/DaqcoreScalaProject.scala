@@ -24,6 +24,10 @@ class DaqcoreScalaProject(info: ProjectInfo) extends DefaultProject(info) with A
   val akka_stm = "se.scalablesolutions.akka" % "akka-stm" % "1.1.3"
   val akka_slf4j = "se.scalablesolutions.akka" % "akka-slf4j" % "1.1.3"
 
+  val dispatch_http = "net.databinder" % "dispatch-http_2.9.0" % "0.8.3" % "compile"
+  val dispatch_http_json = "net.databinder" % "dispatch-http-json_2.9.0" % "0.8.3" % "compile"
+  val dispatch_couch = "net.databinder" % "dispatch-couch_2.9.0" % "0.8.3" % "compile"
+  
   val logback_core = "ch.qos.logback" % "logback-core" % "0.9.28"
   val logback_classic = "ch.qos.logback" % "logback-classic" % "0.9.28" % "runtime" intransitive()
   val log4j_over_slf4j = "org.slf4j" % "log4j-over-slf4j" % "1.6.0" % "runtime" intransitive()
