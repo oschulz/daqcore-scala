@@ -21,6 +21,10 @@ import dispatch.json._
 
 
 case class PropPath(parts: collection.immutable.Queue[String]) {
+  def isEmpty: Boolean = parts.isEmpty
+  def head: String = parts.head
+  def tail: PropPath = PropPath(parts.tail)
+
   def %(k: Any): PropPath = k match {
     case k: String => PropPath(parts ++ k.split("[.]").toSeq)
     case k: Symbol => PropPath(parts enqueue k.name)
@@ -64,6 +68,12 @@ sealed trait PropVal {
   def toLong: Long = toDouble.toLong
   def toFloat: Float = toDouble.toFloat
 
+  def toProps = this.asInstanceOf[Props]
+  
+  def apply(path: PropPath): PropVal = throw new UnsupportedOperationException("PropVals of type " + this.getClass.getName + " have no properties")
+  def apply(path: String): PropVal = apply(PropPath(path))
+  def apply(key: Int): PropVal = apply(key.toString)
+  
   override def toString = toJsValue.toString
   def toJSON = toString
 }
@@ -80,10 +90,10 @@ object PropVal {
     case x: Long => NumPropVal(x)
     case x: Float => NumPropVal(x)
     case x: Double => NumPropVal(x)
-    case x: Unit => throw new ClassCastException("Unit cannot be cast to " + classOf[PropVal].getName)
+    case x: Unit => throw new IllegalArgumentException(classOf[PropVal].getName + " cannot represent " + classOf[Unit].getName)
     case x: Map[_, _] => Props.fromNative(x)
     case x: Seq[_] => SeqPropVal.fromNative(x)
-    case x: AnyRef => throw new ClassCastException(x.getClass.getName + " cannot be cast to " + classOf[PropVal].getName)
+    case x: AnyRef => throw new IllegalArgumentException(classOf[PropVal].getName + " cannot represent " + x.getClass.getName)
   }
 
   def apply(value: Seq[PropVal]): PropVal = SeqPropVal(value: _*)
@@ -133,8 +143,8 @@ case class StringPropVal(value: String) extends PropVal {
 
 
 trait ComplexPropVal extends PropVal {
-  def toDouble = throw new ClassCastException(this.getClass.getName + " cannot be cast to Double")
-  def toBoolean = throw new ClassCastException(this.getClass.getName + " cannot be cast to Boolean")
+  def toDouble = throw new UnsupportedOperationException(this.getClass.getName + " cannot be converted to Double")
+  def toBoolean = throw new UnsupportedOperationException(this.getClass.getName + " cannot be converted to Boolean")
 }
 
 
@@ -151,10 +161,22 @@ object SeqPropVal {
 
 
 case class Props(value: Map[String, PropVal]) extends ComplexPropVal {
-  def apply(key: String): PropVal = value(key)
-  def apply(key: Symbol): PropVal = value(key.name)
-  def apply(key: Int): PropVal = value(key.toString)
-  
+  override def apply(path: PropPath): PropVal = {
+    if (path.isEmpty) throw new IllegalArgumentException("Cannot get value for empty PropPath")
+    value.get(path.head) match {
+      case None => throw new IllegalArgumentException("Invalid PropPath " + path)
+      case Some(v) => {
+        if (path.tail.isEmpty) v
+        else v match {
+          case props: Props => props(path.tail)
+          case _ => throw new IllegalArgumentException("Invalid PropPath " + path.tail)
+        }
+      }
+    }
+  }
+
+  override def apply(key: Int): PropVal = value(key.toString)
+    
   def merge(that: Props): Props = {
     Props(
       that.value.foldLeft(this.value) { case (result, (k, vNew)) =>
