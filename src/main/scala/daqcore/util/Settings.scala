@@ -20,6 +20,32 @@ package daqcore.util
 import dispatch.json._
 
 
+case class SPath(parts: collection.immutable.Queue[String]) {
+  def %(k: Any): SPath = k match {
+    case k: String => SPath(parts ++ k.split("[.]").toSeq)
+    case k: Symbol => SPath(parts enqueue k.name)
+    case k: Int => SPath(parts enqueue k.toString)
+    case k: Seq[_] => SPath(parts ++ (k map {_.toString}))
+    case k: Any => %(k.toString)
+  }
+
+  override def toString = parts.mkString(".")
+}
+
+
+object SPath {
+  val empty: SPath = SPath(collection.immutable.Queue.empty[String])
+
+  def apply(): SPath = empty
+
+  def apply(k: Any): SPath = k match {
+    case k: SPath => k
+    case _ => empty % k
+  }
+}
+
+
+
 sealed trait SetVal {
   def value: Any
   def toDouble: Double
@@ -154,18 +180,10 @@ case class Settings(value: Map[String, SetVal]) extends ComplexSetVal {
 object Settings {
   val empty = Settings(Map.empty[String, SetVal])
 
-  def KeyString(k: Any) = k match {
-    case k: String => k
-    case k: Symbol => k.name
-    case k: Int => k.toString
-    case k: Any => k.toString
-  }
-
   def apply(values: (_, _)*): Settings = {
     values.foldLeft(Settings.empty) { case (settings, (path, value)) =>
       settings merge {
-        val pathComponents = path.toString.split("[.]")
-        pathComponents.reverse.foldLeft(SetVal(value)) {
+        SPath(path).parts.reverse.foldLeft(SetVal(value)) {
           case (v, k) => Settings(Map(k -> v))
         }.asInstanceOf[Settings]
       }
@@ -173,7 +191,7 @@ object Settings {
   }
 
   def fromNative(values: Map[_, _]) =
-    Settings(values map { case (k, v) => (KeyString(k), SetVal(v)) })
+    Settings((values.toSeq map { case (k, v) => (k, SetVal(v)) }) : _*)
   
   def fromJsObject(obj: JsObject) =
     Settings( obj.self.map{ case (k,v) => (k.self, SetVal.fromJsValue(v)) } )
