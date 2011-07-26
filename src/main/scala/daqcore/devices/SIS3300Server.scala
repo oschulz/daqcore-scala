@@ -301,7 +301,7 @@ abstract class SIS3300Server(val vmeBus: VMEBus, val baseAddress: Int) extends E
     val modStopDelay = findNearestInt((0 to 0xffff), toSet.stopDelay)
     val modNAverage = findNearestInt(avgConfigTable.keys, toSet.nAverage)
     val modSampleRate = findNearest(clockSourceTable.keys, toSet.sampleRate)
-    val tsPreDiv = findNearest((0x1 to 0xffff), toSet.tsBase * clock)
+    val tsPreDiv = findNearest((0x0 to 0xffff), toSet.tsBase * clock - 2)
     val maxNPages = pageConfigTable(modNSampes).nEvents
     val modNPages = findNearestInt((1 to maxNPages), toSet.nPages)
 
@@ -310,7 +310,7 @@ abstract class SIS3300Server(val vmeBus: VMEBus, val baseAddress: Int) extends E
       stopDelay = modStopDelay,
       nAverage = modNAverage,
       sampleRate = modSampleRate,
-      tsBase = tsPreDiv.toDouble / clock,
+      tsBase = if (tsPreDiv > 0) ((tsPreDiv + 2).toDouble / clock) else (1.toDouble / clock),
       nPages = modNPages
     )
 
