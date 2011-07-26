@@ -295,7 +295,7 @@ abstract class SIS3300Server(val vmeBus: VMEBus, val baseAddress: Int) extends E
   def srvSetDAQSettings(toSet: DAQSettings): Unit = {
     import memory._
 
-    val clock = 105E6
+    val clock = 100E6
     
     val modNSampes = findNearestInt(pageConfigTable.keys, toSet.nSamples)
     val modStopDelay = findNearestInt((0 to 0xffff), toSet.stopDelay)
