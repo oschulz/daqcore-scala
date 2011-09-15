@@ -53,7 +53,7 @@ abstract class SIS3300Server(val vmeBus: VMEBus, val baseAddress: Int) extends E
   protected var moduleInfoVar: ModuleInfo = null
   def moduleInfo = moduleInfoVar
 
-  // 48-bit timestamps (currently only in firmware rev. 1185).
+  // 48-bit timestamps (currently only in firmware rev. 1105).
   protected var extendedTimestampsVar: Boolean = false
   def extendedTimestamps = extendedTimestampsVar
 
@@ -71,7 +71,7 @@ abstract class SIS3300Server(val vmeBus: VMEBus, val baseAddress: Int) extends E
       info
     }
 
-    extendedTimestampsVar = (moduleInfo.fwRevMajor == 0x11) && (moduleInfo.fwRevMinor == 0x85);
+    extendedTimestampsVar = (moduleInfo.fwRevMajor == 0x11) && ((moduleInfo.fwRevMinor == 0x05) || (moduleInfo.fwRevMinor == 0x85)); // Module ID sometimes reads wrong
     info("48-bit timestamps: " + extendedTimestamps)
 
     atCleanup {
