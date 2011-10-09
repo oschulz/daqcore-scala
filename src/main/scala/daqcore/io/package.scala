@@ -38,5 +38,8 @@ package object io {
   implicit def inetSockAddr(hostPort: (String, Int)): InetSockAddr = InetSockAddr(hostPort._1, hostPort._2)
   implicit def inetSockAddr(port: Int): InetSockAddr = InetSockAddr(port)
   
+  val RawMsgInput = ByteStreamInput
+  val RawMsgOutput = ByteStreamOutput
+  
   lazy val defaultSnmpManager = SNMPv2Manager(sv = actors.alwaysRestartSupervisor)
 }
