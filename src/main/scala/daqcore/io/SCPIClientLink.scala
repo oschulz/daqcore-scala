@@ -32,6 +32,9 @@ trait SCPIClientLink extends ServerProfile {
   def queryF(instr: Instruction*)(timeout: Long = defaultTimeout): Future[Response] =
     srv.!!>(SCPIClientLink.CmdQuery(instr: _*), timeout)
 
+  def query(instr: Instruction*): Future[Response] =
+    srv.!!>(SCPIClientLink.CmdQuery(instr: _*))
+
   def cmd(instr: Instruction*) : Unit =
     srv ! SCPIClientLink.CmdOnly(instr: _*)
 }
