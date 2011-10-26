@@ -96,7 +96,7 @@ class SCPIParser extends ByteCharSeqParsers {
   def dqString: Parser[ByteCharSeq] = dqStringExpr
   def sqString: Parser[ByteCharSeq] = sqStringExpr
   def string: Parser[ByteCharSeq] = dqString | sqString
-  def chars: Parser[ByteCharSeq] = recMnemonicExpr
+  def chars: Parser[ByteCharSeq] = charsExpr
 
   def value: Parser[ByteCharSeq] = skipWS (
     blockData |
@@ -196,6 +196,7 @@ object SCPIParser {
   val sqStringExpr = """'([^']*)'""".r
   val mnemSuffixExpr = """[1-9][0-9]*""".r
   val recMnemonicExpr = """[A-Z]+|[a-z]+""".r
+  val charsExpr = """([A-Z]+|[a-z]+)([1-9][0-9]*)?""".r
   val EOI = """\z""".r
   
   protected val tlParser = new ThreadLocal[SCPIParser]
