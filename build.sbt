@@ -1,5 +1,7 @@
 name := "my-akka-project"
 
+organization := "local.my-org"
+
 version := "0.1.0"
 
 scalaVersion := "2.9.1"
