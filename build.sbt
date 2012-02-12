@@ -26,6 +26,12 @@ libraryDependencies += "com.typesafe.akka" % "akka-actor" % "2.0-M4"
 
 libraryDependencies += "com.typesafe.akka" % "akka-actor-migration" % "2.0-M4"
 
+libraryDependencies += "com.typesafe.akka" % "akka-remote" % "2.0-M4"
+
+libraryDependencies += "com.typesafe.akka" % "akka-agent" % "2.0-M4"
+
+libraryDependencies += "com.typesafe.akka" % "akka-transactor" % "2.0-M4"
+
 libraryDependencies += "com.typesafe.akka" % "akka-slf4j" % "2.0-M4"
 
 
