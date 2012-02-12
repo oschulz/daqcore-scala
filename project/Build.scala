@@ -9,7 +9,7 @@ object MyBuild extends Build {
 
   def copyDepTask = copyDependencies <<= (update, crossTarget, scalaVersion) map {
     (updateReport, out, scalaVer) =>
-    updateReport.allFiles foreach { srcPath =>
+    updateReport.select(configuration = Set("runtime")) foreach { srcPath =>
       val destPath = out / "lib" / srcPath.getName
       IO.copyFile(srcPath, destPath, preserveLastModified=true)
     }
