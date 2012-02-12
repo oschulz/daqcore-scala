@@ -1,6 +1,6 @@
-name := "my-akka-project"
+name := "daqcore-scala"
 
-organization := "local.my-org"
+organization := "de.tu-dortmund"
 
 version := "0.1.0"
 
