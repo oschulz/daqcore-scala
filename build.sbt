@@ -22,17 +22,17 @@ resolvers += "TU-Do Physik E4 Releases" at "http://maven.e4.physik.uni-dortmund.
 resolvers += "TU-Do Physik E4 Snapshots" at "http://maven.e4.physik.uni-dortmund.de/maven2/snapshots/"
 
 
-libraryDependencies += "com.typesafe.akka" % "akka-actor" % "2.0-M4"
+libraryDependencies += "com.typesafe.akka" % "akka-actor" % "2.0-RC1"
 
-libraryDependencies += "com.typesafe.akka" % "akka-actor-migration" % "2.0-M4"
+libraryDependencies += "com.typesafe.akka" % "akka-actor-migration" % "2.0-RC1"
 
-libraryDependencies += "com.typesafe.akka" % "akka-remote" % "2.0-M4"
+libraryDependencies += "com.typesafe.akka" % "akka-remote" % "2.0-RC1"
 
-libraryDependencies += "com.typesafe.akka" % "akka-agent" % "2.0-M4"
+libraryDependencies += "com.typesafe.akka" % "akka-agent" % "2.0-RC1"
 
-libraryDependencies += "com.typesafe.akka" % "akka-transactor" % "2.0-M4"
+libraryDependencies += "com.typesafe.akka" % "akka-transactor" % "2.0-RC1"
 
-libraryDependencies += "com.typesafe.akka" % "akka-slf4j" % "2.0-M4"
+libraryDependencies += "com.typesafe.akka" % "akka-slf4j" % "2.0-RC1"
 
 
 libraryDependencies += "org.scalatest" % "scalatest_2.9.0" % "1.7.1" % "test"
