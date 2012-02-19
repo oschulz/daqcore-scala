@@ -1,7 +1,7 @@
 import sbt._
 import Keys._
 
-object MyBuild extends Build {
+object build extends Build {
 
   // copy-dependencies by Fred Dubois
 
