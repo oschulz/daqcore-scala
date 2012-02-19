@@ -20,7 +20,8 @@ object MyBuild extends Build {
     "root",
     file("."),
     settings = Defaults.defaultSettings ++ Seq(
-      copyDepTask
+      copyDepTask,
+      console <<= Defaults.consoleTask(fullClasspath in Runtime, console)
     )
   )
 }
