@@ -286,6 +286,12 @@ object TypedActor extends ExtensionId[TypedActorExtension] with ExtensionIdProvi
           TypedActor.selfReference set null
           TypedActor.currentContext set null
         }
+      
+      case msg if classOf[Receiver].isAssignableFrom(me.getClass) && me.asInstanceOf[Receiver].receive.isDefinedAt(msg) ⇒
+        me.asInstanceOf[Receiver].receive(msg)
+      
+      case Terminated(dead) if classOf[DeathWatch].isAssignableFrom(me.getClass) ⇒
+        me.asInstanceOf[DeathWatch].onTerminated(dead)
     }
   }
 
@@ -346,6 +352,23 @@ object TypedActor extends ExtensionId[TypedActorExtension] with ExtensionIdProvi
      * By default it calls preStart()
      */
     def postRestart(reason: Throwable): Unit
+  }
+
+  trait DeathWatch {
+    /**
+     * User overridable callback.
+     * <p/>
+     * Is called right on receiving a Terminated message from a monitored actor.
+     * By default, the receiving actor is killed, throwing a DeathPactException.
+     */
+    def onTerminated(actor: ActorRef): Unit
+  }
+
+  trait Receiver {
+    /**
+     * Use this to specify behaviour upon receiving a message from an untyped actor.
+     */
+    def receive: Actor.Receive
   }
 
   private[akka] class TypedActorInvocationHandler(val extension: TypedActorExtension, val actorVar: AtomVar[ActorRef], val timeout: Timeout) extends InvocationHandler {
