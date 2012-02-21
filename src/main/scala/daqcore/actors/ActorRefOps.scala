@@ -22,6 +22,8 @@ import akka.dispatch.Future
 
 
 class ActorRefOps(aref: ActorRef) {
+  def stop()(implicit sys: ActorSystem) = sys.stop(aref)
+
   def typed[T <: AnyRef](implicit mf: ClassManifest[T], sys: ActorSystem) = typedActor(aref)
 }
 
