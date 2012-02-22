@@ -20,6 +20,11 @@ package daqcore
 
 package object util {
 
+type ByteString = akka.util.ByteString
+val  ByteString = akka.util.ByteString
+
+type ByteStringBuilder = akka.util.ByteStringBuilder
+object ByteStringBuilder { def apply() = new ByteStringBuilder }
 
 implicit def iteratorOps[A](it: Iterator[A])  = new IteratorOps(it)
 implicit def iterableOps[A](coll: Iterable[A]) = new IterableOps(coll)
