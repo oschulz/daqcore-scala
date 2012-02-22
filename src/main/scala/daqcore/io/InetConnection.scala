@@ -26,7 +26,7 @@ import daqcore.util._
 import daqcore.actors._, daqcore.actors.TypedActorTraits._
 
 
-trait InetConnection extends ByteStreamIO {
+trait InetConnection extends ByteStreamIO with Closeable {
    def recv(): Future[ByteString]
    def send(data: ByteString) : Unit
    def close(): Unit
@@ -43,7 +43,7 @@ object InetConnection {
 }
 
 
-class InetConnectionImpl(address: InetSocketAddress) extends InetConnection with TypedActorImpl with Receiver  {
+class InetConnectionImpl(address: InetSocketAddress) extends InetConnection with TypedActorImpl with CloseableImpl with Receiver  {
   import akka.actor.{IO, IOManager}
 
   val inputQueue = new DataActionQueue[ByteString]
@@ -60,9 +60,6 @@ class InetConnectionImpl(address: InetSocketAddress) extends InetConnection with
   def send(data: ByteString) : Unit = socket.write(data)
   
   def flush(): Unit = {} // Automatic flush on every send
-  
-  def close(): Unit = selfStop()
-
   
   def receive = {
     case IO.Connected(socket, address) => {

@@ -116,3 +116,12 @@ trait TypedActorImpl extends Logging with Profiling
   }
 
 }
+
+
+
+trait CloseableImpl extends Closeable with TypedActorImpl {
+  def close(): Unit = {
+    log.debug("Closing %s".format(selfId))
+    selfStop()
+  }
+}
