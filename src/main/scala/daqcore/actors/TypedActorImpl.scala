@@ -31,12 +31,13 @@ trait TypedActorImpl extends Logging with Profiling
   log.debug("Creating object for %s".format(selfId))
 
   implicit def dispatcher = TypedActor.dispatcher
+  implicit def context: ActorContext = TypedActor.context
 
   def self[A <: AnyRef]: A = TypedActor.self[A]
-  def selfContext = TypedActor.context
-  def selfRef: ActorRef = selfContext.self
+  def selfRef: ActorRef = context.self
+  def actorSystem: ActorSystem = context.system
   
-  def selfStop(): Unit = selfContext.stop(selfRef)
+  def selfStop(): Unit = context.stop(selfRef)
   
   val selfId = "%s($s)".format(self, this.getClass)
   

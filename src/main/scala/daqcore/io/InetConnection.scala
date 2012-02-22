@@ -48,7 +48,7 @@ class InetConnectionImpl(address: InetSocketAddress) extends InetConnection with
 
   val inputQueue = new DataActionQueue[ByteString]
 
-  var socket: IO.SocketHandle = IOManager(selfContext.system).connect(address)(selfRef)
+  var socket: IO.SocketHandle = IOManager(actorSystem).connect(address)(selfRef)
   atCleanup { socket.close() }
 
   def recv(): Future[ByteString] = {
