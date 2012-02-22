@@ -17,8 +17,15 @@
 
 package daqcore
 
+import daqcore.util.{ByteString, ByteStringBuilder}
+
 
 package object io {
+  val IO = akka.actor.IO
+
+  type Encoder[A] = (A, ByteStringBuilder) => Unit
+  type Decoder[A] = IO.Iteratee[A]
+
   type InetAddr = java.net.InetAddress
 
   object InetAddr {
