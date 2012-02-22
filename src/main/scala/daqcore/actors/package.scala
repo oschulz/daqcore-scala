@@ -17,7 +17,7 @@
 
 package daqcore
 
-import akka.actor.{ActorSystem, ActorContext, ActorRef, ActorPath, ActorRefFactory}
+import akka.actor.{ActorSystem, ActorContext, ActorRef, ActorPath, Actor, ActorRefFactory, Props}
 import akka.actor.contrib.daqcore.{TypedActor, TypedProps}
 import akka.dispatch.Future
 import akka.util.Timeout
@@ -48,6 +48,11 @@ package object actors {
   def actorFor(path: Iterable[String])(implicit asys: ActorSystem): ActorRef = asys.actorFor(path)
   def actorFor(path: String)(implicit asys: ActorSystem): ActorRef = asys.actorFor(path)
   def actorFor(path: ActorPath)(implicit asys: ActorSystem): ActorRef = asys.actorFor(path)
+
+  def actorOf(creator: => Actor, name: String = "")(implicit rf: ActorRefFactory): ActorRef = {
+    if (name.isEmpty) rf.actorOf(Props(creator))
+    else rf.actorOf(Props(creator), name)
+  }
   
   def typedActor[T <: AnyRef](aref: ActorRef)(implicit mf: ClassManifest[T], sys: ActorSystem) =
     TypedActor(sys).typedActorOf(TypedProps[T](), aref)
