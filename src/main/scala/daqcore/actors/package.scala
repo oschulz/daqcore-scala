@@ -17,8 +17,7 @@
 
 package daqcore
 
-import akka.actor.{ActorSystem, ActorContext, ActorRef, ActorPath, Actor, ActorRefFactory, Props}
-import akka.actor.contrib.daqcore.{TypedActor, TypedProps}
+import akka.actor._
 import akka.dispatch.Future
 import akka.util.Timeout
 import akka.util.duration._
@@ -34,7 +33,6 @@ package object actors {
     type PreRestart = TypedActor.PreRestart
     type PostRestart = TypedActor.PostRestart
     type Receiver = TypedActor.Receiver
-    type DeathWatch = TypedActor.Receiver
   }
 
   implicit val defaultTimeout = Timeout(5 seconds)

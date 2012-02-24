@@ -17,8 +17,7 @@
 
 package daqcore.actors
 
-import akka.actor.{ActorSystem, ActorContext, ActorRef, ActorRefFactory}
-import akka.actor.contrib.daqcore.{TypedActor, TypedProps}
+import akka.actor._
 import akka.dispatch.{Future, Promise}
 
 import daqcore.util._

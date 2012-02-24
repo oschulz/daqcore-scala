@@ -43,7 +43,7 @@ object InetConnection {
 }
 
 
-class InetConnectionImpl(address: InetSocketAddress) extends InetConnection with TypedActorImpl with CloseableImpl with Receiver  {
+class InetConnectionImpl(address: InetSocketAddress) extends InetConnection with TypedActorImpl with CloseableImpl with MsgReceive  {
   import akka.actor.{IO, IOManager}
 
   val inputQueue = new DataActionQueue[ByteString]
@@ -61,15 +61,15 @@ class InetConnectionImpl(address: InetSocketAddress) extends InetConnection with
   
   def flush(): Unit = {} // Automatic flush on every send
   
-  def receive = {
-    case IO.Connected(socket, address) => {
+  def msgReceive = {
+    case (IO.Connected(socket, address), _) => {
       println("Established connection to " + address)
     }
-    case IO.Read(socket, bytes) => {
+    case (IO.Read(socket, bytes), _) => {
       trace("Received: " + loggable(bytes))
       inputQueue pushData bytes
     }
-    case IO.Closed(socket: IO.SocketHandle, cause) => {
+    case (IO.Closed(socket: IO.SocketHandle, cause), _) => {
       trace("Connection closed because: " + cause)
     }
   }
