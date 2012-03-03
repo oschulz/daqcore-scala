@@ -4,15 +4,15 @@ organization := "de.tu-dortmund"
 
 version := "0.1.0"
 
-scalaVersion := "2.9.1"
+scalaVersion := "2.9.1-1-RC1"
 
 autoCompilerPlugins := true
 
-addCompilerPlugin("org.scala-lang.plugins" % "continuations" % "2.9.1")
+addCompilerPlugin("org.scala-lang.plugins" % "continuations" % "2.9.1-1-RC1")
 
 scalacOptions ++= Seq("-unchecked", "-deprecation", "-P:continuations:enable")
 
-libraryDependencies += "org.scala-lang" % "scala-swing" % "2.9.1"
+libraryDependencies += "org.scala-lang" % "scala-swing" % "2.9.1-1-RC1"
 
 
 resolvers += "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/"
@@ -22,17 +22,17 @@ resolvers += "TU-Do Physik E4 Releases" at "http://maven.e4.physik.uni-dortmund.
 resolvers += "TU-Do Physik E4 Snapshots" at "http://maven.e4.physik.uni-dortmund.de/maven2/snapshots/"
 
 
-libraryDependencies += "com.typesafe.akka" % "akka-actor" % "2.0-RC2"
+libraryDependencies += "com.typesafe.akka" % "akka-actor" % "2.0-RC4"
 
-libraryDependencies += "com.typesafe.akka" % "akka-actor-migration" % "2.0-RC2"
+libraryDependencies += "com.typesafe.akka" % "akka-actor-migration" % "2.0-RC4"
 
-libraryDependencies += "com.typesafe.akka" % "akka-remote" % "2.0-RC2"
+libraryDependencies += "com.typesafe.akka" % "akka-remote" % "2.0-RC4"
 
-libraryDependencies += "com.typesafe.akka" % "akka-agent" % "2.0-RC2"
+libraryDependencies += "com.typesafe.akka" % "akka-agent" % "2.0-RC4"
 
-libraryDependencies += "com.typesafe.akka" % "akka-transactor" % "2.0-RC2"
+libraryDependencies += "com.typesafe.akka" % "akka-transactor" % "2.0-RC4"
 
-libraryDependencies += "com.typesafe.akka" % "akka-slf4j" % "2.0-RC2"
+libraryDependencies += "com.typesafe.akka" % "akka-slf4j" % "2.0-RC4"
 
 
 libraryDependencies += "org.scalatest" % "scalatest_2.9.0" % "1.7.1" % "test"
