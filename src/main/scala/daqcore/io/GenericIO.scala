@@ -37,9 +37,13 @@ trait GenericIO[A] extends GenericInput[A] with GenericOutput[A]
 
 
 
-trait ByteStreamInput extends GenericInput[ByteString]
+trait ByteStreamInput extends GenericInput[ByteString] {
+   def recv[A](decoder: Decoder[A]): Future[A]
+}
 
-trait ByteStreamOutput extends GenericOutput[ByteString]
+trait ByteStreamOutput extends GenericOutput[ByteString] {
+   def send[A](data: A, encoder: Encoder[A]) : Unit
+}
 
 trait ByteStreamIO extends GenericIO[ByteString] with ByteStreamInput with ByteStreamOutput
 

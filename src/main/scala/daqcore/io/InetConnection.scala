@@ -27,10 +27,6 @@ import daqcore.actors._, daqcore.actors.TypedActorTraits._
 
 
 trait InetConnection extends ByteStreamIO with Closeable {
-   def recv(): Future[ByteString]
-   def send(data: ByteString) : Unit
-   def close(): Unit
-   def flush(): Unit
 }
 
 
@@ -46,24 +42,41 @@ object InetConnection {
 class InetConnectionImpl(address: InetSocketAddress) extends InetConnection with TypedActorImpl with CloseableImpl with MsgReceive  {
   import akka.actor.{IO, IOManager}
 
-  val inputQueue = new DataActionQueue[ByteString]
+  val inputQueue = new DataDecoderQueue
+  val outputQueue = new ByteStringBuilder
 
   var socket: IO.SocketHandle = IOManager(actorSystem).connect(address)(selfRef)
   atCleanup { socket.close() }
 
-  def recv(): Future[ByteString] = {
-    val result = Promise[ByteString]()
-    inputQueue pushAction { result success _ }
-    result
+  def recv(): Future[ByteString] = recv(IO takeAny)
+  
+  def send(data: ByteString) : Unit = if (! data.isEmpty) {
+    outputQueue ++= data
+    flush()
   }
   
-  def send(data: ByteString) : Unit = socket.write(data)
-  
-  def flush(): Unit = {} // Automatic flush on every send
+  def flush(): Unit = {
+    val bytes = outputQueue.result
+    if (! bytes.isEmpty) {
+      socket.write(bytes)
+      outputQueue.clear
+    }
+  }
+
+  def recv[A](decoder: Decoder[A]): Future[A] = {
+    val result = Promise[A]()
+    inputQueue pushDecoder { decoder map { result success _ } }
+    result
+  }
+
+  def send[A](data: A, encoder: Encoder[A]) : Unit = {
+    encoder(outputQueue, data)
+    flush()
+  }
   
   def msgReceive = {
     case (IO.Connected(socket, address), _) => {
-      println("Established connection to " + address)
+      trace("Established connection to " + address)
     }
     case (IO.Read(socket, bytes), _) => {
       trace("Received: " + loggable(bytes))

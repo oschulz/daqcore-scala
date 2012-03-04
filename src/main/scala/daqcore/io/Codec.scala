@@ -37,7 +37,7 @@ case class ListDecoder[A](dec: Decoder[A]) {
 object LineCodec {
   val NL = ByteString("\n")
 
-  def enc[A]: Encoder[A] = (in: A, out: ByteStringBuilder) => {
+  def enc[A]: Encoder[A] = (out: ByteStringBuilder, in: A) => {
 	val bs = in match {
       case bs: ByteString => bs
 	  case obj => ByteString(obj.toString)
