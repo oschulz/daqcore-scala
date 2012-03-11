@@ -65,3 +65,8 @@ class DataDecoderQueue {
   def pendingChunks = dataQueue.size
   def pendingDecoders = decoderQueue.size
 }
+
+
+object DataDecoderQueue {
+  def apply() = new DataDecoderQueue
+}

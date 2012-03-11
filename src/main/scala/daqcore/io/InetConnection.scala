@@ -40,7 +40,7 @@ object InetConnection {
 
 
   abstract class ConnectionImpl extends InetConnection with TypedActorImpl with CloseableTAImpl with MsgReceive  {
-    val inputQueue = new DataDecoderQueue
+    val inputQueue = DataDecoderQueue()
     val outputQueue = new ByteStringBuilder
 
     val socket: IO.SocketHandle
