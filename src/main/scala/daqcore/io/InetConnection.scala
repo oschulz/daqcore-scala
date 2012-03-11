@@ -27,7 +27,7 @@ import daqcore.util._
 import daqcore.actors._, daqcore.actors.TypedActorTraits._
 
 
-trait InetConnection extends ByteStreamIO with Closeable {
+trait InetConnection extends ByteStreamIO with CloseableTA {
 }
 
 
@@ -39,7 +39,7 @@ object InetConnection {
     apply(new InetSocketAddress(host, port))
 
 
-  abstract class ConnectionImpl extends InetConnection with TypedActorImpl with CloseableImpl with MsgReceive  {
+  abstract class ConnectionImpl extends InetConnection with TypedActorImpl with CloseableTAImpl with MsgReceive  {
     val inputQueue = new DataDecoderQueue
     val outputQueue = new ByteStringBuilder
 
@@ -87,14 +87,14 @@ object InetConnection {
   }
 
 
-  class ClientConnectionImpl(address: SocketAddress) extends ConnectionImpl with TypedActorImpl with CloseableImpl with MsgReceive {
+  class ClientConnectionImpl(address: SocketAddress) extends ConnectionImpl with TypedActorImpl with CloseableTAImpl with MsgReceive {
     val socket: IO.SocketHandle = IOManager(actorSystem).connect(address)(selfRef)
   }
 }
 
 
 
-trait InetServer extends Closeable {
+trait InetServer extends CloseableTA {
 }
 
 
@@ -115,12 +115,12 @@ object InetServer {
     apply(new InetSocketAddress(port), name)(body)
 
 
-  class ServerConnectionImpl(serverHandle: IO.ServerHandle) extends ConnectionImpl with TypedActorImpl with CloseableImpl with MsgReceive  {
+  class ServerConnectionImpl(serverHandle: IO.ServerHandle) extends ConnectionImpl with TypedActorImpl with CloseableTAImpl with MsgReceive  {
     val socket: IO.SocketHandle = serverHandle.accept()(selfRef)
   }
 
 
-  class ServerImpl(val address: SocketAddress, body: InetConnection => Unit) extends InetServer with TypedActorImpl with CloseableImpl with MsgReceive with Supervisor {
+  class ServerImpl(val address: SocketAddress, body: InetConnection => Unit) extends InetServer with TypedActorImpl with CloseableTAImpl with MsgReceive with Supervisor {
     val serverHandle = IOManager(actorSystem).listen(address)(selfRef)
     atCleanup { serverHandle.close() }
 

@@ -117,8 +117,14 @@ trait TypedActorImpl extends Logging with Profiling
 }
 
 
+trait CloseableTA extends Closeable {
+  def isOpen(): Future[Boolean]
+}
 
-trait CloseableImpl extends Closeable with TypedActorImpl {
+
+trait CloseableTAImpl extends Closeable with TypedActorImpl {
+  def isOpen(): Future[Boolean] = true
+
   def close(): Unit = {
     log.debug("Closing %s".format(selfId))
     selfStop()
