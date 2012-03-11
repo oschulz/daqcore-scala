@@ -17,10 +17,11 @@
 
 package daqcore.io
 
-import java.net.InetSocketAddress
+import java.net.{SocketAddress, InetSocketAddress}
 
 import akka.dispatch.{Future, Promise}
 import akka.util.{ByteString, Timeout}
+import akka.actor._
 
 import daqcore.util._
 import daqcore.actors._, daqcore.actors.TypedActorTraits._
@@ -31,59 +32,116 @@ trait InetConnection extends ByteStreamIO with Closeable {
 
 
 object InetConnection {
-  def apply(address: InetSocketAddress): InetConnection =
-    typedActorOf[InetConnection](new InetConnectionImpl(address))
+  def apply(address: SocketAddress): InetConnection =
+    typedActorOf[InetConnection](new ClientConnectionImpl(address))
   
   def apply(host: String, port: Int): InetConnection =
     apply(new InetSocketAddress(host, port))
+
+
+  abstract class ConnectionImpl extends InetConnection with TypedActorImpl with CloseableImpl with MsgReceive  {
+    val inputQueue = new DataDecoderQueue
+    val outputQueue = new ByteStringBuilder
+
+    val socket: IO.SocketHandle
+    atCleanup { socket.close() }
+
+    def recv(): Future[ByteString] = recv(IO takeAny)
+    
+    def send(data: ByteString) : Unit = if (! data.isEmpty) {
+      outputQueue ++= data
+      flush()
+    }
+    
+    def flush(): Unit = {
+      val bytes = outputQueue.result
+      if (! bytes.isEmpty) {
+        socket.write(bytes)
+        outputQueue.clear
+      }
+    }
+
+    def recv[A](decoder: Decoder[A]): Future[A] = {
+      val result = Promise[A]()
+      inputQueue pushDecoder { decoder map { result success _ } }
+      result
+    }
+
+    def send[A](data: A, encoder: Encoder[A]) : Unit = {
+      encoder(outputQueue, data)
+      flush()
+    }
+    
+    def msgReceive = {
+      case (IO.Connected(socket, address), _) => {
+        log.trace("Established connection to " + address)
+      }
+      case (IO.Read(socket, bytes), _) => {
+        log.trace("Received: " + loggable(bytes))
+        inputQueue pushData bytes
+      }
+      case (IO.Closed(socket: IO.SocketHandle, cause), _) => {
+        log.trace("Connection closed because: " + cause)
+      }
+    }
+  }
+
+
+  class ClientConnectionImpl(address: SocketAddress) extends ConnectionImpl with TypedActorImpl with CloseableImpl with MsgReceive {
+    val socket: IO.SocketHandle = IOManager(actorSystem).connect(address)(selfRef)
+  }
 }
 
 
-class InetConnectionImpl(address: InetSocketAddress) extends InetConnection with TypedActorImpl with CloseableImpl with MsgReceive  {
-  import akka.actor.{IO, IOManager}
 
-  val inputQueue = new DataDecoderQueue
-  val outputQueue = new ByteStringBuilder
+trait InetServer extends Closeable {
+}
 
-  var socket: IO.SocketHandle = IOManager(actorSystem).connect(address)(selfRef)
-  atCleanup { socket.close() }
 
-  def recv(): Future[ByteString] = recv(IO takeAny)
+object InetServer {
+  import InetConnection.{ConnectionImpl}
+
   
-  def send(data: ByteString) : Unit = if (! data.isEmpty) {
-    outputQueue ++= data
-    flush()
-  }
-  
-  def flush(): Unit = {
-    val bytes = outputQueue.result
-    if (! bytes.isEmpty) {
-      socket.write(bytes)
-      outputQueue.clear
-    }
+  def apply(address: SocketAddress)(body: InetConnection => Unit): InetServer =
+    typedActorOf[InetServer](new ServerImpl(address, body))
+
+  def apply(address: SocketAddress, name: String)(body: InetConnection => Unit): InetServer =
+    typedActorOf[InetServer](new ServerImpl(address, body), name)
+    
+  def apply(port: Int)(body: InetConnection => Unit): InetServer =
+    apply(new InetSocketAddress(port))(body)
+
+  def apply(port: Int, name: String)(body: InetConnection => Unit): InetServer =
+    apply(new InetSocketAddress(port), name)(body)
+
+
+  class ServerConnectionImpl(serverHandle: IO.ServerHandle) extends ConnectionImpl with TypedActorImpl with CloseableImpl with MsgReceive  {
+    val socket: IO.SocketHandle = serverHandle.accept()(selfRef)
   }
 
-  def recv[A](decoder: Decoder[A]): Future[A] = {
-    val result = Promise[A]()
-    inputQueue pushDecoder { decoder map { result success _ } }
-    result
-  }
 
-  def send[A](data: A, encoder: Encoder[A]) : Unit = {
-    encoder(outputQueue, data)
-    flush()
-  }
-  
-  def msgReceive = {
-    case (IO.Connected(socket, address), _) => {
-      trace("Established connection to " + address)
-    }
-    case (IO.Read(socket, bytes), _) => {
-      trace("Received: " + loggable(bytes))
-      inputQueue pushData bytes
-    }
-    case (IO.Closed(socket: IO.SocketHandle, cause), _) => {
-      trace("Connection closed because: " + cause)
+  class ServerImpl(val address: SocketAddress, body: InetConnection => Unit) extends InetServer with TypedActorImpl with CloseableImpl with MsgReceive with Supervisor {
+    val serverHandle = IOManager(actorSystem).listen(address)(selfRef)
+    atCleanup { serverHandle.close() }
+
+    def supervisorStrategy = OneForOneStrategy() { case _ ⇒ SupervisorStrategy.Stop }
+    
+    def msgReceive = {
+      case (IO.Listening(server, address), _) => {
+        log.trace("Server is listening on " + address)
+      }
+       
+      case (IO.NewClient(server), _) => {
+        log.trace("New connection to server")
+        spawn { context =>
+          val connection = typedActorOf[InetConnection](new ServerConnectionImpl(serverHandle))(classManifest[InetConnection], context)
+          body(connection)
+        } (context)
+      }
+       
+      case (IO.Closed(server: IO.ServerHandle, cause), _) => {
+        log.trace("Server socket has closed because: " + cause)
+      }
     }
   }
 }
