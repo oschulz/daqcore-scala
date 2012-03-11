@@ -66,4 +66,7 @@ package object actors {
     if (name.isEmpty) factory.typedActorOf(props)
     else factory.typedActorOf(props, name)
   }
+  
+  def spawn(body: ActorContext => Unit)(implicit rf: ActorRefFactory): ActorRef = ForkedTask(body)(rf)
+  def spawn(body: => Unit)(implicit rf: ActorRefFactory): ActorRef = ForkedTask(body)(rf)
 }
