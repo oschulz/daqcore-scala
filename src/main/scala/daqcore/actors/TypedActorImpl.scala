@@ -38,7 +38,7 @@ trait TypedActorImpl extends Logging with Profiling
   
   def selfStop(): Unit = context.stop(selfRef)
   
-  val selfId = "%s($s)".format(self, this.getClass)
+  val selfId = "%s($s)".format(selfRef, this.getClass)
   
   implicit def successfulPromise[A](x: A): Future[A] = Promise successful x
 
