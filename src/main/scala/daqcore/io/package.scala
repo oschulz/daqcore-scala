@@ -25,6 +25,10 @@ package object io {
 
   type Encoder[A] = (ByteStringBuilder, A) => Unit
   type Decoder[A] = IO.Iteratee[A]
+  
+  type FrameEncoder = Decoder[ByteString]
+  type FrameDecoder = Decoder[ByteString]
+  type FrameCodec = Codec[ByteString, ByteString]
 
   type InetAddr = java.net.InetAddress
 

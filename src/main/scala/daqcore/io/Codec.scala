@@ -17,10 +17,34 @@
 
 package daqcore.io
 
+import akka.dispatch.Future
+
 import daqcore.util._
 
 
-case class Codec[A, B] (enc: Encoder[A], dec: Decoder[B])
+trait Codec[A, B] {
+  def enc: Encoder[A]
+  def dec: Decoder[B]
+
+  def apply(stream: ByteStreamIO): TypedIO[A, B] = TypedIO(this, stream)
+}
+
+object Codec {
+  def apply[A, B](enc: Encoder[A], dec: Decoder[B]): Codec[A, B] =
+    SimpleCodec(enc, dec)
+}
+
+case class SimpleCodec[A, B] (enc: Encoder[A], dec: Decoder[B]) extends Codec[A, B]
+
+
+case class TypedIO[A, B](codec: Codec[A, B], stream: ByteStreamIO) {
+   def send(data: A): Unit = stream.send(data, codec.enc)
+
+   def recv(): Future[B] = stream.recv(codec.dec)
+
+   def flush(): Unit = stream.flush()
+}
+
 
 
 case class ListDecoder[A](dec: Decoder[A]) {
@@ -34,18 +58,29 @@ case class ListDecoder[A](dec: Decoder[A]) {
 }
 
 
+
 object LineCodec {
   val NL = ByteString("\n")
+  val CRNL = ByteString("\r\n")
+}
 
-  def enc[A]: Encoder[A] = (out: ByteStringBuilder, in: A) => {
-	val bs = in match {
-      case bs: ByteString => bs
-	  case obj => ByteString(obj.toString)
-	}
+
+case class StringLineCodec(separator: ByteString = LineCodec.NL, charset: String = "UTF-8") extends Codec[String, String] {
+  val enc: Encoder[String] = (out: ByteStringBuilder, in: String) => {
+    val bs = ByteString(in, charset)
 	out ++= bs
-	if (! bs.endsWith(NL)) out ++= NL
+	if (! bs.endsWith(LineCodec.NL)) out ++= LineCodec.NL
   }
   
-  def dec: Decoder[ByteString] = IO takeUntil ByteString("\n")
-  def decString: Decoder[String] = dec map { _.utf8String }
+  val dec: Decoder[String] = IO takeUntil LineCodec.NL map { _.decodeString(charset) }
+}
+
+
+case class RawLineCodec(separator: ByteString = LineCodec.NL) extends FrameCodec {
+  val enc: Encoder[ByteString] = (out: ByteStringBuilder, bs: ByteString) => {
+	out ++= bs
+	if (! bs.endsWith(LineCodec.NL)) out ++= LineCodec.NL
+  }
+  
+  val dec: Decoder[ByteString] = IO takeUntil LineCodec.NL
 }
