@@ -32,10 +32,10 @@ trait InetConnection extends ByteStreamIO with CloseableTA {
 
 
 object InetConnection {
-  def apply(address: SocketAddress): InetConnection =
+  def apply(address: SocketAddress)(implicit rf: ActorRefFactory): InetConnection =
     typedActorOf[InetConnection](new ClientConnectionImpl(address))
   
-  def apply(host: String, port: Int): InetConnection =
+  def apply(host: String, port: Int)(implicit rf: ActorRefFactory): InetConnection =
     apply(new InetSocketAddress(host, port))
 
 
@@ -102,16 +102,16 @@ object InetServer {
   import InetConnection.{ConnectionImpl}
 
   
-  def apply(address: SocketAddress)(body: InetConnection => Unit): InetServer =
+  def apply(address: SocketAddress)(body: InetConnection => Unit)(implicit rf: ActorRefFactory): InetServer =
     typedActorOf[InetServer](new ServerImpl(address, body))
 
-  def apply(address: SocketAddress, name: String)(body: InetConnection => Unit): InetServer =
+  def apply(address: SocketAddress, name: String)(body: InetConnection => Unit)(implicit rf: ActorRefFactory): InetServer =
     typedActorOf[InetServer](new ServerImpl(address, body), name)
     
-  def apply(port: Int)(body: InetConnection => Unit): InetServer =
+  def apply(port: Int)(body: InetConnection => Unit)(implicit rf: ActorRefFactory): InetServer =
     apply(new InetSocketAddress(port))(body)
 
-  def apply(port: Int, name: String)(body: InetConnection => Unit): InetServer =
+  def apply(port: Int, name: String)(body: InetConnection => Unit)(implicit rf: ActorRefFactory): InetServer =
     apply(new InetSocketAddress(port), name)(body)
 
 
