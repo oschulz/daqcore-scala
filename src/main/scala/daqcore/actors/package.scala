@@ -69,4 +69,17 @@ package object actors {
   
   def spawn(body: ActorContext => Unit)(implicit rf: ActorRefFactory): ActorRef = ForkedTask(body)(rf)
   def spawn(body: => Unit)(implicit rf: ActorRefFactory): ActorRef = ForkedTask(body)(rf)
+
+
+  def schedule(initialDelay: Long, frequency: Long)(f: => Unit)(implicit asys: ActorSystem): Cancellable =
+    asys.scheduler.schedule(initialDelay milliseconds, frequency milliseconds)(f)
+
+  def schedule(initialDelay: Long, frequency: Long, receiver: ActorRef, message: Any)(implicit asys: ActorSystem): Cancellable =
+    asys.scheduler.schedule(initialDelay milliseconds, frequency milliseconds, receiver, message)
+  
+  def scheduleOnce(delay: Long)(f: => Unit)(implicit asys: ActorSystem): Cancellable =
+    asys.scheduler.scheduleOnce(delay milliseconds)(f)
+
+  def scheduleOnce(delay: Long, receiver: ActorRef, message: Any)(implicit asys: ActorSystem): Cancellable =
+    asys.scheduler.scheduleOnce(delay milliseconds, receiver, message)
 }
