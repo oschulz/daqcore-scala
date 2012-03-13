@@ -22,6 +22,8 @@ import java.net.{SocketAddress, InetSocketAddress}
 import akka.dispatch.{Future, Promise}
 import akka.util.{ByteString, Timeout}
 import akka.actor._
+import akka.util.Timeout
+import akka.util.duration._
 
 import daqcore.util._
 import daqcore.actors._, daqcore.actors.TypedActorTraits._
@@ -133,10 +135,11 @@ object InetServer {
        
       case (IO.NewClient(server), _) => {
         log.trace("New connection to server")
-        spawn { context =>
-          val connection = typedActorOf[InetConnection](new ServerConnectionImpl(serverHandle))(classManifest[InetConnection], context)
-          body(connection)
-        } (context)
+        val connection = typedActorOf[InetConnection](new ServerConnectionImpl(serverHandle))
+        connection.isOpen.getOpt(100 milliseconds) match {
+          case Some(true) => connection.isOpen onSuccess { case true => body(connection) }
+          case _ => log.trace("Could not open connection - client no longer interested?")
+        }
       }
        
       case (IO.Closed(server: IO.ServerHandle, cause), _) => {
