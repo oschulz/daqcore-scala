@@ -24,8 +24,6 @@ import akka.util.duration._
 
 
 package object actors {
-  implicit val daqcoreSystem = ActorSystem("daqcore")
-
   object TypedActorTraits {
     type Supervisor = TypedActor.Supervisor
     type PreStart = TypedActor.PreStart
@@ -34,8 +32,6 @@ package object actors {
     type PostRestart = TypedActor.PostRestart
     type Receiver = TypedActor.Receiver
   }
-
-  implicit val defaultTimeout = Timeout(5 seconds)
 
   implicit def actorRefOps(ref: ActorRef) = new ActorRefOps(ref)
 
