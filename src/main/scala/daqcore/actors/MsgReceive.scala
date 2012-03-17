@@ -18,16 +18,43 @@
 package daqcore.actors
 
 import akka.actor._
+import akka.util.Duration
+import akka.util.duration._
+
+import daqcore.util.Logging
 
 
-trait MsgReceive extends TypedActor.Receiver {
+trait MsgReceive extends TypedActor.Receiver with Logging {
   import akka.actor.contrib.daqcore.UnhandledMsgBehaviour
-  
+  import MsgReceive.ExecScheduled
+
   def msgReceive: PartialFunction[(Any, ActorRef), Unit]
 
-  def onReceive(message: Any, sender: ActorRef): Unit = {
-    val msgSender = (message, sender)
-    if (msgReceive isDefinedAt msgSender) msgReceive(msgSender)
-    else UnhandledMsgBehaviour.unhandled(message, sender, TypedActor.context)
+  def scheduleSelf(initialDelay: Duration, frequency: Duration)(f: => Unit): Cancellable =
+    TypedActor.context.system.scheduler.schedule(initialDelay, frequency, TypedActor.context.self, ExecScheduled(() => f))
+
+  def scheduleSelf(initialDelay: Long, frequency: Long)(f: => Unit): Cancellable =
+    scheduleSelf(initialDelay milliseconds, frequency milliseconds)(f)
+
+  def scheduleSelfOnce(delay: Duration)(f: => Unit): Cancellable =
+    TypedActor.context.system.scheduler.scheduleOnce(delay, TypedActor.context.self, ExecScheduled(() => f))
+
+  def scheduleSelfOnce(delay: Long)(f: => Unit): Cancellable =
+    scheduleSelfOnce(delay milliseconds)(f)
+
+  def onReceive(message: Any, sender: ActorRef): Unit = (message, sender) match {
+    case (ExecScheduled(body), _) => {
+      log.trace("Executing scheduled action")
+      body()
+    }
+    case msg_sender => {
+      if (msgReceive isDefinedAt msg_sender) msgReceive(msg_sender)
+      else UnhandledMsgBehaviour.unhandled(message, sender, TypedActor.context)
+    }
   }
+}
+
+
+object MsgReceive {
+  private [actors] case class ExecScheduled(body: () => Unit)
 }
