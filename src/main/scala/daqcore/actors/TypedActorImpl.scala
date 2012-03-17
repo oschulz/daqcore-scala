@@ -27,8 +27,6 @@ import TypedActorTraits._
 trait TypedActorImpl extends Logging with Profiling
   with PreStart with PostStop with PreRestart with PostRestart
 {
-  log.debug("Creating object for %s".format(selfId))
-
   implicit def dispatcher = TypedActor.dispatcher
   implicit def context: ActorContext = TypedActor.context
 
@@ -38,14 +36,16 @@ trait TypedActorImpl extends Logging with Profiling
   
   def selfStop(): Unit = context.stop(selfRef)
   
-  val selfId = "%s($s)".format(selfRef, this.getClass)
+  val selfId = "Typed%s(%s)".format(selfRef, this.getClass)
+
+  log.debug("Creating object for %s".format(selfId))
   
   implicit def successfulPromise[A](x: A): Future[A] = Promise successful x
 
   def init(): Unit = {
     withCleanup
-      { log.debug("Actor %s initializing".format(selfId)) }
-      { log.debug("Actor %s cleaned up".format(selfId)) }
+      { log.debug("%s initializing".format(selfId)) }
+      { log.debug("%s cleaned up".format(selfId)) }
   }
 
   def preStart(): Unit = {
