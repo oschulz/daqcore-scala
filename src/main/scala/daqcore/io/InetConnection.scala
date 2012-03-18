@@ -19,10 +19,9 @@ package daqcore.io
 
 import java.net.{SocketAddress, InetSocketAddress}
 
-import akka.dispatch.{Future, Promise}
-import akka.util.{ByteString, Timeout}
 import akka.actor._
-import akka.util.Timeout
+import akka.dispatch.{Future, Promise}
+import akka.util.{ByteString, Duration, Timeout}
 import akka.util.duration._
 
 import daqcore.util._
@@ -47,6 +46,9 @@ object InetConnection {
 
     val socket: IO.SocketHandle
     atCleanup { socket.close() }
+    
+    val isOpenPromise = Promise[Boolean]()
+    override def isOpen() = isOpenPromise
 
     def recv(): Future[ByteString] = recv(IO takeAny)
     
@@ -74,8 +76,14 @@ object InetConnection {
       flush()
     }
     
+    override def close(): Unit = {
+      if (! isOpenPromise.isCompleted) isOpenPromise success false
+      super.close()
+    }
+    
     def msgReceive = {
       case (IO.Connected(socket, address), _) => {
+        isOpenPromise success true
         log.trace("Established connection to " + address)
       }
       case (IO.Read(socket, bytes), _) => {
@@ -84,6 +92,7 @@ object InetConnection {
       }
       case (IO.Closed(socket: IO.SocketHandle, cause), _) => {
         log.trace("Connection closed because: " + cause)
+        close()
       }
     }
   }
