@@ -69,18 +69,18 @@ case class StringLineCodec(separator: ByteString = LineCodec.NL, charset: String
   val enc: Encoder[String] = (out: ByteStringBuilder, in: String) => {
     val bs = ByteString(in, charset)
 	out ++= bs
-	if (! bs.endsWith(LineCodec.NL)) out ++= LineCodec.NL
+	if (! bs.endsWith(separator)) out ++= separator
   }
   
-  val dec: Decoder[String] = IO takeUntil LineCodec.NL map { _.decodeString(charset) }
+  val dec: Decoder[String] = IO takeUntil separator map { _.decodeString(charset) }
 }
 
 
 case class RawLineCodec(separator: ByteString = LineCodec.NL) extends FrameCodec {
   val enc: Encoder[ByteString] = (out: ByteStringBuilder, bs: ByteString) => {
 	out ++= bs
-	if (! bs.endsWith(LineCodec.NL)) out ++= LineCodec.NL
+	if (! bs.endsWith(separator)) out ++= separator
   }
   
-  val dec: Decoder[ByteString] = IO takeUntil LineCodec.NL
+  val dec: Decoder[ByteString] = IO takeUntil separator
 }
