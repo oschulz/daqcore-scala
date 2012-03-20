@@ -24,24 +24,27 @@ import daqcore.util._
 import TypedActorTraits._
 
 
-trait TypedActorImpl extends Logging with Profiling
-  with PreStart with PostStop with PreRestart with PostRestart
+trait TypedActorBasics
 {
   implicit def dispatcher = TypedActor.dispatcher
   implicit def context: ActorContext = TypedActor.context
+  implicit def successfulPromise[A](x: A): Future[A] = Promise successful x
 
   def self[A <: AnyRef]: A = TypedActor.self[A]
   def selfRef: ActorRef = context.self
   def actorSystem: ActorSystem = context.system
   
   def selfStop(): Unit = context.stop(selfRef)
-  
+}
+
+
+trait TypedActorImpl extends TypedActorBasics with Logging with Profiling
+  with PreStart with PostStop with PreRestart with PostRestart
+{
   val selfId = "Typed%s(%s)".format(selfRef, this.getClass)
 
   log.debug("Creating object for %s".format(selfId))
   
-  implicit def successfulPromise[A](x: A): Future[A] = Promise successful x
-
   def init(): Unit = {
     withCleanup
       { log.debug("%s initializing".format(selfId)) }
