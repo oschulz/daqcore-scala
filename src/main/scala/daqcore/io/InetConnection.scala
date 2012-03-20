@@ -40,7 +40,9 @@ object InetConnection {
     apply(new InetSocketAddress(host, port))
 
 
-  abstract class ConnectionImpl extends InetConnection with TypedActorImpl with CloseableTAImpl with MsgReceive  {
+  abstract class ConnectionImpl extends InetConnection with TypedActorImpl with MsgReceive
+    with CloseableTAImpl with SyncableImpl
+  {
     val inputQueue = DataDecoderQueue()
     val outputQueue = new ByteStringBuilder
 
@@ -63,6 +65,11 @@ object InetConnection {
         socket.write(bytes)
         outputQueue.clear
       }
+    }
+    
+    override def sync() = {
+      flush()
+      super.sync()
     }
 
     def recv[A](decoder: Decoder[A]): Future[A] = {

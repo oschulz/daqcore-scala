@@ -38,11 +38,17 @@ case class SimpleCodec[A, B] (enc: Encoder[A], dec: Decoder[B]) extends Codec[A,
 
 
 case class TypedIO[A, B](codec: Codec[A, B], stream: ByteStreamIO) {
-   def send(data: A): Unit = stream.send(data, codec.enc)
+  def send(data: A): Unit = stream.send(data, codec.enc)
 
-   def recv(): Future[B] = stream.recv(codec.dec)
+  def recv(): Future[B] = stream.recv(codec.dec)
 
-   def flush(): Unit = stream.flush()
+  def flush(): Unit = stream.flush()
+
+  def sync() = stream.sync()
+
+  def getSync() = stream.getSync()
+  
+  def pause(duration: Duration) = stream.pause(duration)
 }
 
 

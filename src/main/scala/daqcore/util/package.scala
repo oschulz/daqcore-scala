@@ -23,6 +23,12 @@ package object util {
 type ByteString = akka.util.ByteString
 val  ByteString = akka.util.ByteString
 
+type Duration = akka.util.Duration
+val  Duration = akka.util.Duration
+
+type Timeout = akka.util.Timeout
+val  Timeout = akka.util.Timeout
+
 type ByteStringBuilder = akka.util.ByteStringBuilder
 object ByteStringBuilder { def apply() = new ByteStringBuilder }
 

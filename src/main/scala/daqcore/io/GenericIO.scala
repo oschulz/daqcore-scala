@@ -20,13 +20,15 @@ package daqcore.io
 import akka.dispatch.Future
 import akka.util.{ByteString, Timeout}
 
+import daqcore.actors._
+
 
 trait GenericInput[A] {
   def recv(): Future[A]
 }
 
 
-trait GenericOutput[A] {
+trait GenericOutput[A] extends Syncable {
   def send(data: A) : Unit
 
   def flush() : Unit
