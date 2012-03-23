@@ -10,10 +10,11 @@ autoCompilerPlugins := true
 
 addCompilerPlugin("org.scala-lang.plugins" % "continuations" % "2.9.1-1-RC1")
 
+Classpaths.compilerPluginConfig
+
 scalacOptions ++= Seq("-unchecked", "-deprecation", "-P:continuations:enable")
 
 libraryDependencies += "org.scala-lang" % "scala-swing" % "2.9.1-1-RC1"
-
 
 resolvers += "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/"
 
