@@ -1,7 +1,7 @@
 import sbt._
 import Process._
 
-class DaqcoreScalaProject(info: ProjectInfo) extends DefaultProject(info) with AutoCompilerPlugins with AkkaProject {
+class DaqcoreScalaProject(info: ProjectInfo) extends DefaultProject(info) with AutoCompilerPlugins {
   override def parallelExecution = true
 
   val publishTo = Resolver.file("maven-local", Path.userHome / ".m2" / "repository" asFile)
@@ -10,6 +10,7 @@ class DaqcoreScalaProject(info: ProjectInfo) extends DefaultProject(info) with A
   val tuDoE4Releases = "TU-Do Physik E4 Releases" at "http://maven.e4.physik.uni-dortmund.de/maven2/releases/"
   val tuDoE4Snapshots = "TU-Do Physik E4 Snapshots" at "http://maven.e4.physik.uni-dortmund.de/maven2/snapshots/"
 
+  val typesafeReso = "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/"
   val jBossRepo = "jBoss" at "http://repository.jboss.org/nexus/content/groups/public/"
   val snmp4jRepo = "SNMP4J" at "https://server.oosnmp.net/dist/release/"
 
@@ -19,10 +20,10 @@ class DaqcoreScalaProject(info: ProjectInfo) extends DefaultProject(info) with A
 
   val scalatest = "org.scalatest" % "scalatest_2.9.0" % "1.4.1" % "test"
 
-  val akka_actor = akkaModule("actor")
-  val akka_remote = akkaModule("remote")
-  val akka_stm = akkaModule("stm")
-  val akka_slf4j = akkaModule("slf4j")
+  val akka_actor = "se.scalablesolutions.akka" % "akka-actor" % "1.1.3"
+  val akka_remote = "se.scalablesolutions.akka" % "akka-remote" % "1.1.3"
+  val akka_stm = "se.scalablesolutions.akka" % "akka-stm" % "1.1.3"
+  val akka_slf4j = "se.scalablesolutions.akka" % "akka-slf4j" % "1.1.3"
 
   val logback_core = "ch.qos.logback" % "logback-core" % "0.9.28"
   val logback_classic = "ch.qos.logback" % "logback-classic" % "0.9.28" % "runtime" intransitive()
