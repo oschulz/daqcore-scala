@@ -40,24 +40,9 @@ object InetConnection {
     apply(new InetSocketAddress(host, port))
 
 
-  abstract class ConnectionImpl extends InetConnection with TypedActorImpl with MsgReceive
-    with CloseableTAImpl with SyncableImpl
-  {
-    val inputQueue = DataDecoderQueue()
-    val outputQueue = new ByteStringBuilder
-
-    val socket: IO.SocketHandle
+  abstract class ConnectionImpl extends InetConnection with ByteStreamIOImpl {
+    protected val socket: IO.SocketHandle
     atCleanup { socket.close() }
-    
-    val isOpenPromise = Promise[Boolean]()
-    override def isOpen() = isOpenPromise
-
-    def recv(): Future[ByteString] = recv(IO takeAny)
-    
-    def send(data: ByteString) : Unit = if (! data.isEmpty) {
-      outputQueue ++= data
-      flush()
-    }
     
     def flush(): Unit = {
       val bytes = outputQueue.result
@@ -67,30 +52,9 @@ object InetConnection {
       }
     }
     
-    override def sync() = {
-      flush()
-      super.sync()
-    }
-
-    def recv[A](decoder: Decoder[A]): Future[A] = {
-      val result = Promise[A]()
-      inputQueue pushDecoder { decoder map { result success _ } }
-      result
-    }
-
-    def send[A](data: A, encoder: Encoder[A]) : Unit = {
-      encoder(outputQueue, data)
-      flush()
-    }
-    
-    override def close(): Unit = {
-      if (! isOpenPromise.isCompleted) isOpenPromise success false
-      super.close()
-    }
-    
     override def msgReceive = extend(super.msgReceive) {
       case (IO.Connected(socket, address), _) => {
-        isOpenPromise success true
+        setIsOpen(true)
         log.trace("Established connection to " + address)
       }
       case (IO.Read(socket, bytes), _) => {
