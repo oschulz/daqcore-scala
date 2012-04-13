@@ -27,8 +27,11 @@ import daqcore.util.Logging
 trait MsgReceive extends TypedActor.Receiver with Logging {
   import akka.actor.contrib.daqcore.UnhandledMsgBehaviour
   import MsgReceive.ExecScheduled
+  
+  type Receiver = PartialFunction[(Any, ActorRef), Unit]
 
-  def msgReceive: PartialFunction[(Any, ActorRef), Unit]
+  def msgReceive: Receiver =
+    { case (MsgReceive.NoMatch, _) => }
 
   def scheduleSelf(initialDelay: Duration, frequency: Duration)(f: => Unit): Cancellable =
     TypedActor.context.system.scheduler.schedule(initialDelay, frequency, TypedActor.context.self, ExecScheduled(() => f))
@@ -52,9 +55,14 @@ trait MsgReceive extends TypedActor.Receiver with Logging {
       else UnhandledMsgBehaviour.unhandled(message, sender, TypedActor.context)
     }
   }
+  
+  def extend(receiver: Receiver)(extension: Receiver) =
+    extension orElse receiver
 }
 
 
 object MsgReceive {
+  private object NoMatch
+
   private [actors] case class ExecScheduled(body: () => Unit)
 }

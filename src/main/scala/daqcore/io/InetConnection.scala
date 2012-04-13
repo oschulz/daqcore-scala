@@ -88,7 +88,7 @@ object InetConnection {
       super.close()
     }
     
-    def msgReceive = {
+    override def msgReceive = extend(super.msgReceive) {
       case (IO.Connected(socket, address), _) => {
         isOpenPromise success true
         log.trace("Established connection to " + address)
@@ -144,7 +144,7 @@ object InetServer {
 
     def supervisorStrategy = OneForOneStrategy() { case _ ⇒ SupervisorStrategy.Stop }
     
-    def msgReceive = {
+    override def msgReceive = extend(super.msgReceive) {
       case (IO.Listening(server, address), _) => {
         log.trace("Server is listening on " + address)
       }
