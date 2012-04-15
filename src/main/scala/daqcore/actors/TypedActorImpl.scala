@@ -28,11 +28,12 @@ trait TypedActorBasics
 {
   implicit def dispatcher = TypedActor.dispatcher
   implicit def context: ActorContext = TypedActor.context
-  implicit def successfulPromise[A](x: A): Future[A] = Promise successful x
 
   def self[A <: AnyRef]: A = TypedActor.self[A]
   def selfRef: ActorRef = context.self
   def actorSystem: ActorSystem = context.system
+
+  def successful[A](x: A): Future[A] = Promise successful x
   
   def selfStop(): Unit = context.stop(selfRef)
 }
@@ -126,7 +127,7 @@ trait CloseableTA extends Closeable {
 
 
 trait CloseableTAImpl extends Closeable with TypedActorImpl {
-  def isOpen(): Future[Boolean] = true
+  def isOpen(): Future[Boolean] = successful(true)
 
   def close(): Unit = {
     log.debug("Closing %s".format(selfId))

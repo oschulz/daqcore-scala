@@ -33,7 +33,7 @@ trait Syncable {
 trait SyncableImpl extends TypedActorBasics with Syncable {
   def sync() {}
 
-  def getSync() = sync()
+  def getSync() = successful(sync())
   
   def pause(duration: Duration) {
     sync()
