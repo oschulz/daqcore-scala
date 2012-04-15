@@ -36,6 +36,12 @@ trait TypedActorBasics
   def successful[A](x: A): Future[A] = Promise successful x
   
   def selfStop(): Unit = context.stop(selfRef)
+
+  def schedule(initialDelay: Duration, frequency: Duration, receiver: ActorRef, message: Any): Cancellable =
+    actorSystem.scheduler.schedule(initialDelay, frequency, receiver, message)
+  
+  def scheduleOnce(delay: Duration, receiver: ActorRef, message: Any): Cancellable =
+    actorSystem.scheduler.scheduleOnce(delay, receiver, message)
 }
 
 
