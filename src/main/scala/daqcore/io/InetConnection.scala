@@ -21,8 +21,6 @@ import java.net.{SocketAddress, InetSocketAddress}
 
 import akka.actor._
 import akka.dispatch.{Future, Promise}
-import akka.util.{ByteString, Duration, Timeout}
-import akka.util.duration._
 
 import daqcore.util._
 import daqcore.actors._, daqcore.actors.TypedActorTraits._

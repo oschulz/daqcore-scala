@@ -25,6 +25,7 @@ val  ByteString = akka.util.ByteString
 
 type Duration = akka.util.Duration
 val  Duration = akka.util.Duration
+implicit def long2Duration (x: Int): akka.util.DurationLong = akka.util.duration.longToDurationLong(x)
 
 type Timeout = akka.util.Timeout
 val  Timeout = akka.util.Timeout
