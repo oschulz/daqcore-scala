@@ -19,8 +19,7 @@ package daqcore
 
 import akka.actor._
 import akka.dispatch.Future
-import akka.util.Timeout
-import akka.util.duration._
+import akka.util.{Timeout, Duration}
 
 
 package object actors {
@@ -67,15 +66,15 @@ package object actors {
   def spawn(body: => Unit)(implicit rf: ActorRefFactory): ActorRef = ForkedTask(body)(rf)
 
 
-  def schedule(initialDelay: Long, frequency: Long)(f: => Unit)(implicit asys: ActorSystem): Cancellable =
-    asys.scheduler.schedule(initialDelay milliseconds, frequency milliseconds)(f)
+  def schedule(initialDelay: Duration, frequency: Duration)(f: => Unit)(implicit asys: ActorSystem): Cancellable =
+    asys.scheduler.schedule(initialDelay, frequency)(f)
 
-  def schedule(initialDelay: Long, frequency: Long, receiver: ActorRef, message: Any)(implicit asys: ActorSystem): Cancellable =
-    asys.scheduler.schedule(initialDelay milliseconds, frequency milliseconds, receiver, message)
+  def schedule(initialDelay: Duration, frequency: Duration, receiver: ActorRef, message: Any)(implicit asys: ActorSystem): Cancellable =
+    asys.scheduler.schedule(initialDelay, frequency, receiver, message)
   
-  def scheduleOnce(delay: Long)(f: => Unit)(implicit asys: ActorSystem): Cancellable =
-    asys.scheduler.scheduleOnce(delay milliseconds)(f)
+  def scheduleOnce(delay: Duration)(f: => Unit)(implicit asys: ActorSystem): Cancellable =
+    asys.scheduler.scheduleOnce(delay)(f)
 
-  def scheduleOnce(delay: Long, receiver: ActorRef, message: Any)(implicit asys: ActorSystem): Cancellable =
-    asys.scheduler.scheduleOnce(delay milliseconds, receiver, message)
+  def scheduleOnce(delay: Duration, receiver: ActorRef, message: Any)(implicit asys: ActorSystem): Cancellable =
+    asys.scheduler.scheduleOnce(delay, receiver, message)
 }
