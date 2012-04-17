@@ -18,6 +18,8 @@ scalacOptions ++= Seq("-unchecked", "-deprecation", "-P:continuations:enable")
 
 libraryDependencies += "org.scala-lang" % "scala-swing" % "2.9.1-1"
 
+libraryDependencies += "org.scala-lang" % "jline" % "2.9.1-1" % "runtime"
+
 resolvers += "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/"
 
 resolvers += "TU-Do Physik E4 Releases" at "http://maven.e4.physik.uni-dortmund.de/maven2/releases/"
