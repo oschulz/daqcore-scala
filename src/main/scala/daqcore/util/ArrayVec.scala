@@ -23,10 +23,12 @@ import scala.collection.generic.CanBuildFrom
 import scala.collection.mutable.{Builder,ArrayBuffer,ArrayBuilder}
 
 
-sealed class ArrayVec[@specialized A: ClassManifest](array: Array[A]) extends
+class ArrayVec[@specialized A: ClassManifest](private val array: Array[A]) extends
   collection.immutable.IndexedSeq[A] with IndexedSeqLike[A, ArrayVec[A]] with
   Serializable
 {
+  protected[util] def internalArray = array
+
   final def classMf = classManifest[A]
   
   final protected[util] def getArray = array
@@ -47,30 +49,38 @@ sealed class ArrayVec[@specialized A: ClassManifest](array: Array[A]) extends
     }
   }
 
-  final override def slice(from: Int, until: Int): ArrayVec[A] =
-    iterator.slice(from, until).toArrayVec
+  // Must be overriden in derives classes!
+  protected def newInstance(array: Array[A]): this.type =
+    new ArrayVec(array).asInstanceOf[this.type]
+
+  protected def getInstance(it: ArrayIterator[A]): this.type =
+    if (it isIdenticalTo this.iterator) this
+    else newInstance(it.toArray)
   
-  final override def take(n: Int) = slice(0, n)
-  final override def takeRight(n: Int) = slice(length - n, length)
-  final override def drop(n: Int) = slice(n, length)
-  final override def dropRight(n: Int) = slice(0, length - n)
+  override def slice(from: Int, until: Int): this.type =
+    getInstance(iterator.slice(from, until))
+  
+  override def take(n: Int): this.type = slice(0, n)
+  override def takeRight(n: Int): this.type = slice(length - n, length)
+  override def drop(n: Int): this.type = slice(n, length)
+  override def dropRight(n: Int): this.type = slice(0, length - n)
 
   final override def head: A = this(0)
-  final override def tail: ArrayVec[A] = this.drop(1)
+  final override def tail: this.type = this.drop(1)
   final override def last: A = this(this.length - 1)
-  final override def init: ArrayVec[A] = this.take(this.length - 1)
+  override def init: this.type = this.take(this.length - 1)
   
   final override def takeWhile(p: A => Boolean) = iterator.takeWhile(p).toArrayVec
   final override def dropWhile(p: A => Boolean) = iterator.dropWhile(p).toArrayVec
-  final override def span(p: A => Boolean) =
-    { val (a, b) = iterator.span(p); (a.toArrayVec, b.toArrayVec) }
+  override def span(p: A => Boolean): (ArrayVec[A], ArrayVec[A]) =
+    { val (a, b) = iterator.span(p); (getInstance(a), getInstance(b)) }
 
-  final override def splitAt(n: Int) = (take(n), drop(n))
+  override def splitAt(n: Int): (ArrayVec[A], ArrayVec[A]) = (take(n), drop(n))
   
   final override def indexWhere(p: A => Boolean): Int = iterator.indexWhere(p)
   override def indexOf[@specialized B >: A](elem: B): Int = iterator.indexOf(elem)
 
-  final override def reverse = reverseIterator.toArrayVec
+  override def reverse = reverseIterator.toArrayVec
 
   final override def toArray [B >: A] (implicit arg0: ClassManifest[B]) = iterator.toArray
   final override def copyToArray [B >: A] (xs: Array[B], start: Int, len: Int) = iterator.copyToArray(xs, start, len)
@@ -79,8 +89,8 @@ sealed class ArrayVec[@specialized A: ClassManifest](array: Array[A]) extends
     
   @inline final def apply(index: Int): A = array(index)
 
-  final override def iterator = new ArrayIterator(array, 0, array.length, false)
-  final override def reverseIterator = new ArrayIterator(array, 0, array.length, true)
+  override def iterator: ArrayIterator[A] = ArrayIterator(array, 0, array.length, false)
+  override def reverseIterator: ArrayIterator[A] = ArrayIterator(array, 0, array.length, true)
 
   final override def foldLeft[@specialized B] (z: B)(op: (B, A) => B): B =
     iterator.foldLeft(z)(op)
@@ -89,7 +99,7 @@ sealed class ArrayVec[@specialized A: ClassManifest](array: Array[A]) extends
     iterator.foldRight(z)(op)
   
   final override protected def newBuilder: Builder[A, ArrayVec[A]] =
-    (new ArrayBuffer[A]) mapResult { a => val array = a.toArray; new ArrayVec(array) }
+    (new ArrayBuffer[A]) mapResult { a => val array = a.toArray; newInstance(array) }
   
   final override def map [B, That] (op: (A) => B)(implicit bf: CanBuildFrom[ArrayVec[A], B, That]) : That = {
     def defaultMapImpl = super.map(op)(bf)

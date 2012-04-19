@@ -18,9 +18,20 @@
 package daqcore.util
 
 
-final class ArrayIterator[@specialized A: ClassManifest](private val array: Array[A], private var from: Int, private var until: Int, private var isReversed: Boolean) extends
+class ArrayIterator[@specialized A: ClassManifest](private val array: Array[A], private var from: Int, private var until: Int, private var isReversed: Boolean) extends
   BufferedIterator[A]
 {
+  protected[util] def internalArray = array
+  protected[util] def internalFrom = from
+  protected[util] def internalUntil = until
+  protected[util] def internalIsReversed = isReversed
+
+  def isIdenticalTo(that: ArrayIterator[A]): Boolean = {
+    ((this.array) eq (that.internalArray)) &&
+      ((this.from) == (that.from)) && ((this.until) == (that.until)) &&
+      ((this.isReversed) == (that.isReversed))
+  }
+
   def hasNext = from < until
 
   def head = if (!isReversed) array(from) else array(until - 1)
@@ -51,30 +62,34 @@ final class ArrayIterator[@specialized A: ClassManifest](private val array: Arra
     this.drop(n)
   }
 
-  override def duplicate: (ArrayIterator[A], ArrayIterator[A]) =
-    (this, new ArrayIterator(array, from, until, isReversed))
+  protected def newInstance(array: Array[A], from: Int, until: Int, isReversed: Boolean): this.type =
+    (new ArrayIterator[A](array, from, until, isReversed)).asInstanceOf[this.type]
+
+  override def clone: this.type = newInstance(array, from, until, isReversed)
+
+  override def duplicate: (ArrayIterator[A], ArrayIterator[A]) = (this, clone)
     
-  def reverse: Iterator[A] = {
+  def reverse: this.type = {
     isReversed = ! isReversed
     this
   }
 
-  override def slice (from: Int, until: Int): ArrayIterator[A] =
+  override def slice (from: Int, until: Int): this.type =
     drop(from).take(until - from)
 
-  override def take(n: Int): ArrayIterator[A] = {
+  override def take(n: Int): this.type = {
     if (!isReversed) until = until min (from + (0 max n))
     else from = from max (until - (0 max n))
     this
   }
 
-  override def drop(n: Int): ArrayIterator[A] = {
+  override def drop(n: Int): this.type = {
     if (!isReversed) from = until min (from + (0 max n))
     else until = from max (until - (0 max n))
     this
   }
   
-  override def takeWhile(p: A => Boolean): ArrayIterator[A] = {
+  override def takeWhile(p: A => Boolean): this.type = {
     val prev = if (!isReversed) from else until
     dropWhile(p)
     if (!isReversed) { until = from; from = prev }
@@ -82,7 +97,7 @@ final class ArrayIterator[@specialized A: ClassManifest](private val array: Arra
     this
   }
 
-  override def dropWhile(p: A => Boolean): ArrayIterator[A] = {
+  override def dropWhile(p: A => Boolean): this.type = {
     var stop = false
     if (!isReversed) while (!stop && hasNext) {
       if (p(array(from))) { from = from + 1 } else {stop = true}
@@ -96,8 +111,8 @@ final class ArrayIterator[@specialized A: ClassManifest](private val array: Arra
     val prev = if (!isReversed) from else until
     dropWhile(p)
     val that = {
-      if (!isReversed) new ArrayIterator(array, prev, from, isReversed)
-      else new ArrayIterator(array, until, prev, isReversed)
+      if (!isReversed) newInstance(array, prev, from, isReversed)
+      else newInstance(array, until, prev, isReversed)
     }
     (that, this)
   }
@@ -116,11 +131,13 @@ final class ArrayIterator[@specialized A: ClassManifest](private val array: Arra
     if (found) index else -1
   }
 
-  def toArrayVec: ArrayVec[A] = {
+  protected def toSharedArray: Array[A] = {
     val target = if (unsliced) array else toArray
     drop(len)
-    ArrayVec.wrap(target)
+    target
   }
+
+  def toArrayVec: ArrayVec[A] = ArrayVec.wrap(toSharedArray)
 
   override def toSeq: ArrayVec[A] = toArrayVec
   
@@ -141,7 +158,7 @@ final class ArrayIterator[@specialized A: ClassManifest](private val array: Arra
   }
 
   def splitEvery(n: Int): Stream[ArrayIterator[A]] = {
-    if (hasNext) { val (a,b) = duplicate; Stream.cons(a.take(n), b.drop(n).splitEvery(n)) }
+    if (hasNext) { val (a, b) = duplicate; Stream.cons(a.take(n), b.drop(n).splitEvery(n)) }
     else Stream.Empty
   }
 
@@ -150,6 +167,9 @@ final class ArrayIterator[@specialized A: ClassManifest](private val array: Arra
 
 
 object ArrayIterator {
+  def apply[@specialized A: ClassManifest](array: Array[A], from: Int, until: Int, reverse: Boolean): ArrayIterator[A] =
+    new ArrayIterator(array, from, until, reverse)
+
   def forArray[@specialized A: ClassManifest](array: Array[A]): ArrayIterator[A] =
     new ArrayIterator(array, 0, array.length, false)
 
