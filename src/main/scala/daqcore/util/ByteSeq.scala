@@ -1,4 +1,4 @@
-// Copyright (C) 2010 Oliver Schulz <oliver.schulz@tu-dortmund.de>
+// Copyright (C) 2010-2012 Oliver Schulz <oliver.schulz@tu-dortmund.de>
 
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -18,17 +18,39 @@
 package daqcore.util
 
 import scala.collection.immutable.Queue
-import scala.collection.{TraversableLike, IndexedSeqLike}
-import scala.collection.generic.CanBuildFrom
-import scala.collection.mutable.{Builder,ArrayBuffer,ArrayBuilder}
+import scala.collection.mutable.{Builder}
+import scala.collection.mutable.{ArrayOps => ScalaArrayOps}
+
+class ByteSeq(array: Array[Byte]) extends ArrayVec[Byte](array) with GenericByteSeq {
+  final override def iterator: ByteSeqIterator = ByteSeqIterator(array, 0, array.length, false)
+  final override def reverseIterator: ByteSeqIterator = ByteSeqIterator(array, 0, array.length, true)
+
+  final override protected def newInstance(array: Array[Byte]): this.type =
+    new ByteSeq(array).asInstanceOf[this.type]
+
+  final override def span(p: Byte => Boolean): (ByteSeq, ByteSeq) =
+    { val (a, b) = iterator.span(p); (getInstance(a), getInstance(b)) }
+
+  final override def splitAt(n: Int): (ByteSeq, ByteSeq) = (take(n), drop(n))
+
+  final override def reverse = new ByteSeq(super.reverse.internalArray)
+}
 
 
-class ByteSeqCompanion {
-  def apply(values: Byte*) = wrap(values.toArray)
+object ByteSeq {
+  def apply(values: Byte*) = {
+    values match {
+      case vec: ArrayVec[_] => new ByteSeq(vec.asInstanceOf[ArrayVec[Byte]].internalArray)
+      case value => wrap(values.toArray)
+    }
+  }
+
+  def apply(string: String): ByteSeq = apply(string, "UTF-8")
+  def apply(string: String, charset: String): ByteSeq = wrap(string.getBytes(charset))
 
   def empty = this.apply()
   
-  def wrap(array: Array[Byte]) = ArrayVec.wrap(array)
+  def wrap(array: Array[Byte]) = new ByteSeq(array)
 
   def fromChunks(chunks: Seq[Array[Byte]]): ByteSeq = {
     val length = chunks.map{_.length}.sum
@@ -38,15 +60,61 @@ class ByteSeqCompanion {
       ArrayOps.arrayCopy(chunk, 0, dest, destPos, chunk.length)
       destPos += chunk.length
     }
-    ArrayVec.wrap(dest)
+    wrap(dest)
   }
 }
 
 
 
-final class ByteSeqBuilder(val defaultChunkSize: Int) extends Builder[Byte, ByteSeq] {
-  import ByteSeqBuilder._
+class ByteSeqIterator(private val array: Array[Byte], private var from: Int, private var until: Int, private var isReversed: Boolean)
+  extends ArrayIterator[Byte](array, from, until, isReversed) with GenericByteSeqIterator
+{
+  override protected def newInstance(array: Array[Byte], from: Int, until: Int, isReversed: Boolean): this.type =
+    (new ByteSeqIterator(array, from, until, isReversed)).asInstanceOf[this.type]
+
+  def this(that: ArrayIterator[Byte]) =
+    this(that.internalArray, that.internalFrom, that.internalUntil, that.internalIsReversed)
+
+  override def duplicate: (ByteSeqIterator, ByteSeqIterator) = (this, clone)
+
+  override def span(p: Byte => Boolean): (ByteSeqIterator, ByteSeqIterator) = {
+    val (a, b) = span(p)
+    (new ByteSeqIterator(a), new ByteSeqIterator(b))
+  }
+
+  def toByteSeq: ByteSeq = ByteSeq.wrap(toSharedArray)
+
+  override def toSeq: ByteSeq = toByteSeq
+}
+
+
+object ByteSeqIterator {
+  def apply(that: ArrayIterator[Byte]): ByteSeqIterator = new ByteSeqIterator(that)
+
+  def apply(array: Array[Byte], from: Int, until: Int, reverse: Boolean): ByteSeqIterator =
+    new ByteSeqIterator(array, from, until, reverse)
+
+  def forArray(array: Array[Byte]): ByteSeqIterator =
+    new ByteSeqIterator(array, 0, array.length, false)
+
+  def forArrayRange(array: Array[Byte], from: Int, until: Int): ByteSeqIterator =
+    new ByteSeqIterator(array, from, until, false)
   
+  def empty: ByteSeqIterator =
+    forArray(Array.empty[Byte])
+
+  //def forChunks(chunks: Seq[Array[Byte]]): ByteSeqIterator =
+    //ByteSeq.fromChunks(chunks).iterator
+}
+
+
+
+class ByteSeqBuilder(val defaultChunkSize: Int) extends
+  GenericByteSeqBuilder with Builder[Byte, ByteSeq]
+{
+  import ByteSeqBuilder._
+
+ 
   require(defaultChunkSize > 0)
 
   private var chunk = emptyChunk
@@ -83,15 +151,16 @@ final class ByteSeqBuilder(val defaultChunkSize: Int) extends Builder[Byte, Byte
     this
   }
   
-  def ++= (xs: Array[Byte]) = {
-    pushChunk()
-    chunk = xs.toArray
-    pos = xs.length
-    pushChunk()
-  }
 
   override def ++= (xs: TraversableOnce[Byte]) = {
     xs match {
+      case wrapped: ScalaArrayOps[_] => {
+        val xs = wrapped.asInstanceOf[ScalaArrayOps[Byte]].repr
+        pushChunk()
+        chunk = xs.toArray
+        pos = xs.length
+        pushChunk()
+      }
       case it: ArrayIterator[_] => {
         val xs = it.asInstanceOf[ArrayIterator[Byte]]
         val len = xs.len
