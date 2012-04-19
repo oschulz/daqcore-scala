@@ -29,8 +29,20 @@ trait GenericByteSeq extends collection.immutable.IndexedSeq[Byte] {
 
 
 trait GenericByteSeqIterator extends BufferedIterator[Byte] {
+  def getByte()(implicit enc: ValEncoding) = enc.getByte(this)
+  def getShort()(implicit enc: ValEncoding) = enc.getShort(this)
+  def getInt()(implicit enc: ValEncoding) = enc.getInt(this)
+  def getLong()(implicit enc: ValEncoding) = enc.getLong(this)
+  def getFloat()(implicit enc: ValEncoding) = enc.getFloat(this)
+  def getDouble()(implicit enc: ValEncoding) = enc.getDouble(this)
 }
 
 
 trait GenericByteSeqBuilder extends Builder[Byte, GenericByteSeq] {
+  def putByte(x: Byte)(implicit enc: ValEncoding) = enc.putByte(this, x)
+  def putShort(x: Short)(implicit enc: ValEncoding) = enc.putShort(this, x)
+  def putInt(x: Int)(implicit enc: ValEncoding) = enc.putInt(this, x)
+  def putLong(x: Long)(implicit enc: ValEncoding) = enc.putLong(this, x)
+  def putFloat(x: Float)(implicit enc: ValEncoding) = enc.putFloat(this, x)
+  def putDouble(x: Double)(implicit enc: ValEncoding) = enc.putDouble(this, x)
 }

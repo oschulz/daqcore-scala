@@ -202,13 +202,6 @@ class ByteSeqBuilder(val defaultChunkSize: Int) extends
     clear()
     res
   }
-
-  def putByte(x: Byte)(implicit enc: ValEncoding) = enc.putByte(this, x)
-  def putShort(x: Short)(implicit enc: ValEncoding) = enc.putShort(this, x)
-  def putInt(x: Int)(implicit enc: ValEncoding) = enc.putInt(this, x)
-  def putLong(x: Long)(implicit enc: ValEncoding) = enc.putLong(this, x)
-  def putFloat(x: Float)(implicit enc: ValEncoding) = enc.putFloat(this, x)
-  def putDouble(x: Double)(implicit enc: ValEncoding) = enc.putDouble(this, x)
 }
 
 
