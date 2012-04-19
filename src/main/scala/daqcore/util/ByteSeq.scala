@@ -38,10 +38,11 @@ class ByteSeq(array: Array[Byte]) extends ArrayVec[Byte](array) with GenericByte
 
 
 object ByteSeq {
-  def apply(values: Byte*) = {
+  def apply(values: Byte*): ByteSeq = {
     values match {
+      case seq: ByteSeq => seq
       case vec: ArrayVec[_] => new ByteSeq(vec.asInstanceOf[ArrayVec[Byte]].internalArray)
-      case value => wrap(values.toArray)
+      case x => apply(ArrayVec(x: _*): _*)
     }
   }
 

@@ -58,7 +58,7 @@ abstract trait BasicOutput {
 }
 
 
-case class RootEncInput(val source: ByteSeqIterator) extends BasicInput {
+case class RootEncInput(val source: GenericByteSeqIterator) extends BasicInput {
   implicit val enc = BigEndian
 
   final def readBoolean() = (enc.getByte(source) > 0)
@@ -75,8 +75,9 @@ case class RootEncInput(val source: ByteSeqIterator) extends BasicInput {
       if (l < 0xff) l else readInt()
     }
     val a = Array.ofDim[Byte](length)
-    require(source.len >= length)
-    source.copyToArray(a)
+    val (src1, src2) = source.duplicate
+    require(src1.length >= length)
+    src2.copyToArray(a)
     new String(a)
   }
 
@@ -102,7 +103,7 @@ case class RootEncInput(val source: ByteSeqIterator) extends BasicInput {
 }
 
 
-case class RootEncOutput(val target: ByteSeqBuilder) extends BasicOutput {
+case class RootEncOutput(val target: GenericByteSeqBuilder) extends BasicOutput {
   implicit val enc = BigEndian
 
   def clear() = target.clear()

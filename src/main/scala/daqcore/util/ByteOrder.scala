@@ -22,7 +22,7 @@ import java.nio.{ByteOrder => NIOByteOrder, ByteBuffer => NIOByteBuffer}
 sealed trait ByteOrder extends ValEncoding {
   def nioByteOrder: NIOByteOrder
 
-  protected def getRawBytes(source: ByteSeqIterator, length: Int): Array[Byte] = {
+  protected def getRawBytes(source: GenericByteSeqIterator, length: Int): Array[Byte] = {
     // relies on source.duplicate returning (source, ...) - for some
     // reason, using duplicate/drop/take here make the bulk get methods
     // run significantly faster than using source.copyToArray
@@ -35,7 +35,7 @@ sealed trait ByteOrder extends ValEncoding {
     array
   }
 
-  protected def getToNIOByteBuffer(source: ByteSeqIterator, length: Int): NIOByteBuffer = {
+  protected def getToNIOByteBuffer(source: GenericByteSeqIterator, length: Int): NIOByteBuffer = {
     val byteArray = getRawBytes(source, length)
     val byteBuf = NIOByteBuffer.wrap(byteArray)
     byteBuf.order(nioByteOrder)
@@ -49,11 +49,11 @@ sealed trait ByteOrder extends ValEncoding {
       byteBuf
   }
   
-  override def putBytes(target: ByteSeqBuilder, xs: ArrayIterator[Byte]): Unit = {
+  override def putBytes(target: GenericByteSeqBuilder, xs: ArrayIterator[Byte]): Unit = {
     target ++= xs.toArray
   }
 
-  override def putShorts(target: ByteSeqBuilder, xs: ArrayIterator[Short]): Unit = {
+  override def putShorts(target: GenericByteSeqBuilder, xs: ArrayIterator[Short]): Unit = {
     val nBytes = xs.size * sizeOf[Short]
     val byteBuf = newNIOByteBuffer(nBytes)
     val buf = byteBuf.asShortBuffer
@@ -64,7 +64,7 @@ sealed trait ByteOrder extends ValEncoding {
     target ++= byteArray
   }
 
-  override def putInts(target: ByteSeqBuilder, xs: ArrayIterator[Int]): Unit = {
+  override def putInts(target: GenericByteSeqBuilder, xs: ArrayIterator[Int]): Unit = {
     val nBytes = xs.size * sizeOf[Int]
     val byteBuf = newNIOByteBuffer(nBytes)
     val buf = byteBuf.asIntBuffer
@@ -75,7 +75,7 @@ sealed trait ByteOrder extends ValEncoding {
     target ++= byteArray
   }
   
-  override def putLongs(target: ByteSeqBuilder, xs: ArrayIterator[Long]): Unit = {
+  override def putLongs(target: GenericByteSeqBuilder, xs: ArrayIterator[Long]): Unit = {
     val nBytes = xs.size * sizeOf[Long]
     val byteBuf = newNIOByteBuffer(nBytes)
     val buf = byteBuf.asLongBuffer
@@ -86,7 +86,7 @@ sealed trait ByteOrder extends ValEncoding {
     target ++= byteArray
   }
 
-  override def putFloats(target: ByteSeqBuilder, xs: ArrayIterator[Float]): Unit = {
+  override def putFloats(target: GenericByteSeqBuilder, xs: ArrayIterator[Float]): Unit = {
     val nBytes = xs.size * sizeOf[Float]
     val byteBuf = newNIOByteBuffer(nBytes)
     val buf = byteBuf.asFloatBuffer
@@ -97,7 +97,7 @@ sealed trait ByteOrder extends ValEncoding {
     target ++= byteArray
   }
 
-  override def putDoubles(target: ByteSeqBuilder, xs: ArrayIterator[Double]): Unit = {
+  override def putDoubles(target: GenericByteSeqBuilder, xs: ArrayIterator[Double]): Unit = {
     val nBytes = xs.size * sizeOf[Double]
     val byteBuf = newNIOByteBuffer(nBytes)
     val buf = byteBuf.asDoubleBuffer
@@ -109,39 +109,39 @@ sealed trait ByteOrder extends ValEncoding {
   }
 
 
-  override def getBytes(source: ByteSeqIterator, length: Int): ArrayVec[Byte] = {
+  override def getBytes(source: GenericByteSeqIterator, length: Int): ArrayVec[Byte] = {
     ArrayVec.wrap(getRawBytes(source, length))
   }
 
-  override def getShorts(source: ByteSeqIterator, length: Int): ArrayVec[Short] = {
+  override def getShorts(source: GenericByteSeqIterator, length: Int): ArrayVec[Short] = {
     val buf = getToNIOByteBuffer(source, length * sizeOf[Short]).asShortBuffer
     val array = Array.ofDim[Short](length)
     buf.get(array)
     ArrayVec.wrap(array)
   }
 
-  override def getInts(source: ByteSeqIterator, length: Int): ArrayVec[Int] = {
+  override def getInts(source: GenericByteSeqIterator, length: Int): ArrayVec[Int] = {
     val buf = getToNIOByteBuffer(source, length * sizeOf[Int]).asIntBuffer
     val array = Array.ofDim[Int](length)
     buf.get(array)
     ArrayVec.wrap(array)
   }
 
-  override def getLongs(source: ByteSeqIterator, length: Int): ArrayVec[Long] = {
+  override def getLongs(source: GenericByteSeqIterator, length: Int): ArrayVec[Long] = {
     val buf = getToNIOByteBuffer(source, length * sizeOf[Long]).asLongBuffer
     val array = Array.ofDim[Long](length)
     buf.get(array)
     ArrayVec.wrap(array)
   }
 
-  override def getFloats(source: ByteSeqIterator, length: Int): ArrayVec[Float] = {
+  override def getFloats(source: GenericByteSeqIterator, length: Int): ArrayVec[Float] = {
     val buf = getToNIOByteBuffer(source, length * sizeOf[Float]).asFloatBuffer
     val array = Array.ofDim[Float](length)
     buf.get(array)
     ArrayVec.wrap(array)
   }
   
-  override def getDoubles(source: ByteSeqIterator, length: Int): ArrayVec[Double] = {
+  override def getDoubles(source: GenericByteSeqIterator, length: Int): ArrayVec[Double] = {
     val buf = getToNIOByteBuffer(source, length * sizeOf[Double]).asDoubleBuffer
     val array = Array.ofDim[Double](length)
     buf.get(array)
@@ -165,23 +165,23 @@ object ByteOrder {
 case object BigEndian extends ByteOrder {
   def nioByteOrder = NIOByteOrder.BIG_ENDIAN
 
-  def putByte(target: ByteSeqBuilder, x: Byte) = {
+  def putByte(target: GenericByteSeqBuilder, x: Byte) = {
     target += x
   }
 
-  def putShort(target: ByteSeqBuilder, x: Short) = {
+  def putShort(target: GenericByteSeqBuilder, x: Short) = {
      target += (x >>>  8).toByte
      target += (x >>>  0).toByte
   }
 
-  def putInt(target: ByteSeqBuilder, x: Int) = {
+  def putInt(target: GenericByteSeqBuilder, x: Int) = {
      target += (x >>> 24).toByte
      target += (x >>> 16).toByte
      target += (x >>>  8).toByte
      target += (x >>>  0).toByte
   }
 
-  def putLong(target: ByteSeqBuilder, x: Long) = {
+  def putLong(target: GenericByteSeqBuilder, x: Long) = {
      target += (x >>> 56).toByte
      target += (x >>> 48).toByte
      target += (x >>> 40).toByte
@@ -193,17 +193,17 @@ case object BigEndian extends ByteOrder {
   }
 
 
-  def getByte(source: ByteSeqIterator) = {
+  def getByte(source: GenericByteSeqIterator) = {
     source.next()
   }
   
-  def getShort(source: ByteSeqIterator) = {
+  def getShort(source: GenericByteSeqIterator) = {
      ( (source.next() & 0xff) <<  8
      | (source.next() & 0xff) <<  0
      ).toShort
   }
 
-  def getInt(source: ByteSeqIterator) = {
+  def getInt(source: GenericByteSeqIterator) = {
      ( (source.next() & 0xff) << 24
      | (source.next() & 0xff) << 16
      | (source.next() & 0xff) <<  8
@@ -211,7 +211,7 @@ case object BigEndian extends ByteOrder {
      )
   }
 
-  def getLong(source: ByteSeqIterator) = {
+  def getLong(source: GenericByteSeqIterator) = {
      ( (source.next().toLong & 0xff) << 56
      | (source.next().toLong & 0xff) << 48
      | (source.next().toLong & 0xff) << 40
@@ -230,23 +230,23 @@ case object LittleEndian extends ByteOrder {
   def nioByteOrder = java.nio.ByteOrder.LITTLE_ENDIAN
 
 
-  def putByte(target: ByteSeqBuilder, x: Byte) = {
+  def putByte(target: GenericByteSeqBuilder, x: Byte) = {
     target += x
   }
 
-  def putShort(target: ByteSeqBuilder, x: Short) = {
+  def putShort(target: GenericByteSeqBuilder, x: Short) = {
      target += (x >>>  0).toByte
      target += (x >>>  8).toByte
   }
 
-  def putInt(target: ByteSeqBuilder, x: Int) = {
+  def putInt(target: GenericByteSeqBuilder, x: Int) = {
      target += (x >>>  0).toByte
      target += (x >>>  8).toByte
      target += (x >>> 16).toByte
      target += (x >>> 24).toByte
   }
 
-  def putLong(target: ByteSeqBuilder, x: Long) = {
+  def putLong(target: GenericByteSeqBuilder, x: Long) = {
      target += (x >>>  0).toByte
      target += (x >>>  8).toByte
      target += (x >>> 16).toByte
@@ -258,17 +258,17 @@ case object LittleEndian extends ByteOrder {
   }
 
 
-  def getByte(source: ByteSeqIterator) = {
+  def getByte(source: GenericByteSeqIterator) = {
     source.next()
   }
   
-  def getShort(source: ByteSeqIterator) = {
+  def getShort(source: GenericByteSeqIterator) = {
      ( (source.next() & 0xff) <<  0
      | (source.next() & 0xff) <<  8
      ).toShort
   }
 
-  def getInt(source: ByteSeqIterator) = {
+  def getInt(source: GenericByteSeqIterator) = {
      ( (source.next() & 0xff) <<  0
      | (source.next() & 0xff) <<  8
      | (source.next() & 0xff) << 16
@@ -276,7 +276,7 @@ case object LittleEndian extends ByteOrder {
      )
   }
 
-  def getLong(source: ByteSeqIterator) = {
+  def getLong(source: GenericByteSeqIterator) = {
      ( (source.next().toLong & 0xff) <<  0
      | (source.next().toLong & 0xff) <<  8
      | (source.next().toLong & 0xff) << 16

@@ -23,7 +23,7 @@ import scala.collection.mutable.{Builder}
 trait GenericByteSeq extends collection.immutable.IndexedSeq[Byte] {
   // null return values is necessary here to override the return type
   // pure abstract defs are not sufficient for some reason:
-  override def iterator: GenericByteSeqIterator = null 
+  override def iterator: GenericByteSeqIterator = null
   override def reverseIterator: GenericByteSeqIterator = null
 }
 

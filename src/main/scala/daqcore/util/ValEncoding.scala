@@ -19,104 +19,104 @@ package daqcore.util
 
 
 trait ValEncoding {
-  def putByte(target: ByteSeqBuilder, x: Byte): Unit
-  def putShort(target: ByteSeqBuilder, x: Short): Unit
-  def putInt(target: ByteSeqBuilder, x: Int): Unit
-  def putLong(target: ByteSeqBuilder, x: Long): Unit
+  def putByte(target: GenericByteSeqBuilder, x: Byte): Unit
+  def putShort(target: GenericByteSeqBuilder, x: Short): Unit
+  def putInt(target: GenericByteSeqBuilder, x: Int): Unit
+  def putLong(target: GenericByteSeqBuilder, x: Long): Unit
   
-  def putFloat(target: ByteSeqBuilder, x: Float): Unit =
+  def putFloat(target: GenericByteSeqBuilder, x: Float): Unit =
     putInt(target, java.lang.Float.floatToRawIntBits(x))
   
-  def putDouble(target: ByteSeqBuilder, x: Double): Unit =
+  def putDouble(target: GenericByteSeqBuilder, x: Double): Unit =
     putLong(target, java.lang.Double.doubleToRawLongBits(x))
 
-  def getByte(source: ByteSeqIterator): Byte
-  def getShort(source: ByteSeqIterator): Short
-  def getInt(source: ByteSeqIterator): Int
-  def getLong(source: ByteSeqIterator): Long
+  def getByte(source: GenericByteSeqIterator): Byte
+  def getShort(source: GenericByteSeqIterator): Short
+  def getInt(source: GenericByteSeqIterator): Int
+  def getLong(source: GenericByteSeqIterator): Long
 
-  def getFloat(source: ByteSeqIterator): Float =
+  def getFloat(source: GenericByteSeqIterator): Float =
     java.lang.Float.intBitsToFloat(getInt(source))
 
-  def getDouble(source: ByteSeqIterator): Double =
+  def getDouble(source: GenericByteSeqIterator): Double =
     java.lang.Double.longBitsToDouble(getLong(source))
 
 
-  def putBytes(target: ByteSeqBuilder, xs: ArrayIterator[Byte]): Unit =
+  def putBytes(target: GenericByteSeqBuilder, xs: ArrayIterator[Byte]): Unit =
     for (x <- xs) putByte(target, x)
   
-  def putShorts(target: ByteSeqBuilder, xs: ArrayIterator[Short]): Unit =
+  def putShorts(target: GenericByteSeqBuilder, xs: ArrayIterator[Short]): Unit =
     for (x <- xs) putShort(target, x)
 
-  def putInts(target: ByteSeqBuilder, xs: ArrayIterator[Int]): Unit =
+  def putInts(target: GenericByteSeqBuilder, xs: ArrayIterator[Int]): Unit =
     for (x <- xs) putInt(target, x)
   
-  def putLongs(target: ByteSeqBuilder, xs: ArrayIterator[Long]): Unit =
+  def putLongs(target: GenericByteSeqBuilder, xs: ArrayIterator[Long]): Unit =
     for (x <- xs) putLong(target, x)
 
-  def putFloats(target: ByteSeqBuilder, xs: ArrayIterator[Float]): Unit =
+  def putFloats(target: GenericByteSeqBuilder, xs: ArrayIterator[Float]): Unit =
     for (x <- xs) putFloat(target, x)
   
-  def putDoubles(target: ByteSeqBuilder, xs: ArrayIterator[Double]): Unit =
+  def putDoubles(target: GenericByteSeqBuilder, xs: ArrayIterator[Double]): Unit =
     for (x <- xs) putDouble(target, x)
 
 
-  def putBytes(target: ByteSeqBuilder, xs: ArrayVec[Byte]): Unit =
+  def putBytes(target: GenericByteSeqBuilder, xs: ArrayVec[Byte]): Unit =
     putBytes(target, xs.iterator)
   
-  def putShorts(target: ByteSeqBuilder, xs: ArrayVec[Short]): Unit =
+  def putShorts(target: GenericByteSeqBuilder, xs: ArrayVec[Short]): Unit =
     putShorts(target, xs.iterator)
 
-  def putInts(target: ByteSeqBuilder, xs: ArrayVec[Int]): Unit =
+  def putInts(target: GenericByteSeqBuilder, xs: ArrayVec[Int]): Unit =
     putInts(target, xs.iterator)
   
-  def putLongs(target: ByteSeqBuilder, xs: ArrayVec[Long]): Unit =
+  def putLongs(target: GenericByteSeqBuilder, xs: ArrayVec[Long]): Unit =
     putLongs(target, xs.iterator)
 
-  def putFloats(target: ByteSeqBuilder, xs: ArrayVec[Float]): Unit =
+  def putFloats(target: GenericByteSeqBuilder, xs: ArrayVec[Float]): Unit =
     putFloats(target, xs.iterator)
   
-  def putDoubles(target: ByteSeqBuilder, xs: ArrayVec[Double]): Unit =
+  def putDoubles(target: GenericByteSeqBuilder, xs: ArrayVec[Double]): Unit =
     putDoubles(target, xs.iterator)
 
 
-  def getBytes(source: ByteSeqIterator, length: Int): ArrayVec[Byte] = {
+  def getBytes(source: GenericByteSeqIterator, length: Int): ArrayVec[Byte] = {
     val target = Array.ofDim[Byte](length)
     for (i <- Range(0, length)) target(i) = getByte(source)
     ArrayVec.wrap(target)
   }
 
-  def getShorts(source: ByteSeqIterator, length: Int): ArrayVec[Short] = {
+  def getShorts(source: GenericByteSeqIterator, length: Int): ArrayVec[Short] = {
     val target = Array.ofDim[Short](length)
     for (i <- Range(0, length)) target(i) = getShort(source)
     ArrayVec.wrap(target)
   }
 
-  def getInts(source: ByteSeqIterator, length: Int): ArrayVec[Int] = {
+  def getInts(source: GenericByteSeqIterator, length: Int): ArrayVec[Int] = {
     val target = Array.ofDim[Int](length)
     for (i <- Range(0, length)) target(i) = getInt(source)
     ArrayVec.wrap(target)
   }
 
-  def getLongs(source: ByteSeqIterator, length: Int): ArrayVec[Long] = {
+  def getLongs(source: GenericByteSeqIterator, length: Int): ArrayVec[Long] = {
     val target = Array.ofDim[Long](length)
     for (i <- Range(0, length)) target(i) = getLong(source)
     ArrayVec.wrap(target)
   }
 
-  def getFloats(source: ByteSeqIterator, length: Int): ArrayVec[Float] = {
+  def getFloats(source: GenericByteSeqIterator, length: Int): ArrayVec[Float] = {
     val target = Array.ofDim[Float](length)
     for (i <- Range(0, length)) target(i) = getFloat(source)
     ArrayVec.wrap(target)
   }
   
-  def getDoubles(source: ByteSeqIterator, length: Int): ArrayVec[Double] = {
+  def getDoubles(source: GenericByteSeqIterator, length: Int): ArrayVec[Double] = {
     val target = Array.ofDim[Double](length)
     for (i <- Range(0, length)) target(i) = getDouble(source)
     ArrayVec.wrap(target)
   }
 
-  def fromBytes[A <: AnyVal : ClassManifest](bytes: ByteSeq) : ArrayVec[A] = {
+  def fromBytes[A <: AnyVal : ClassManifest](bytes: GenericByteSeq): ArrayVec[A] = {
     val mf = classManifest[A]
     if (mf == classManifest[Byte]) getBytes(bytes.iterator, bytes.length / sizeOf[Byte]).asInstanceOf[ArrayVec[A]]
     else if (mf == classManifest[Short]) getShorts(bytes.iterator, bytes.length / sizeOf[Short]).asInstanceOf[ArrayVec[A]]
@@ -128,7 +128,7 @@ trait ValEncoding {
   }
 
 
-  def toBytes[A <: AnyVal : ClassManifest](seq: ArrayVec[A]) : ByteSeq = {
+  def toBytes[A <: AnyVal : ClassManifest](seq: ArrayVec[A]): ByteSeq = {
     val mf = classManifest[A]
     val builder = ByteSeqBuilder(seq.length * sizeOf[A])
     if (mf == classManifest[Byte]) putBytes(builder, seq.asInstanceOf[ArrayVec[Byte]])
