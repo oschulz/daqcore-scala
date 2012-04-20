@@ -25,6 +25,10 @@ trait GenericByteSeq extends collection.immutable.IndexedSeq[Byte] {
   // pure abstract defs are not sufficient for some reason:
   override def iterator: GenericByteSeqIterator = null
   override def reverseIterator: GenericByteSeqIterator = null
+
+  def ++(that: TraversableOnce[Byte]): GenericByteSeq
+
+  def indexOf(elem: Byte): Int = iterator.indexOf(elem)
 }
 
 

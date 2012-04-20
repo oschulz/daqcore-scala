@@ -23,15 +23,13 @@ import scala.collection.generic.CanBuildFrom
 import scala.collection.mutable.{Builder,ArrayBuffer,ArrayBuilder}
 
 
-class ArrayVec[@specialized A: ClassManifest](private val array: Array[A]) extends
+sealed class ArrayVec[@specialized A: ClassManifest](private val array: Array[A]) extends
   collection.immutable.IndexedSeq[A] with IndexedSeqLike[A, ArrayVec[A]] with
   Serializable
 {
   protected[util] def internalArray = array
 
   final def classMf = classManifest[A]
-  
-  final protected[util] def getArray = array
   
   @inline final def length = array.length
   @inline final override def size = length
@@ -49,38 +47,34 @@ class ArrayVec[@specialized A: ClassManifest](private val array: Array[A]) exten
     }
   }
 
-  // Must be overriden in derives classes!
-  protected def newInstance(array: Array[A]): this.type =
-    new ArrayVec(array).asInstanceOf[this.type]
-
-  protected def getInstance(it: ArrayIterator[A]): this.type =
+  protected final def getInstance(it: ArrayIterator[A]): ArrayVec[A] =
     if (it isIdenticalTo this.iterator) this
-    else newInstance(it.toArray)
+    else new ArrayVec[A](it.toArray)
   
-  override def slice(from: Int, until: Int): this.type =
+  final override def slice(from: Int, until: Int): ArrayVec[A] =
     getInstance(iterator.slice(from, until))
   
-  override def take(n: Int): this.type = slice(0, n)
-  override def takeRight(n: Int): this.type = slice(length - n, length)
-  override def drop(n: Int): this.type = slice(n, length)
-  override def dropRight(n: Int): this.type = slice(0, length - n)
+  final override def take(n: Int): ArrayVec[A] = slice(0, n)
+  final override def takeRight(n: Int): ArrayVec[A] = slice(length - n, length)
+  final override def drop(n: Int): ArrayVec[A] = slice(n, length)
+  final override def dropRight(n: Int): ArrayVec[A] = slice(0, length - n)
 
   final override def head: A = this(0)
-  final override def tail: this.type = this.drop(1)
+  final override def tail: ArrayVec[A] = this.drop(1)
   final override def last: A = this(this.length - 1)
-  override def init: this.type = this.take(this.length - 1)
+  final override def init: ArrayVec[A] = this.take(this.length - 1)
   
   final override def takeWhile(p: A => Boolean) = iterator.takeWhile(p).toArrayVec
   final override def dropWhile(p: A => Boolean) = iterator.dropWhile(p).toArrayVec
-  override def span(p: A => Boolean): (ArrayVec[A], ArrayVec[A]) =
+  final override def span(p: A => Boolean): (ArrayVec[A], ArrayVec[A]) =
     { val (a, b) = iterator.span(p); (getInstance(a), getInstance(b)) }
 
-  override def splitAt(n: Int): (ArrayVec[A], ArrayVec[A]) = (take(n), drop(n))
+  final override def splitAt(n: Int): (ArrayVec[A], ArrayVec[A]) = (take(n), drop(n))
   
   final override def indexWhere(p: A => Boolean): Int = iterator.indexWhere(p)
   override def indexOf[@specialized B >: A](elem: B): Int = iterator.indexOf(elem)
 
-  override def reverse = reverseIterator.toArrayVec
+  final override def reverse = reverseIterator.toArrayVec
 
   final override def toArray [B >: A] (implicit arg0: ClassManifest[B]) = iterator.toArray
   final override def copyToArray [B >: A] (xs: Array[B], start: Int, len: Int) = iterator.copyToArray(xs, start, len)
@@ -89,8 +83,8 @@ class ArrayVec[@specialized A: ClassManifest](private val array: Array[A]) exten
     
   @inline final def apply(index: Int): A = array(index)
 
-  override def iterator: ArrayIterator[A] = ArrayIterator(array, 0, array.length, false)
-  override def reverseIterator: ArrayIterator[A] = ArrayIterator(array, 0, array.length, true)
+  final override def iterator: ArrayIterator[A] = new ArrayIterator(array, 0, array.length, false)
+  final override def reverseIterator: ArrayIterator[A] = new ArrayIterator(array, 0, array.length, true)
 
   final override def foldLeft[@specialized B] (z: B)(op: (B, A) => B): B =
     iterator.foldLeft(z)(op)
@@ -99,7 +93,7 @@ class ArrayVec[@specialized A: ClassManifest](private val array: Array[A]) exten
     iterator.foldRight(z)(op)
   
   final override protected def newBuilder: Builder[A, ArrayVec[A]] =
-    (new ArrayBuffer[A]) mapResult { a => val array = a.toArray; newInstance(array) }
+    (new ArrayBuffer[A]) mapResult { a => val array = a.toArray; new ArrayVec[A](array) }
   
   final override def map [B, That] (op: (A) => B)(implicit bf: CanBuildFrom[ArrayVec[A], B, That]) : That = {
     def defaultMapImpl = super.map(op)(bf)
@@ -136,11 +130,14 @@ class ArrayVec[@specialized A: ClassManifest](private val array: Array[A]) exten
 
 
 object ArrayVec {
-  def apply[@specialized A: ClassManifest](values: A*) = wrap(values.toArray)
+  def apply[@specialized A: ClassManifest](values: A*) = values match {
+    case _: Immutable => new ArrayVec(values.toArray)
+    case _ => new ArrayVec(values.toArray.clone)
+  }
   
   def empty[@specialized A: ClassManifest] = apply()
   
-  def wrap[@specialized A: ClassManifest](array: Array[A]): ArrayVec[A] = new ArrayVec(array)
+  protected [util] def wrap[@specialized A: ClassManifest](array: Array[A]): ArrayVec[A] = new ArrayVec(array)
 
   def fill[@specialized A: ClassManifest](N: Int)(f: => A): ArrayVec[A] = {
     val array = Array.ofDim[A](N)
@@ -210,11 +207,11 @@ object ArrayVecBuilder {
 }
 
 
-class ArrayVecBoolean(array: Array[Boolean]) extends ArrayVec[Boolean](array) { def this(v: ArrayVec[Boolean]) = this(v.getArray) }
-class ArrayVecByte(array: Array[Byte]) extends ArrayVec[Byte](array) { def this(v: ArrayVec[Byte]) = this(v.getArray) }
-class ArrayVecChar(array: Array[Char]) extends ArrayVec[Char](array) { def this(v: ArrayVec[Char]) = this(v.getArray) }
-class ArrayVecShort(array: Array[Short]) extends ArrayVec[Short](array) { def this(v: ArrayVec[Short]) = this(v.getArray) }
-class ArrayVecInt(array: Array[Int]) extends ArrayVec[Int](array) { def this(v: ArrayVec[Int]) = this(v.getArray) }
-class ArrayVecLong(array: Array[Long]) extends ArrayVec[Long](array) { def this(v: ArrayVec[Long]) = this(v.getArray) }
-class ArrayVecFloat(array: Array[Float]) extends ArrayVec[Float](array) { def this(v: ArrayVec[Float]) = this(v.getArray) }
-class ArrayVecDouble(array: Array[Double]) extends ArrayVec[Double](array) { def this(v: ArrayVec[Double]) = this(v.getArray) }
+class ArrayVecBoolean private (array: Array[Boolean]) extends ArrayVec[Boolean](array) { def this(v: ArrayVec[Boolean]) = this(v.internalArray) }
+class ArrayVecByte private (array: Array[Byte]) extends ArrayVec[Byte](array) { def this(v: ArrayVec[Byte]) = this(v.internalArray) }
+class ArrayVecChar private (array: Array[Char]) extends ArrayVec[Char](array) { def this(v: ArrayVec[Char]) = this(v.internalArray) }
+class ArrayVecShort private (array: Array[Short]) extends ArrayVec[Short](array) { def this(v: ArrayVec[Short]) = this(v.internalArray) }
+class ArrayVecInt private (array: Array[Int]) extends ArrayVec[Int](array) { def this(v: ArrayVec[Int]) = this(v.internalArray) }
+class ArrayVecLong private (array: Array[Long]) extends ArrayVec[Long](array) { def this(v: ArrayVec[Long]) = this(v.internalArray) }
+class ArrayVecFloat private (array: Array[Float]) extends ArrayVec[Float](array) { def this(v: ArrayVec[Float]) = this(v.internalArray) }
+class ArrayVecDouble private (array: Array[Double]) extends ArrayVec[Double](array) { def this(v: ArrayVec[Double]) = this(v.internalArray) }

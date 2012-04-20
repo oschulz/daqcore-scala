@@ -17,32 +17,108 @@
 
 package daqcore.util
 
+import scala.collection.IndexedSeqLike
+import scala.collection.generic.CanBuildFrom
 import scala.collection.immutable.Queue
 import scala.collection.mutable.{Builder}
 import scala.collection.mutable.{ArrayOps => ScalaArrayOps}
 
-class ByteSeq(array: Array[Byte]) extends ArrayVec[Byte](array) with GenericByteSeq {
-  final override def iterator: ByteSeqIterator = ByteSeqIterator(array, 0, array.length, false)
-  final override def reverseIterator: ByteSeqIterator = ByteSeqIterator(array, 0, array.length, true)
 
-  final override protected def newInstance(array: Array[Byte]): this.type =
-    new ByteSeq(array).asInstanceOf[this.type]
+sealed class ByteSeq private[util] (private val array: Array[Byte]) extends GenericByteSeq with
+  collection.immutable.IndexedSeq[Byte] with IndexedSeqLike[Byte, ByteSeq] with
+  Serializable
+{
+  protected[util] final def internalArray = array
+  
+  @inline final def length = array.length
+  @inline final override def size = length
 
+  protected final def newInstance(array: Array[Byte]): ByteSeq =
+    new ByteSeq(array)
+
+  protected final def getInstance(it: ByteSeqIterator): ByteSeq =
+    if (it isIdenticalTo this.iterator) this
+    else newInstance(it.toArray)
+  
+  final def ++(that: TraversableOnce[Byte]): ByteSeq = {
+    def addKnownLength(that: TraversableOnce[Byte], that_length: Int) = {
+      val target = Array.ofDim[Byte](this.length + that_length)
+      this.copyToArray(target, 0)
+      that.copyToArray(target, this.length)
+      newInstance(target)
+    }
+    
+    that match {
+      case xs: Seq[_] => addKnownLength(that, xs.length)
+      case xs: BufferedIterator[_] => {
+        val (a, b) = xs.duplicate
+        addKnownLength(a, b.length)
+      }
+      case _ => {
+        val bld = ByteSeqBuilder()
+        bld ++= this
+        bld ++= that
+        bld.result
+      }
+    }
+  }
+  
+  final override def slice(from: Int, until: Int): ByteSeq =
+    getInstance(iterator.slice(from, until))
+  
+  final override def take(n: Int): ByteSeq = slice(0, n)
+  final override def takeRight(n: Int): ByteSeq = slice(length - n, length)
+  final override def drop(n: Int): ByteSeq = slice(n, length)
+  final override def dropRight(n: Int): ByteSeq = slice(0, length - n)
+
+  final override def head: Byte = this(0)
+  final override def tail: ByteSeq = this.drop(1)
+  final override def last: Byte = this(this.length - 1)
+  final override def init: ByteSeq = this.take(this.length - 1)
+  
+  final override def takeWhile(p: Byte => Boolean) = newInstance(iterator.takeWhile(p).toArray)
+  final override def dropWhile(p: Byte => Boolean) = newInstance(iterator.dropWhile(p).toArray)
   final override def span(p: Byte => Boolean): (ByteSeq, ByteSeq) =
     { val (a, b) = iterator.span(p); (getInstance(a), getInstance(b)) }
 
   final override def splitAt(n: Int): (ByteSeq, ByteSeq) = (take(n), drop(n))
+  
+  final override def indexWhere(p: Byte => Boolean): Int = iterator.indexWhere(p)
+  final override def indexOf[B >: Byte](elem: B): Int = iterator.indexOf(elem)
 
-  final override def reverse = new ByteSeq(super.reverse.internalArray)
+  final override def reverse = newInstance(reverseIterator.toArray)
+
+  final override def toArray [B >: Byte] (implicit arg0: ClassManifest[B]) = iterator.toArray
+  final override def copyToArray [B >: Byte] (xs: Array[B], start: Int, len: Int) = iterator.copyToArray(xs, start, len)
+  
+  @inline final override def foreach[@specialized U](f: Byte => U): Unit = iterator foreach f
+
+  @inline final def apply(index: Int): Byte = array(index)
+
+  final override def iterator: ByteSeqIterator = ByteSeqIterator(array, 0, array.length)
+  final override def reverseIterator: ByteSeqIterator = reverse.iterator
+  
+  // final override def reverse: ByteSeq
+
+  // final override def map [B, That] (op: (A) => B)(implicit bf: CanBuildFrom[ArrayVec[A], B, That]) : That = {
+
+  final override def foldLeft[@specialized B] (z: B)(op: (B, Byte) => B): B =
+    iterator.foldLeft(z)(op)
+
+  final override def foldRight[@specialized B] (z: B)(op: (Byte, B) => B): B =
+    iterator.foldRight(z)(op)
+  
+  final override protected def newBuilder: Builder[Byte, ByteSeq] = ByteSeqBuilder()
 }
 
 
 object ByteSeq {
   def apply(values: Byte*): ByteSeq = {
     values match {
-      case seq: ByteSeq => seq
+      case bs: ByteSeq => bs
       case vec: ArrayVec[_] => new ByteSeq(vec.asInstanceOf[ArrayVec[Byte]].internalArray)
-      case x => apply(ArrayVec(x: _*): _*)
+      case _: Immutable => new ByteSeq(values.toArray)
+      case _ => new ByteSeq(values.toArray.clone)
     }
   }
 
@@ -67,45 +143,160 @@ object ByteSeq {
 
 
 
-class ByteSeqIterator(private val array: Array[Byte], private var from: Int, private var until: Int, private var isReversed: Boolean)
-  extends ArrayIterator[Byte](array, from, until, isReversed) with GenericByteSeqIterator
+sealed class ByteSeqIterator private[util] (private val array: Array[Byte], private var from: Int, private var until: Int) extends
+  BufferedIterator[Byte] with GenericByteSeqIterator
 {
-  override protected def newInstance(array: Array[Byte], from: Int, until: Int, isReversed: Boolean): this.type =
-    (new ByteSeqIterator(array, from, until, isReversed)).asInstanceOf[this.type]
+  protected[util] final def internalArray = array
+  protected[util] final def internalFrom = from
+  protected[util] final def internalUntil = until
 
-  def this(that: ArrayIterator[Byte]) =
-    this(that.internalArray, that.internalFrom, that.internalUntil, that.internalIsReversed)
-
-  override def duplicate: (ByteSeqIterator, ByteSeqIterator) = (this, clone)
-
-  override def span(p: Byte => Boolean): (ByteSeqIterator, ByteSeqIterator) = {
-    val (a, b) = span(p)
-    (new ByteSeqIterator(a), new ByteSeqIterator(b))
+  final def isIdenticalTo(that: ByteSeqIterator): Boolean = {
+    ((this.array) eq (that.internalArray)) &&
+      ((this.from) == (that.from)) && ((this.until) == (that.until))
   }
 
-  def toByteSeq: ByteSeq = ByteSeq.wrap(toSharedArray)
+  final def isIdenticalTo(that: ArrayIterator[Byte]): Boolean = {
+    ((this.array) eq (that.internalArray)) &&
+      ((this.from) == (that.internalFrom)) && ((this.until) == (that.internalUntil)) &&
+      (that.internalIsReversed == false)
+  }
 
-  override def toSeq: ByteSeq = toByteSeq
+  final def hasNext = from < until
+
+  final def head = array(from)
+
+  final def next() = {
+    if (!hasNext) Iterator.empty.next
+    else { val i = from; from = from + 1; array(i) }
+  }
+  
+  private final def unsliced = (from == 0) && (until == array.length)
+  
+  final def len = until - from
+
+  final override def length = { val l = len; drop(len); l }
+  final override def size = len
+  
+  final override def toArray [B >: Byte] (implicit arg0: ClassManifest[B]) : Array[B] = {
+    val target = Array.ofDim[B](len)
+    copyToArray(target)
+    target
+  }
+
+  final override def copyToArray [B >: Byte] (xs: Array[B], start: Int, len: Int) : Unit = {
+    val n = 0 max ( (xs.length - start) min this.len min len )
+    ArrayOps.arrayCopy(this.array, from, xs, start, n)
+    this.drop(n)
+  }
+
+  protected final def newInstance(array: Array[Byte], from: Int, until: Int): this.type =
+    (new ByteSeqIterator(array, from, until)).asInstanceOf[this.type]
+
+  final override def clone: this.type = newInstance(array, from, until)
+
+  final override def duplicate: (ByteSeqIterator, ByteSeqIterator) = (this, clone)
+    
+  final override def slice (from: Int, until: Int): this.type =
+    drop(from).take(until - from)
+
+  final override def take(n: Int): this.type = {
+    until = until min (from + (0 max n))
+    this
+  }
+
+  final override def drop(n: Int): this.type = {
+    from = until min (from + (0 max n))
+    this
+  }
+  
+  final override def takeWhile(p: Byte => Boolean): this.type = {
+    val prev = from
+    dropWhile(p)
+    until = from; from = prev
+    this
+  }
+
+  final override def dropWhile(p: Byte => Boolean): this.type = {
+    var stop = false
+    while (!stop && hasNext) {
+      if (p(array(from))) { from = from + 1 } else {stop = true}
+    }
+    this
+  }
+
+  final override def span(p: Byte => Boolean): (ByteSeqIterator, ByteSeqIterator) = {
+    val prev = from
+    dropWhile(p)
+    val that = newInstance(array, prev, from)
+    (that, this)
+  }
+
+  final override def indexWhere(p: Byte => Boolean): Int = {
+    var index = 0
+    var found = false
+    while (!found && hasNext) if (p(next())) {found = true} else {index += 1}
+    if (found) index else -1
+  }
+  
+  final def indexOf(elem: Byte): Int = {
+    var index = 0
+    var found = false
+    while (!found && hasNext) if (elem == next()) {found = true} else {index += 1}
+    if (found) index else -1
+  }
+
+  final override def indexOf[B >: Byte](elem: B): Int = {
+    var index = 0
+    var found = false
+    while (!found && hasNext) if (elem == next()) {found = true} else {index += 1}
+    if (found) index else -1
+  }
+
+  protected final def toSharedArray: Array[Byte] = {
+    val target = if (unsliced) array else toArray
+    drop(len)
+    target
+  }
+
+  final def toByteSeq: ByteSeq = ByteSeq.wrap(toSharedArray)
+
+  final override def toSeq: ByteSeq = toByteSeq
+  
+  @inline final override def foreach[@specialized U](f: Byte => U): Unit =
+    while (hasNext) f(next())
+
+  final override def foldLeft[@specialized B] (z: B)(op: (B, Byte) => B): B = {
+    var acc = z
+    while (hasNext) acc = op(acc, next()) 
+    acc
+  }
+
+  // final override def foldRight[@specialized B] (z: B)(op: (Byte, B) => B): B
+
+  final def splitEvery(n: Int): Stream[ByteSeqIterator] = {
+    if (hasNext) { val (a, b) = duplicate; Stream.cons(a.take(n), b.drop(n).splitEvery(n)) }
+    else Stream.Empty
+  }
+
+  final def sharedWith(that: ByteSeqIterator): Boolean = (this.array == that.array)
 }
 
 
 object ByteSeqIterator {
-  def apply(that: ArrayIterator[Byte]): ByteSeqIterator = new ByteSeqIterator(that)
+  private val emptyArray = Array.ofDim[Byte](0)
 
-  def apply(array: Array[Byte], from: Int, until: Int, reverse: Boolean): ByteSeqIterator =
-    new ByteSeqIterator(array, from, until, reverse)
+  def apply(that: ArrayIterator[Byte]): ByteSeqIterator = {
+    if (!that.internalIsReversed) new ByteSeqIterator(that.internalArray, that.internalFrom, that.internalUntil)
+    else apply(that.toArray)
+  }
 
-  def forArray(array: Array[Byte]): ByteSeqIterator =
-    new ByteSeqIterator(array, 0, array.length, false)
+  protected[util] def apply(array: Array[Byte]): ByteSeqIterator =
+    new ByteSeqIterator(array, 0, array.length)
 
-  def forArrayRange(array: Array[Byte], from: Int, until: Int): ByteSeqIterator =
-    new ByteSeqIterator(array, from, until, false)
+  protected[util] def apply(array: Array[Byte], from: Int, until: Int): ByteSeqIterator =
+    new ByteSeqIterator(array, from, until)
   
-  def empty: ByteSeqIterator =
-    forArray(Array.empty[Byte])
-
-  //def forChunks(chunks: Seq[Array[Byte]]): ByteSeqIterator =
-    //ByteSeq.fromChunks(chunks).iterator
+  def empty: ByteSeqIterator = apply(emptyArray)
 }
 
 
