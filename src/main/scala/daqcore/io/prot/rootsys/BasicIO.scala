@@ -52,7 +52,7 @@ abstract trait BasicOutput {
   def writeUUID(x: UUID): Unit
 
   def writeArray[@specialized A: ClassManifest](array: Array[A]): Unit =
-    writeSeq(ArrayVec.wrap(array))
+    writeSeq(ArrayVec(array: _*))
   
   def writeSeq[A: ClassManifest](seq: Seq[A]): Unit
 }
