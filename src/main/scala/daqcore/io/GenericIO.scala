@@ -17,6 +17,7 @@
 
 package daqcore.io
 
+import akka.actor.ActorRef
 import akka.dispatch.Future
 import akka.util.{ByteString, Timeout}
 
@@ -25,6 +26,9 @@ import daqcore.actors._
 
 trait GenericInput[A] {
   def recv(): Future[A]
+
+  def recvOnce(receiver: ActorRef): Unit
+  def recvAll(receiver: ActorRef): Unit
 }
 
 
@@ -40,7 +44,11 @@ trait GenericIO[A] extends GenericInput[A] with GenericOutput[A]
 
 
 trait ByteStreamInput extends GenericInput[ByteString] {
-   def recv[A](decoder: Decoder[A]): Future[A]
+  def recv[A](decoder: Decoder[A]): Future[A]
+
+  def recvOnce(receiver: ActorRef, decoder: Decoder[_]): Unit
+
+  def recvAll(receiver: ActorRef, decoder: Decoder[_]): Unit
 }
 
 trait ByteStreamOutput extends GenericOutput[ByteString] {

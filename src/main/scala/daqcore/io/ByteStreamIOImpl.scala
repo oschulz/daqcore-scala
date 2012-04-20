@@ -55,6 +55,8 @@ trait ByteStreamIOImpl extends ByteStreamIO with CloseableTAImpl
   }
 
   def recv(): Future[ByteString] = recv(IO takeAny)
+  def recvOnce(receiver: ActorRef): Unit = recvOnce(receiver, IO takeAny)
+  def recvAll(receiver: ActorRef): Unit = recvAll(receiver, IO takeAny)
   
   def send(data: ByteString) : Unit = if (! data.isEmpty) {
     outputQueue ++= data
@@ -71,7 +73,13 @@ trait ByteStreamIOImpl extends ByteStreamIO with CloseableTAImpl
     encoder(outputQueue, data)
     flush()
   }
+
+  def recvOnce(receiver: ActorRef, decoder: Decoder[_]): Unit =
+    inputQueue pushDecoder { decoder map { receiver ! _ } }
   
+  def recvAll(receiver: ActorRef, decoder: Decoder[_]): Unit =
+    inputQueue pushDecoder { IO.repeat { decoder map { receiver ! _ } } }
+    
   override def close(): Unit = {
     if (isOpenOpt.isEmpty) setIsOpen(false)
     super.close()
