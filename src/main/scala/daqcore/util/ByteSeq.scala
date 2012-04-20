@@ -109,13 +109,55 @@ sealed class ByteSeq private[util] (private val array: Array[Byte]) extends Gene
     iterator.foldRight(z)(op)
   
   final override protected def newBuilder: Builder[Byte, ByteSeq] = ByteSeqBuilder()
+  
+  final def toByteString = ByteSeq.ByteStringInterop.toByteString(this)
 }
 
 
 object ByteSeq {
+  private[ByteSeq] object ByteStringInterop {
+    import ByteString.ByteString1
+
+    private object BS1Info {
+      val clazz = classOf[ByteString1]
+      val arrayField = clazz.getDeclaredField("bytes")
+      arrayField.setAccessible(true)
+      val startField = clazz.getDeclaredField("startIndex")
+      startField.setAccessible(true)
+      val endField = clazz.getDeclaredField("length")
+      endField.setAccessible(true)
+    }
+    
+    def fromByteString(bs: ByteString): ByteSeq = bs match {
+      case bs1: ByteString1 => {
+        import BS1Info._
+        val array = arrayField.get(bs1).asInstanceOf[Array[Byte]]
+        val start = startField.getInt(bs1)
+        val length = endField.getInt(bs1)
+        if ((start == 0) && (length == array.length)) ByteSeq.wrap(array)
+        else ByteSeq.wrap(bs1.toArray)
+      }
+      case bs => ByteSeq.wrap(bs.toArray)
+    }
+    
+    def toByteString(seq: ByteSeq): ByteString = ByteString() match {
+      case bs1: ByteString1 => {
+        import BS1Info._
+        val array = seq.internalArray
+        arrayField.set(bs1, array)
+        startField.setInt(bs1, 0)
+        endField.setInt(bs1, array.length)
+        bs1
+      }
+      case _ => ByteString(seq.internalArray)
+    }
+  }
+
+
   def apply(values: Byte*): ByteSeq = {
     values match {
       case bs: ByteSeq => bs
+      case bs: ByteString => from(bs)
       case vec: ArrayVec[_] => new ByteSeq(vec.asInstanceOf[ArrayVec[Byte]].internalArray)
       case _: Immutable => new ByteSeq(values.toArray)
       case _ => new ByteSeq(values.toArray.clone)
@@ -128,6 +170,8 @@ object ByteSeq {
   def empty = this.apply()
   
   def wrap(array: Array[Byte]) = new ByteSeq(array)
+
+  def from(bs: ByteString) = ByteStringInterop.fromByteString(bs)
 
   def fromChunks(chunks: Seq[Array[Byte]]): ByteSeq = {
     val length = chunks.map{_.length}.sum

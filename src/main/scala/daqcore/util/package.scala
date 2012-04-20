@@ -22,6 +22,7 @@ package object util {
 
 type ByteString = akka.util.ByteString
 val  ByteString = akka.util.ByteString
+implicit def byteStringOps(bs: ByteString) = new ByteStringOps(bs)
 
 type Duration = akka.util.Duration
 val  Duration = akka.util.Duration
