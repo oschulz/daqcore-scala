@@ -400,5 +400,5 @@ object ByteSeqBuilder {
   private val emptyChunk = Array.empty[Byte]
   private val emptyChunks = Queue.empty[Array[Byte]]
 
-  def apply(defaultChunkSize: Int = 1478): ByteSeqBuilder = new ByteSeqBuilder(defaultChunkSize)
+  def apply(defaultChunkSize: Int = 16): ByteSeqBuilder = new ByteSeqBuilder(defaultChunkSize)
 }
