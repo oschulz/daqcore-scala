@@ -74,8 +74,6 @@ implicit def byteCharSeqToByteSeq(bcs: ByteCharSeq) = bcs.getBytes
 
 def fast[A: ClassManifest](seq: Seq[A]) = FastSeqOps[A](seq)
 
-implicit def idxSeq2subSeq[T](seq: IndexedSeq[T]) = new SubIdxSeq(seq, 0, seq.length)
-
 
 implicit def string2PropPath(s: String) = PropPath(s)
 
