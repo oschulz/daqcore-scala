@@ -27,6 +27,28 @@ trait Codec[A, B] {
   def dec: Decoder[B]
 
   def apply(stream: ByteStreamIO): TypedIO[A, B] = TypedIO(this, stream)
+
+  def apply(values: A*): ByteString = {
+    val bld = ByteStringBuilder()
+    values foreach { v => enc(bld, v) }
+    bld.result()
+  }
+  
+  def unapplySeq(bytes: ByteString) = try {
+    val buffer = collection.mutable.ListBuffer[B]()
+    val initial = for { elem <- dec } yield { buffer += elem; {} }
+    var state: (IO.Iteratee[Unit], IO.Input) = (initial, IO Chunk bytes)
+    while ( state match { case (_, IO.Chunk(b)) if b.isEmpty => false; case _ => true } ) {
+      state = state._1(state._2)
+      state match {
+        case (_: IO.Done[_], rest) => state = (initial, rest)
+        case _ => throw new IllegalArgumentException("Unexpected EOI")
+      }
+    }
+    Some(buffer.result)
+  } catch {
+    case e => None
+  }
 }
 
 object Codec {
@@ -49,18 +71,6 @@ case class TypedIO[A, B](codec: Codec[A, B], stream: ByteStreamIO) {
   def getSync() = stream.getSync()
   
   def pause(duration: Duration) = stream.pause(duration)
-}
-
-
-
-case class ListDecoder[A](dec: Decoder[A]) {
-  protected val buffer = collection.mutable.ListBuffer[A]()
-  protected val procInput = IO.IterateeRef sync { IO repeat {
-    for { elem <- dec } yield { buffer += elem }
-  } }
-  
-  def apply(input: IO.Input): List[A] = { procInput(input); val res = buffer.result; buffer.clear; res }
-  def apply(input: ByteString): List[A] = apply(IO Chunk input)
 }
 
 
