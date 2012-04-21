@@ -51,9 +51,9 @@ class SCPIParserSpec extends WordSpec with MustMatchers {
       assert( lR === l )
       
       val input2 = ByteCharSeq("  1,  \t 2,3 ,  #15Hello , 4 ")
-      val response2 = parser.parseResponse(input2)
+      val response2 = parser.parseResponse(input2.toByteSeq)
       println(response2)
-      assert( response2.getBytes === ByteCharSeq("1,2,3,#15Hello,4") )
+      assert( response2.getBytes === ByteCharSeq("1,2,3,#15Hello,4").getBytes )
     }
     
     "parse requests correctly" in {
@@ -61,13 +61,13 @@ class SCPIParserSpec extends WordSpec with MustMatchers {
       parser.parseRequest(Request(IDN?).getBytes)
       val expected = ByteCharSeq("*IDN?;SET:VOLT2:DC 5,5.5,#15Hello;:MEAS:VOLT?")
 
-      val req = Request(IDN?, SET~VOLTage(2)~DC! (5, 5.5, BlockData(ByteCharSeq("Hello"))), ~MEASure~VOLTage?)
+      val req = Request(IDN?, SET~VOLTage(2)~DC! (5, 5.5, BlockData(ByteCharSeq("Hello").toByteSeq)), ~MEASure~VOLTage?)
       val preq = parser.parseRequest(req.getBytes)
       assert( req.getBytes === preq.getBytes )
-      assert( req.getBytes === expected )
+      assert( req.getBytes === expected.getBytes )
       
       val req2 = ByteCharSeq("  *IDN? \t;  SET:VOLT2:DC 5 , 5.5 , #15Hello ; :MEAS:VOLT? ")
-      val preq2 = parser.parseRequest(req2)
+      val preq2 = parser.parseRequest(req2.toByteSeq)
       assert( preq2.getBytes === expected.getBytes )
       assert( preq === preq2 )
     }
@@ -79,7 +79,7 @@ class SCPIParserSpec extends WordSpec with MustMatchers {
       val in2 = ByteCharSeq("  1,   2,3 ,  #15Hello , 4 ")
       val input = in1 ++ ByteCharSeq("\n") ++
             in2 ++ ByteCharSeq("\r\n") ++ ByteCharSeq("7")
-      val res1 = parser.extractTermMsg(input)
+      val res1 = parser.extractTermMsg(input.toByteSeq)
       val res2 = parser.extractTermMsg(res1.next)
       val res3 = parser.extractTermMsg(res2.next)
       

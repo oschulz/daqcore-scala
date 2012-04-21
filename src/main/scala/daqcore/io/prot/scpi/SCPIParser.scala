@@ -55,15 +55,15 @@ class SCPIParser extends ByteCharSeqParsers {
         if ((sizeLength <=  0) || (sizeLength > 10)) Failure("Invalid block data size length: " + sizeLength, in)
         else if (input.length < dataOffset) Failure("Block data input to short for size length " + sizeLength, in)
         else {
-          val size = input.subSequence(2, dataOffset).map(_.toChar).mkString.toInt
+          val size = input.subSequence(2, dataOffset).toString.toInt
           val dataEnd = dataOffset + size
-          if (input.size < dataEnd) Failure("Block data input to short for size " + size, in)
+          if (input.length < dataEnd) Failure("Block data input to short for size " + size, in)
           else {
             val data = input.subSequence(dataOffset, dataEnd)
             val raw = inSeq.subSequence(offset, offset+dataEnd)
             val rest = in.drop(dataEnd)
             require(data.length == size)
-            Success((ByteSeq.wrap(data.toArray), raw), rest)
+            Success((data.toByteSeq, raw), rest)
           }
         }
       } else Failure("Not arbitrary block data", in)

@@ -133,11 +133,11 @@ object AARD {
 
 object BlockData {
   def apply(data: ByteSeq) : ByteCharSeq = {
-    val tag = "#".getBytes
-    val sizeStr = data.size.toString.getBytes
-    val sizeSizeStr = sizeStr.size.toString.getBytes
+    val tag = ByteCharSeq("#")
+    val sizeStr = ByteCharSeq(data.size.toString)
+    val sizeSizeStr = ByteCharSeq(sizeStr.length.toString)
     
-    ByteCharSeq(tag ++ sizeSizeStr ++ sizeStr ++ data)
+    tag ++ sizeSizeStr ++ sizeStr ++ ByteCharSeq(data: _*)
   }
 
   def unapply(bs: ByteCharSeq) : Option[ByteSeq] = {

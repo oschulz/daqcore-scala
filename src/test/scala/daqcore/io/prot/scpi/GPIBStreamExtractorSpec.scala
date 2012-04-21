@@ -34,16 +34,16 @@ class GPIBStreamExtractorSpec extends WordSpec with MustMatchers {
         val nMessages = 5
 
         var recovered = Seq.empty[ByteSeq]
-        var remaining = ByteSeq(Seq.fill(nMessages)(msg).flatten: _*)
+        var remaining = ByteSeq(Seq.fill(nMessages)(msg.toSeq).flatten: _*)
         while (remaining.size > 0) {
-            val fraction = (2 * msg.size * math.pow(util.Random.nextDouble, 3)).toInt + 1
+            val fraction = (2 * msg.length * math.pow(util.Random.nextDouble, 3)).toInt + 1
             val (pkg, rest) = remaining.splitAt(fraction)
             recovered = recovered ++ ex(pkg)
             remaining = rest
         }
 
         assert(recovered.size === nMessages)
-        assert(recovered.view map { _ == msg } reduceLeft { _ && _ })
+        assert(recovered.view map { _ == msg.toSeq } reduceLeft { _ && _ })
       }
     }
   }

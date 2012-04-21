@@ -69,8 +69,6 @@ implicit def arrayVecToArrayVecLong(v: ArrayVec[Long]) = new ArrayVecLong(v)
 implicit def arrayVecToArrayVecFloat(v: ArrayVec[Float]) = new ArrayVecFloat(v)
 implicit def arrayVecToArrayVecDouble(v: ArrayVec[Double]) = new ArrayVecDouble(v)
 
-implicit def byteCharSeqToByteSeq(bcs: ByteCharSeq) = bcs.getBytes
-
 
 def fast[A: ClassManifest](seq: Seq[A]) = FastSeqOps[A](seq)
 
