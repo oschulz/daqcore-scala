@@ -28,9 +28,14 @@ trait VICPLink extends RawMsgIO with CloseableTA {
 }
 
 
-object VICPLink {
+object VICPLink extends IOResourceCompanion[VICPLink] {
+  def newInstance(implicit rf: ActorRefFactory) = {
+    case HostURL("vicp", host, port) =>
+      typedActorOf[VICPLink](new VICPLinkImpl(HostURL("tcp", host, port).toString))
+  }
+  
   def apply(stream: ByteStreamIO)(implicit rf: ActorRefFactory): VICPLink =
-    typedActorOf[VICPLink](new VICPLinkImpl(stream))
+    typedActorOf[VICPLink](new VICPLinkImpl(actorRef(stream).toString))
 
 
   case class VICPMsg (
@@ -90,11 +95,13 @@ object VICPLink {
   }
 
 
-  class VICPLinkImpl(val stream: ByteStreamIO) extends
+  class VICPLinkImpl(val uri: String) extends
     VICPLink with ByteStreamIOImpl
   {
-    stream.recv(selfRef, VICPCodec.dec, repeat = true)
+    val stream = InetConnection(uri)
     context.watch(actorRef(stream))
+
+    stream.recv(selfRef, VICPCodec.dec, repeat = true)
     
     val dataBuilder = ByteStringBuilder()
 

@@ -17,7 +17,7 @@
 
 package daqcore.io
 
-import akka.actor.ActorRef
+import akka.actor.{ActorRef, ActorRefFactory}
 import akka.dispatch.Future
 import akka.util.{ByteString, Timeout}
 
@@ -54,6 +54,9 @@ trait ByteStreamOutput extends GenericOutput[ByteString] {
 
 trait ByteStreamIO extends GenericIO[ByteString] with ByteStreamInput with ByteStreamOutput
 
+object ByteStreamIO extends IOResourceCompanion[ByteStreamIO] {
+  def newInstance(implicit rf: ActorRefFactory) = InetConnection.newInstance
+}
 
 
 trait RawMsgInput extends ByteStreamInput
