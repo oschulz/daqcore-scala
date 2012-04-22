@@ -17,12 +17,18 @@
 
 package daqcore
 
+import java.net.{URI => JavaURI}
 import daqcore.util.{ByteString, ByteStringBuilder}
 
 
 package object io {
   val IO = akka.actor.IO
 
+  type URI = java.net.URI
+  object URI {
+    def apply(string: String): URI = new JavaURI(string)
+  }
+  
   type Encoder[A] = (ByteStringBuilder, A) => Unit
   type Decoder[A] = IO.Iteratee[A]
   
