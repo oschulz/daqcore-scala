@@ -44,9 +44,12 @@ class DataDecoderQueue {
             case IO.EOF(None) =>
           }
         }
-        case (_, rest) => rest match { // decoder needs more data
+        case (cont: IO.Cont[_], rest) => rest match { // decoder needs more data
           case IO.EOF(Some(exception)) => throw exception
-          case _ =>
+          case _ => cont.error match {
+            case Some(error) => throw error
+            case None =>
+          }
         }
       }
     }
