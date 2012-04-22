@@ -25,9 +25,7 @@ package object io {
   val IO = akka.actor.IO
 
   type URI = java.net.URI
-  object URI {
-    def apply(string: String): URI = new JavaURI(string)
-  }
+  val URI = GenericURI
   
   type Encoder[A] = (ByteStringBuilder, A) => Unit
   type Decoder[A] = IO.Iteratee[A]
