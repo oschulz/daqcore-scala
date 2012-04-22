@@ -75,8 +75,11 @@ trait TypedActorImpl extends TypedActorBasics with Logging with Profiling
 
   def postRestart(reason: Throwable): Unit = {
     log.debug("postRestart of " + selfId + ", caused by: " + reason)
+    init()
   }
   
+  def stopChildrenOnRestart: Boolean = true
+
   def preRestart(reason: Throwable, message: Option[Any]): Unit = {
     log.debug("preRestart of " + selfId + ", caused by: " + reason)
 
@@ -84,6 +87,8 @@ trait TypedActorImpl extends TypedActorBasics with Logging with Profiling
       runCleanupActions()
     } finally {
     }
+
+    if (stopChildrenOnRestart) context.children foreach context.stop
   }
 
   def postStop(): Unit = {
