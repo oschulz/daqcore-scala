@@ -93,7 +93,7 @@ object VICPLink {
   class VICPLinkImpl(val stream: ByteStreamIO) extends
     VICPLink with ByteStreamIOImpl
   {
-    stream.recvAll(selfRef, VICPCodec.dec)
+    stream.recv(selfRef, VICPCodec.dec, repeat = true)
     context.watch(actorRef(stream))
     
     val dataBuilder = ByteStringBuilder()

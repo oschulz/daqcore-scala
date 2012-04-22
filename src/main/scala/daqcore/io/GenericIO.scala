@@ -27,8 +27,7 @@ import daqcore.actors._
 trait GenericInput[A] {
   def recv(): Future[A]
 
-  def recvOnce(receiver: ActorRef): Unit
-  def recvAll(receiver: ActorRef): Unit
+  def recv(receiver: ActorRef, repeat: Boolean): Unit
 }
 
 
@@ -46,9 +45,7 @@ trait GenericIO[A] extends GenericInput[A] with GenericOutput[A]
 trait ByteStreamInput extends GenericInput[ByteString] {
   def recv[A](decoder: Decoder[A]): Future[A]
 
-  def recvOnce(receiver: ActorRef, decoder: Decoder[_]): Unit
-
-  def recvAll(receiver: ActorRef, decoder: Decoder[_]): Unit
+  def recv(receiver: ActorRef, decoder: Decoder[_], repeat: Boolean): Unit
 }
 
 trait ByteStreamOutput extends GenericOutput[ByteString] {
