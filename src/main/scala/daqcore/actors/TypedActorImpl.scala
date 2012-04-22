@@ -56,6 +56,8 @@ trait TypedActorBasics
 trait TypedActorImpl extends TypedActorBasics with Logging with Profiling
   with PreStart with PostStop with PreRestart with PostRestart
 {
+  override implicit val context: ActorContext = super.context
+
   val selfId = "Typed%s(%s)".format(selfRef, this.getClass)
 
   log.debug("Creating object for %s".format(selfId))
