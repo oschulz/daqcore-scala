@@ -35,20 +35,26 @@ package object actors {
   implicit def actorRefOps(ref: ActorRef) = new ActorRefOps(ref)
 
   implicit def futureOps[T](future: Future[T]) = new FutureOps(future)
+  
+  def currentActorSystem(implicit rf: ActorRefFactory) = rf match {
+      case system: ActorSystem => system
+      case context: ActorContext => context.system
+      case _ => throw new IllegalArgumentException("Expected argument of type ActorSystem or ActorContext.")
+  }
 
-  def actorRef(obj: AnyRef)(implicit asys: ActorSystem) = TypedActor(asys).getActorRefFor(obj)
+  def actorRef(obj: AnyRef)(implicit rf: ActorRefFactory) = TypedActor(currentActorSystem(rf)).getActorRefFor(obj)
 
-  def actorFor(path: Iterable[String])(implicit asys: ActorSystem): ActorRef = asys.actorFor(path)
-  def actorFor(path: String)(implicit asys: ActorSystem): ActorRef = asys.actorFor(path)
-  def actorFor(path: ActorPath)(implicit asys: ActorSystem): ActorRef = asys.actorFor(path)
+  def actorFor(path: Iterable[String])(implicit rf: ActorRefFactory): ActorRef = currentActorSystem(rf).actorFor(path)
+  def actorFor(path: String)(implicit rf: ActorRefFactory): ActorRef = currentActorSystem(rf).actorFor(path)
+  def actorFor(path: ActorPath)(implicit rf: ActorRefFactory): ActorRef = currentActorSystem(rf).actorFor(path)
 
   def actorOf(creator: => Actor, name: String = "")(implicit rf: ActorRefFactory): ActorRef = {
     if (name.isEmpty) rf.actorOf(Props(creator))
     else rf.actorOf(Props(creator), name)
   }
   
-  def typedActor[T <: AnyRef](aref: ActorRef)(implicit mf: ClassManifest[T], sys: ActorSystem) =
-    TypedActor(sys).typedActorOf(TypedProps[T](), aref)
+  def typedActor[T <: AnyRef](aref: ActorRef)(implicit mf: ClassManifest[T], rf: ActorRefFactory) =
+    TypedActor(currentActorSystem(rf)).typedActorOf(TypedProps[T](), aref)
 
   def typedActorOf[R <: AnyRef](creator: => R, name: String = "")(implicit mf: ClassManifest[R], rf: ActorRefFactory): R = {
     val cl = mf.erasure.asInstanceOf[Class[_ >: AnyRef]]

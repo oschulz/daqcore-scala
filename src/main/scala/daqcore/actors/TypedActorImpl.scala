@@ -33,14 +33,6 @@ trait TypedActorBasics
   def selfRef: ActorRef = context.self
   def actorSystem: ActorSystem = context.system
 
-  def actorRef(obj: AnyRef) = TypedActor(actorSystem).getActorRefFor(obj)
-
-  def actorFor(path: Iterable[String]): ActorRef = actorSystem.actorFor(path)
-  def actorFor(path: String): ActorRef = actorSystem.actorFor(path)
-  def actorFor(path: ActorPath): ActorRef = actorSystem.actorFor(path)
-
-  def typedActor[T <: AnyRef](aref: ActorRef)(implicit mf: ClassManifest[T]) = TypedActor(actorSystem).typedActorOf(TypedProps[T](), aref)
-
   def successful[A](x: A): Future[A] = Promise successful x
   
   def selfStop(): Unit = context.stop(selfRef)
