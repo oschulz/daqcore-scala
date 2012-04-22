@@ -20,6 +20,9 @@ package daqcore.io
 
 import java.net.{URI => JavaURI}
 
+import akka.actor.ActorPath
+
+
 object GenericURI {
   def apply(string: String): URI = new JavaURI(string)
 
@@ -68,6 +71,17 @@ object HostURL {
     case AuthorityURL(Some(scheme), None, Some(host), port, None, None, None) =>
       Some( (scheme, host, port) )
     case uri: String => unapply(new JavaURI(uri))
+    case _ => None
+  }
+}
+
+
+object AkkaActorPath {
+  def unapply(x: Any): Option[ActorPath] = x match {
+    case uri: JavaURI => unapply(uri.toString)
+    case uri: String =>
+      try Some(ActorPath.fromString(uri))
+      catch { case e: java.net.MalformedURLException => None }
     case _ => None
   }
 }
