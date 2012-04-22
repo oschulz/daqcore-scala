@@ -41,22 +41,28 @@ object SCPIStreamCodec extends Codec[ByteString, ByteString] {
 
   val enc = encFct(_, _)
   
- 
-  def decNext(prev: ByteString): IO.Iteratee[ByteString] = IO take 1 flatMap { current =>
-    def notSpecial(byte: Byte) = (byte != DQUOTE.head) && (byte != SQUOTE.head) && (byte != CR.head) && (byte != NL.head) && (byte != HASH.head)
+
+  def decodeBlockData = for {
+    lenA <- IO take 1
+    lengthSize = lenA.decodeString(charEncoding).toInt
+    lenB <- IO take lengthSize
+    length = lenB.decodeString(charEncoding).toInt
+    data <- IO take length
+  } yield {
+    if (data.length != length) throw new RuntimeException("EOI while expecting more block data")
+    (lenA, lenB, data)
+  }
+
+  
+  def decNext(prev: ByteString): IO.Iteratee[ByteString] = IO take 1 flatMap {
+    current =>
+
+    def notSpecial(byte: Byte) = (byte != DQUOTE.head) && (byte != SQUOTE.head) &&
+      (byte != CR.head) && (byte != NL.head) && (byte != HASH.head)
 
     def continue(next: ByteString) = decNext(prev ++ current ++ next)
 
-    def takeBlockData = for {
-      lenA <- IO take 1
-      lengthSize = lenA.decodeString(charEncoding).toInt
-      lenB <- IO take lengthSize
-      length = lenB.decodeString(charEncoding).toInt
-      data <- IO take length
-    } yield {
-      if (data.length != length) throw new RuntimeException("EOI while expecting more block data")
-      lenA ++ lenB ++ data
-    }
+    def takeBlockData = decodeBlockData map { case (lenA, lenB, data) => lenA ++ lenB ++ data }
     
     current match {
       case DQUOTE => IO takeUntil(DQUOTE, true) flatMap continue
