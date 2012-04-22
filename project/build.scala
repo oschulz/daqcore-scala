@@ -21,6 +21,7 @@ object build extends Build {
     file("."),
     settings = Defaults.defaultSettings ++ Seq(
       copyDepTask,
+      unmanagedClasspath in Runtime <+= (baseDirectory) map { base => Attributed.blank(base / "config") },
       console <<= Defaults.consoleTask(fullClasspath in Runtime, console)
     )
   )
