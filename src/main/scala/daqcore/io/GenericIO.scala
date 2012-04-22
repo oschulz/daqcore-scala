@@ -24,14 +24,14 @@ import akka.util.{ByteString, Timeout}
 import daqcore.actors._
 
 
-trait GenericInput[A] {
+trait GenericInput[+A] {
   def recv(): Future[A]
 
   def recv(receiver: ActorRef, repeat: Boolean): Unit
 }
 
 
-trait GenericOutput[A] extends Syncable {
+trait GenericOutput[-A] extends Syncable {
   def send(data: A) : Unit
 
   def flush() : Unit
