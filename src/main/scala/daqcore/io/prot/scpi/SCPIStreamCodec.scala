@@ -42,15 +42,18 @@ object SCPIStreamCodec extends Codec[ByteString, ByteString] {
   val enc = encFct(_, _)
   
 
-  def decodeBlockData = for {
-    lenA <- IO take 1
-    lengthSize = lenA.decodeString(charEncoding).toInt
-    lenB <- IO take lengthSize
-    length = lenB.decodeString(charEncoding).toInt
-    data <- IO take length
-  } yield {
-    if (data.length != length) throw new RuntimeException("EOI while expecting more block data")
-    (lenA, lenB, data)
+  def decodeBlockData = IO take 1 flatMap {
+    lenA =>
+    val lengthSize = lenA.decodeString(charEncoding).toInt
+    if (lengthSize == 0) IO throwErr(new UnsupportedOperationException("Indefinite-Length Block Data not supported"))
+    else for {
+      lenB <- IO take lengthSize
+      length = lenB.decodeString(charEncoding).toInt
+      data <- IO take length
+    } yield {
+      if (data.length != length) IO throwErr(new RuntimeException("EOI while expecting more block data"))
+      (lenA, lenB, data)
+    }
   }
 
   
