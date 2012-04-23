@@ -31,7 +31,10 @@ trait InetConnection extends ByteStreamIO with CloseableTA {
 
 
 object InetConnection extends IOResourceCompanion[InetConnection] {
-  def newInstance(implicit rf: ActorRefFactory) = { case HostURL("tcp", host, Some(port)) => apply(host, port) }
+  def newInstance = {
+    case HostURL("tcp", host, Some(port)) =>
+      () => new ClientConnectionImpl(new InetSocketAddress(host, port))
+  }
 
   def apply(address: SocketAddress)(implicit rf: ActorRefFactory): InetConnection =
     typedActorOf[InetConnection](new ClientConnectionImpl(address))

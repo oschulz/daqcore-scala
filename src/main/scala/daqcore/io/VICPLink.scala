@@ -29,9 +29,9 @@ trait VICPLink extends RawMsgIO with CloseableTA {
 
 
 object VICPLink extends IOResourceCompanion[VICPLink] {
-  def newInstance(implicit rf: ActorRefFactory) = {
+  def newInstance = {
     case HostURL("vicp", host, port) =>
-      typedActorOf[VICPLink](new VICPLinkImpl(HostURL("tcp", host, port).toString))
+      () => new VICPLinkImpl(HostURL("tcp", host, port).toString)
   }
   
   def apply(stream: ByteStreamIO)(implicit rf: ActorRefFactory): VICPLink =

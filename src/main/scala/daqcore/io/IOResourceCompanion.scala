@@ -23,14 +23,18 @@ import daqcore.actors._
 
 
 abstract class IOResourceCompanion[+A <: AnyRef : ClassManifest] {
-  def newInstance(implicit rf: ActorRefFactory): PartialFunction[URI, A]
+  def newInstance: PartialFunction[URI, () => A]
 
-  def apply(uri: URI)(implicit rf: ActorRefFactory): A = uri match {
+  def apply(uri: URI, name: String = "")(implicit rf: ActorRefFactory): A = uri match {
     case AkkaActorPath(path) => typedActor[A](actorFor(path))
     case uri =>
-      try { newInstance(rf)(uri) }
+      try { typedActorOf[A](newInstance(uri)(), name) }
       catch { case e: MatchError => throw new IllegalArgumentException("URI \"%s\" not supported".format(uri)) }
   }
 
-  def apply(uri: String)(implicit rf: ActorRefFactory): A = apply(URI(uri))
+  def apply(uri: String, name: String)(implicit rf: ActorRefFactory): A =
+    apply(URI(uri), name)
+
+  def apply(uri: String)(implicit rf: ActorRefFactory): A =
+    apply(URI(uri))
 }

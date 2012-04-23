@@ -55,7 +55,7 @@ trait ByteStreamOutput extends GenericOutput[ByteString] {
 trait ByteStreamIO extends GenericIO[ByteString] with ByteStreamInput with ByteStreamOutput
 
 object ByteStreamIO extends IOResourceCompanion[ByteStreamIO] {
-  def newInstance(implicit rf: ActorRefFactory) = InetConnection.newInstance
+  def newInstance = InetConnection.newInstance
 }
 
 
