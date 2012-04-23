@@ -35,7 +35,7 @@ object VICPLink extends IOResourceCompanion[VICPLink] {
   }
   
   def apply(stream: ByteStreamIO)(implicit rf: ActorRefFactory): VICPLink =
-    typedActorOf[VICPLink](new VICPLinkImpl(actorRef(stream).toString))
+    typedActorOf[VICPLink](new VICPLinkImpl(actorRef(stream).path.toString))
 
 
   case class VICPMsg (
@@ -98,8 +98,10 @@ object VICPLink extends IOResourceCompanion[VICPLink] {
   class VICPLinkImpl(val uri: String) extends
     VICPLink with ByteStreamIOImpl
   {
-    val stream = InetConnection(uri)
-    context.watch(actorRef(stream))
+    val stream = InetConnection(uri, "inet-connection")
+    val streamARef = actorRef(stream)
+    log.debug("VICP over stream " + streamARef)
+    context.watch(streamARef)
 
     stream.recv(selfRef, VICPCodec.dec, repeat = true)
     
