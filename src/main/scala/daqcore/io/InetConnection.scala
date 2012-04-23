@@ -55,16 +55,16 @@ object InetConnection extends IOResourceCompanion[InetConnection] {
       }
     }
     
-    override def msgReceive = extend(super.msgReceive) {
-      case (IO.Connected(socket, address), _) => {
+    override def receive = extend(super.receive) {
+      case IO.Connected(socket, address) => {
         setIsOpen(true)
         log.trace("Established connection to " + address)
       }
-      case (IO.Read(socket, bytes), _) => {
+      case IO.Read(socket, bytes) => {
         log.trace("Received: " + loggable(bytes))
         inputQueue pushData bytes
       }
-      case (IO.Closed(socket: IO.SocketHandle, cause), _) => {
+      case IO.Closed(socket: IO.SocketHandle, cause) => {
         log.trace("Connection closed because: " + cause)
         close()
       }
@@ -72,7 +72,7 @@ object InetConnection extends IOResourceCompanion[InetConnection] {
   }
 
 
-  class ClientConnectionImpl(address: SocketAddress) extends ConnectionImpl with TypedActorImpl with CloseableTAImpl with MsgReceive {
+  class ClientConnectionImpl(address: SocketAddress) extends ConnectionImpl with TypedActorImpl with CloseableTAImpl {
     val socket: IO.SocketHandle = IOManager(actorSystem).connect(address)(selfRef)
   }
 }
@@ -100,19 +100,19 @@ object InetServer {
     apply(new InetSocketAddress(port), name)(body)
 
 
-  class ServerConnectionImpl(serverHandle: IO.ServerHandle) extends ConnectionImpl with TypedActorImpl with CloseableTAImpl with MsgReceive  {
+  class ServerConnectionImpl(serverHandle: IO.ServerHandle) extends ConnectionImpl with TypedActorImpl with CloseableTAImpl  {
     val socket: IO.SocketHandle = serverHandle.accept()(selfRef)
   }
 
 
-  class ServerImpl(val address: SocketAddress, body: InetConnection => Unit) extends InetServer with TypedActorImpl with CloseableTAImpl with MsgReceive with Supervisor {
+  class ServerImpl(val address: SocketAddress, body: InetConnection => Unit) extends InetServer with TypedActorImpl with CloseableTAImpl with Supervisor {
     val serverHandle = IOManager(actorSystem).listen(address)(selfRef)
     atCleanup { serverHandle.close() }
 
     def supervisorStrategy = OneForOneStrategy() { case _ ⇒ SupervisorStrategy.Stop }
     
-    override def msgReceive = extend(super.msgReceive) {
-      case (IO.Listening(server, address), _) => {
+    override def receive = extend(super.receive) {
+      case IO.Listening(server, address) => {
         log.trace("Server is listening on " + address)
       }
        

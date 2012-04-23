@@ -46,7 +46,7 @@ trait TypedActorBasics
 
 
 trait TypedActorImpl extends TypedActorBasics with Logging with Profiling
-  with PreStart with PostStop with PreRestart with PostRestart
+  with PreStart with PostStop with PreRestart with PostRestart with TypedActorReceive
 {
   override implicit val context: ActorContext = super.context
 

@@ -33,7 +33,7 @@ trait FooBarxvc extends CloseableTAImpl {
 }
 
 trait ByteStreamIOImpl extends ByteStreamIO with CloseableTAImpl
-  with SyncableImpl with MsgReceive
+  with SyncableImpl
 {
   val inputQueue = DataDecoderQueue()
   val outputQueue = new ByteStringBuilder

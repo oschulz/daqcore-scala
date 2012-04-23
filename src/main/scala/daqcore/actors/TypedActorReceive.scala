@@ -24,14 +24,11 @@ import akka.util.duration._
 import daqcore.util.Logging
 
 
-trait MsgReceive extends TypedActor.Receiver with Logging {
+trait TypedActorReceive extends TypedActor.Receiver with Logging {
   import akka.actor.contrib.daqcore.UnhandledMsgBehaviour
-  import MsgReceive.ExecScheduled
+  import TypedActorReceive.{Receiver, ExecScheduled}
   
-  type Receiver = PartialFunction[(Any, ActorRef), Unit]
-
-  def msgReceive: Receiver =
-    { case (MsgReceive.NoMatch, _) => }
+  def receive: Receiver = { case _ if false => }
 
   def scheduleSelf(initialDelay: Duration, frequency: Duration)(f: => Unit): Cancellable =
     TypedActor.context.system.scheduler.schedule(initialDelay, frequency, TypedActor.context.self, ExecScheduled(() => f))
@@ -45,14 +42,21 @@ trait MsgReceive extends TypedActor.Receiver with Logging {
   def scheduleSelfOnce(delay: Long)(f: => Unit): Cancellable =
     scheduleSelfOnce(delay milliseconds)(f)
 
-  def onReceive(message: Any, sender: ActorRef): Unit = (message, sender) match {
-    case (ExecScheduled(body), _) => {
-      log.trace("Executing scheduled action")
-      body()
-    }
-    case msg_sender => {
-      if (msgReceive isDefinedAt msg_sender) msgReceive(msg_sender)
-      else UnhandledMsgBehaviour.unhandled(message, sender, TypedActor.context)
+  final def onReceive(message: Any, sender: ActorRef): Unit = {
+    assert ( sender == TypedActor.context.sender )
+
+    message match {
+      case message => {
+        if (receive isDefinedAt message) receive(message)
+        else message match {
+          case ExecScheduled(body) => {
+            log.trace("Executing scheduled action")
+            body()
+          }
+          case DoCrash(reason) => throw reason
+          case _ => UnhandledMsgBehaviour.unhandled(message, sender, TypedActor.context)
+        }
+      }
     }
   }
   
@@ -61,8 +65,11 @@ trait MsgReceive extends TypedActor.Receiver with Logging {
 }
 
 
-object MsgReceive {
-  private object NoMatch
-
+object TypedActorReceive {
   private [actors] case class ExecScheduled(body: () => Unit)
+
+  type Receiver = PartialFunction[Any, Unit]
 }
+
+
+case class DoCrash(reason: Throwable = new RuntimeException("Received DoCrash, crashing now as requested"))

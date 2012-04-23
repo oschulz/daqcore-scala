@@ -116,8 +116,8 @@ object VICPLink extends IOResourceCompanion[VICPLink] {
       }
     }
 
-    override def msgReceive = extend(super.msgReceive) {
-      case (msg: VICPMsg, _) => {
+    override def receive = extend(super.receive) {
+      case msg: VICPMsg => {
         log.trace("Received VICP message " + loggable(msg))
         msg.data match {
           case Some(data) => {

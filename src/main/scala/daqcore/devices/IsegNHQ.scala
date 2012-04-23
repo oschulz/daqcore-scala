@@ -46,7 +46,7 @@ object IseqNHQ {
 
 
 abstract class IseqXHQImpl(io: ByteStreamIO) extends IseqNHQ
-  with CloseableTAImpl with SyncableImpl with MsgReceive
+  with CloseableTAImpl with SyncableImpl
 {
   import IseqXHQImpl._
   
@@ -138,8 +138,8 @@ abstract class IseqXHQImpl(io: ByteStreamIO) extends IseqNHQ
   def getOutVoltFallRate(channels: Int*) = successful(getChannelsIntDouble("V", channels))
   def setOutVoltFallRate(vals: (Int, Double)*) = successful(setChannelsIntDouble("V", vals))
 
-  override def msgReceive = extend(super.msgReceive) {
-    case (_, _) => checkConnection()
+  override def receive = extend(super.receive) {
+    case CheckConnection => checkConnection()
   }
 }
 
