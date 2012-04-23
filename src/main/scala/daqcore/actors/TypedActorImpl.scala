@@ -28,9 +28,9 @@ trait TypedActorBasics
 {
   implicit def dispatcher = TypedActor.dispatcher
   implicit def context: ActorContext = TypedActor.context
+  implicit def selfRef: ActorRef = context.self
 
   def self[A <: AnyRef]: A = TypedActor.self[A]
-  def selfRef: ActorRef = context.self
   def actorSystem: ActorSystem = context.system
 
   def successful[A](x: A): Future[A] = Promise successful x
