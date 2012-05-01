@@ -23,5 +23,5 @@ import static java.lang.annotation.ElementType.*;
 @Retention(RUNTIME)
 @Target(METHOD)
 public @interface mcall {
-	public Class mc();
+	public Class<?> mc();
 }
