@@ -52,7 +52,7 @@ abstract class IseqXHQImpl(io: ByteStreamIO) extends IseqNHQ
   
   import daqcore.defaults.defaultTimeout
 
-  protected def isegQry(cmd: String) = {
+  protected def send(cmd: String) = {
     // Workaround for serial interface of some Iseq NHQ devices, which require a
     // long pause between each byte sent to them (else they will drop input bytes):
     val out = new ByteStringBuilder
@@ -63,6 +63,10 @@ abstract class IseqXHQImpl(io: ByteStreamIO) extends IseqNHQ
       io.getSync.get;
       Thread.sleep(10)
     }
+  }
+    
+  protected def isegQry(cmd: String) = {
+    send(cmd)
 
     val (replyA, replyB) = codec(io).recv get
     
@@ -75,6 +79,13 @@ abstract class IseqXHQImpl(io: ByteStreamIO) extends IseqNHQ
       case error => throw new RuntimeException("iseq Supply:  Error(%s)".format(error))
     } else replyB
   }
+  
+  protected def iseqCommSync() {
+    send("")
+    io.recv(codec.decSync).get
+  }
+  
+  iseqCommSync()
   
   protected def isegCmd(cmd: String): Unit = isegQry(cmd)
   
@@ -168,6 +179,8 @@ object IseqXHQImpl {
   }
   
   object codec extends Codec[String, (String, String)] {
+    import daqcore.io.IO
+
     val lineCodec = StringLineCodec(LineCodec.CRNL, "ASCII")
 
     val enc = lineCodec.enc
@@ -176,6 +189,8 @@ object IseqXHQImpl {
       a <- lineCodec.dec
       b <- lineCodec.dec
     } yield (a.trim, b.trim)
+
+    val decSync = IO.takeUntil(ByteString("????\r\n"), true) map { _ => true}
   }
 }
 
