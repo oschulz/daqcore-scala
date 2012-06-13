@@ -40,9 +40,9 @@ final case class ByteCharSeq private (wrapped: ByteString) extends
   override def toString = new String(wrapped.toArray, ByteCharSeq.encoding)
 
 
-  override def getBytes: ByteSeq = toByteSeq
+  override def getBytes: ByteString = toByteString
   
-  def putBytes(builder: ByteSeqBuilder) = builder ++= toByteSeq
+  def putBytes(builder: ByteStringBuilder) = builder ++= toByteString
 
   
   def ++(that: ByteCharSeq): ByteCharSeq = new ByteCharSeq(this.wrapped ++ that.wrapped)
@@ -52,7 +52,6 @@ final case class ByteCharSeq private (wrapped: ByteString) extends
 
   
   def toByteString: ByteString = wrapped
-  def toByteSeq: ByteSeq = wrapped.toByteSeq
 
   def toSeq: ByteString = toByteString
 }
@@ -65,9 +64,7 @@ object ByteCharSeq {
   
   def apply(bytes: Byte*): ByteCharSeq = bytes match {
     case seq: ByteString => new ByteCharSeq(seq)
-    case seq: ByteSeq => new ByteCharSeq(seq.toByteString)
-    case seq: Immutable => apply(ByteSeq.wrap(bytes.toArray): _*)
-    case _ => apply(ByteSeq.wrap(bytes.toArray.clone): _*)
+    case _ => apply(ByteString(bytes.toArray))
   }
 
   def apply(seq: CharSequence): ByteCharSeq = seq match {
@@ -75,7 +72,7 @@ object ByteCharSeq {
     case seq => apply(seq.toString)
   }
   
-  def apply(s: String): ByteCharSeq = apply(ByteSeq.wrap(s.getBytes(encoding)): _*)
+  def apply(s: String): ByteCharSeq = apply(ByteString(s, encoding): _*)
   
   def apply(char: Char): ByteCharSeq = apply(char.toString)
 

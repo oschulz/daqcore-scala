@@ -18,7 +18,7 @@
 package daqcore.io
 
 
-import akka.actor._
+import akka.actor.{IO => AkkaIO, _}
 
 import daqcore.util._
 import daqcore.actors._, daqcore.actors.TypedActorTraits._
@@ -50,13 +50,14 @@ object VICPLink extends IOResourceCompanion[VICPLink] {
 
   object VICPCodec extends Codec[VICPMsg, VICPMsg] {
     implicit def encoding = BigEndian
+    implicit def byteOrder = encoding.nioByteOrder
 
     private def encFct(out: ByteStringBuilder, msg: VICPMsg): Unit = {
       def bv(bit: Byte, v: Boolean) = (if (v) (1 << bit) else 0).toByte
       
       val opByte = ( bv(0, msg.eoi) | bv(3, msg.srq) | bv(7, !msg.data.isEmpty) ).toByte
     
-      val bld = ByteSeqBuilder()
+      val bld = ByteString.newBuilder
       
       bld.putByte(opByte)
       bld.putByte(msg.version)
@@ -70,22 +71,22 @@ object VICPLink extends IOResourceCompanion[VICPLink] {
         case None => bld.putInt(0)
       }
 
-      out ++= bld.result.toByteString
+      out ++= bld.result
     }
     
     val enc = encFct(_, _)
     
     val dec = for {
       rawHeader <- IO take 8
-      input = rawHeader.toByteSeq.iterator
-      opByte = input.getByte()
+      input = rawHeader.iterator
+      opByte = input.getByte
       eoi = (opByte & (1 << 0)) > 0
       srq = (opByte & (1 << 3)) > 0
       hasData = (opByte & (1 << 7)) > 0
-      version = input.getByte()
-      seqno = input.getByte()
-      spare = input.getByte() // spare, ignored
-      dataLen = input.getInt()
+      version = input.getByte
+      seqno = input.getByte
+      spare = input.getByte // spare, ignored
+      dataLen = input.getInt
       data <- IO take dataLen
     } yield {
       if (version != 1) throw new RuntimeException("Cannot handle unknown VICP version " + version)

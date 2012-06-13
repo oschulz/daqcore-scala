@@ -23,7 +23,7 @@ import daqcore.util._
 sealed abstract class Header extends HasByteRep {
   def getByteCharSeq: ByteCharSeq
   override def getBytes = getByteCharSeq.getBytes
-  def putBytes(builder: ByteSeqBuilder) = getByteCharSeq.putBytes(builder)
+  def putBytes(builder: ByteStringBuilder) = getByteCharSeq.putBytes(builder)
 
   def ! = Command(this)
   def !(params: ByteCharSeq*) = Command(this, params: _*)

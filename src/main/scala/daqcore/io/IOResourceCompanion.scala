@@ -17,7 +17,7 @@
 
 package daqcore.io
 
-import akka.actor._
+import akka.actor.{IO => AkkaIO, _}
 
 import daqcore.actors._
 

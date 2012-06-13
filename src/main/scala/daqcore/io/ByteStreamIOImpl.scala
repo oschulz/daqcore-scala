@@ -19,9 +19,9 @@ package daqcore.io
 
 import java.net.{SocketAddress, InetSocketAddress}
 
-import akka.actor._
+import akka.actor.{IO => AkkaIO, _}
 import akka.dispatch.{Future, Promise}
-import akka.util.{ByteString, Duration, Timeout}
+import akka.util.{Duration, Timeout}
 import akka.util.duration._
 
 import daqcore.util._

@@ -132,7 +132,7 @@ object AARD {
   * protocols like RS232 or TCP/IP. */
 
 object BlockData {
-  def apply(data: ByteSeq) : ByteCharSeq = {
+  def apply(data: ByteString) : ByteCharSeq = {
     val tag = ByteCharSeq("#")
     val sizeStr = ByteCharSeq(data.size.toString)
     val sizeSizeStr = ByteCharSeq(sizeStr.length.toString)
@@ -140,7 +140,7 @@ object BlockData {
     tag ++ sizeSizeStr ++ sizeStr ++ ByteCharSeq(data: _*)
   }
 
-  def unapply(bs: ByteCharSeq) : Option[ByteSeq] = {
+  def unapply(bs: ByteCharSeq) : Option[ByteString] = {
     val parser = SCPIParser()
     val result = parser.parseAll(parser.blockDataBytes, bs)
     if (result.successful) Some(result.get)

@@ -28,7 +28,7 @@ package object scpi {
   implicit def mnem2CPD(m:SpecMnemonic) = CPD(m)
   
   //!! Sometimes cause SCPI parser test to fail (why?):
-  //implicit def bytes2BlockData(bytes: ByteSeq) = BlockData(bytes)
+  //implicit def bytes2BlockData(bytes: ByteString) = BlockData(bytes)
 
   /** Clear Status (Command) */
   val CLS = CCQHeader("CLS")

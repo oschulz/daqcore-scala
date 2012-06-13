@@ -22,8 +22,8 @@ import daqcore.util._
 
 
 class DataDecoderQueue {
-  type DecoderAction = IO.Iteratee[Unit]
-  type DecoderActionRef = IO.IterateeRefSync[Unit]
+  type DecoderAction = daqcore.io.IO.Iteratee[Unit]
+  type DecoderActionRef = daqcore.io.IO.IterateeRefSync[Unit]
 
   protected val dataQueue = collection.mutable.Queue[ByteString]()
   protected val decoderQueue = collection.mutable.Queue[DecoderActionRef]()

@@ -22,44 +22,44 @@ import java.nio.{ByteOrder => NIOByteOrder, ByteBuffer => NIOByteBuffer}
 
 // Protobuf-style variable length encoding
 sealed trait PBVarLenValEnc extends ValEncoding {
-  override def putFloat(target: GenericByteSeqBuilder, x: Float): Unit =
+  override def putFloat(target: ByteStringBuilder, x: Float): Unit =
     BigEndian.putFloat(target, x)
   
-  override def putDouble(target: GenericByteSeqBuilder, x: Double): Unit =
+  override def putDouble(target: ByteStringBuilder, x: Double): Unit =
     BigEndian.putDouble(target, x)
 
-  override def getFloat(source: GenericByteSeqIterator): Float =
+  override def getFloat(source: ByteIterator): Float =
     BigEndian.getFloat(source) 
 
-  override def getDouble(source: GenericByteSeqIterator): Double =
+  override def getDouble(source: ByteIterator): Double =
     BigEndian.getDouble(source) 
 
-  override def putFloats(target: GenericByteSeqBuilder, xs: ArrayVec[Float]): Unit =
+  override def putFloats(target: ByteStringBuilder, xs: ArrayVec[Float]): Unit =
     BigEndian.putFloats(target, xs)
   
-  override def putDoubles(target: GenericByteSeqBuilder, xs: ArrayVec[Double]): Unit =
+  override def putDoubles(target: ByteStringBuilder, xs: ArrayVec[Double]): Unit =
     BigEndian.putDoubles(target, xs)
 
-  override def getFloats(source: GenericByteSeqIterator, length: Int): ArrayVec[Float] = 
+  override def getFloats(source: ByteIterator, length: Int): ArrayVec[Float] = 
     BigEndian.getFloats(source, length) 
   
-  override def getDoubles(source: GenericByteSeqIterator, length: Int): ArrayVec[Double] = 
+  override def getDoubles(source: ByteIterator, length: Int): ArrayVec[Double] = 
     BigEndian.getDoubles(source, length) 
 }
 
 
 // Protobuf-style variable length encoding (for unsigned values)
 case object PBUnsignedVLEnc extends PBVarLenValEnc {
-  def putByte(target: GenericByteSeqBuilder, x: Byte) =
+  def putByte(target: ByteStringBuilder, x: Byte) =
     putInt(target, x.toInt)
 
-  def putShort(target: GenericByteSeqBuilder, x: Short) =
+  def putShort(target: ByteStringBuilder, x: Short) =
     putLong(target, x.toInt)
 
-  def putInt(target: GenericByteSeqBuilder, x: Int) =
+  def putInt(target: ByteStringBuilder, x: Int) =
     putLong(target, x.toInt)
 
-  def putLong(target: GenericByteSeqBuilder, x: Long) = {
+  def putLong(target: ByteStringBuilder, x: Long) = {
     var rest = x
     do {
       val newRest = rest >>> 7
@@ -69,28 +69,28 @@ case object PBUnsignedVLEnc extends PBVarLenValEnc {
     } while (rest != 0)
   }
 
-  def getByte(source: GenericByteSeqIterator) = {
+  def getByte(source: ByteIterator) = {
     val x = getLong(source)
     if ((x < Byte.MinValue) || (x > Byte.MaxValue))
       throw new IllegalArgumentException("Overflow while reading variable-length Byte")
     else x.toByte
   }
   
-  def getShort(source: GenericByteSeqIterator) = {
+  def getShort(source: ByteIterator) = {
     val x = getLong(source)
     if ((x < Short.MinValue) || (x > Short.MaxValue))
       throw new IllegalArgumentException("Overflow while reading variable-length Short")
     else x.toShort
   }
 
-  def getInt(source: GenericByteSeqIterator) = {
+  def getInt(source: ByteIterator) = {
     val x = getLong(source)
     if ((x < Int.MinValue) || (x > Int.MaxValue))
       throw new IllegalArgumentException("Overflow while reading variable-length Short")
     else x.toInt
   }
 
-  def getLong(source: GenericByteSeqIterator) = {
+  def getLong(source: ByteIterator) = {
     var outputPos = 0;
     var v = 0; var pos = 0; var finished = false
     while (!finished) {
@@ -110,28 +110,28 @@ case object PBSignedVLEnc extends PBVarLenValEnc {
   import daqcore.math.ZigZagEnc
 
 
-  def putByte(target: GenericByteSeqBuilder, x: Byte) = 
+  def putByte(target: ByteStringBuilder, x: Byte) = 
     PBUnsignedVLEnc.putByte(target, ZigZagEnc.encode(x))
 
-  def putShort(target: GenericByteSeqBuilder, x: Short) =
+  def putShort(target: ByteStringBuilder, x: Short) =
     PBUnsignedVLEnc.putShort(target, ZigZagEnc.encode(x))
 
-  def putInt(target: GenericByteSeqBuilder, x: Int) =
+  def putInt(target: ByteStringBuilder, x: Int) =
     PBUnsignedVLEnc.putInt(target, ZigZagEnc.encode(x))
 
-  def putLong(target: GenericByteSeqBuilder, x: Long) =
+  def putLong(target: ByteStringBuilder, x: Long) =
     PBUnsignedVLEnc.putLong(target, ZigZagEnc.encode(x))
 
 
-  def getByte(source: GenericByteSeqIterator) =
+  def getByte(source: ByteIterator) =
      ZigZagEnc.decode(PBUnsignedVLEnc.getByte(source))
  
-  def getShort(source: GenericByteSeqIterator) =
+  def getShort(source: ByteIterator) =
      ZigZagEnc.decode(PBUnsignedVLEnc.getShort(source))
 
-  def getInt(source: GenericByteSeqIterator) =
+  def getInt(source: ByteIterator) =
      ZigZagEnc.decode(PBUnsignedVLEnc.getInt(source))
 
-  def getLong(source: GenericByteSeqIterator) =
+  def getLong(source: ByteIterator) =
      ZigZagEnc.decode(PBUnsignedVLEnc.getLong(source))
 }

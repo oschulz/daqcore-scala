@@ -24,7 +24,7 @@ abstract class Message extends HasByteRep {
   def getByteCharSeq: ByteCharSeq
 
   override def getBytes = getByteCharSeq.getBytes
-  def putBytes(builder: ByteSeqBuilder) = getByteCharSeq.putBytes(builder)
+  def putBytes(builder: ByteStringBuilder) = getByteCharSeq.putBytes(builder)
 }
 
 

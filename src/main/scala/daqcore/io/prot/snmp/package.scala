@@ -34,8 +34,8 @@ implicit def smi2Int(x: Integer32) = x.toInt
 implicit def string2SMI(x: String) = OctetString(x)
 implicit def smi2String(x: OctetString) = x.toString
 
-implicit def iaddr2SMI(x: InetAddress) = IpAddress(ByteSeq.wrap(x.getAddress.clone))
-implicit def smi2iaddr2SMI(x: IpAddress) = InetAddress.getByAddress(x.toByteSeq.toArray)
+implicit def iaddr2SMI(x: InetAddress) = IpAddress(ByteString(x.getAddress))
+implicit def smi2iaddr2SMI(x: IpAddress) = InetAddress.getByAddress(x.toByteString.toArray)
 
 implicit def float2SMI(x: Float) = OpaqueFloat(x)
 implicit def smi2Float(x: OpaqueFloat) = x.toFloat

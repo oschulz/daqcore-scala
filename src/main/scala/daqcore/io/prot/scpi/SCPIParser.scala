@@ -43,7 +43,7 @@ class SCPIParser extends ByteCharSeqParsers {
   def streamMsgTerm: Parser[ByteCharSeq] = streamMsgTermExpr
 
 
-  protected def parseBlockData(in: Input): ParseResult[(ByteSeq, ByteCharSeq)] = {
+  protected def parseBlockData(in: Input): ParseResult[(ByteString, ByteCharSeq)] = {
     val (source, offset) = (in.source, in.offset)
     if (offset >= source.length) Failure("Reached end of input", in)
     else try {
@@ -63,7 +63,7 @@ class SCPIParser extends ByteCharSeqParsers {
             val raw = inSeq.subSequence(offset, offset+dataEnd)
             val rest = in.drop(dataEnd)
             require(data.length == size)
-            Success((data.toByteSeq, raw), rest)
+            Success((data.toByteString, raw), rest)
           }
         }
       } else Failure("Not arbitrary block data", in)
@@ -73,7 +73,7 @@ class SCPIParser extends ByteCharSeqParsers {
     }
   }
   
-  def blockDataBytes: Parser[ByteSeq] = new Parser[ByteSeq] {
+  def blockDataBytes: Parser[ByteString] = new Parser[ByteString] {
     def apply(in: Input) = parseBlockData(in) match {
       case Success((data,all), rest) =>
         Success(data,rest)
@@ -168,19 +168,19 @@ class SCPIParser extends ByteCharSeqParsers {
     skipWS(repsep(instruction, ";") ^^ { instr => Request(instr : _*) })
     
   /** Extract a CR+LF or LF terminated message from a CharSequence */
-  def extractTermMsg(in: ByteSeq) =
+  def extractTermMsg(in: ByteString) =
     streamMsgRaw(ByteCharSeqReader(in))
 
   /** Extract a CR+LF or LF terminated message from a Reader */
   def extractTermMsg(in: Input) =  streamMsgRaw(in)
 
-  def parseResponse(in: ByteSeq): Response =
+  def parseResponse(in: ByteString): Response =
     parseAll(response, ByteCharSeqReader(in)).get
 
-  def parseHeader(in: ByteSeq): Header =
+  def parseHeader(in: ByteString): Header =
     parseAll(header, ByteCharSeqReader(in)).get
 
-  def parseRequest(in: ByteSeq): Request =
+  def parseRequest(in: ByteString): Request =
     parseAll(request, ByteCharSeqReader(in)).get
 }
 

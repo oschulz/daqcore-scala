@@ -23,9 +23,9 @@ import java.io.IOException
 import java.net.InetAddress
 import java.util.concurrent.TimeoutException
 
-import akka.actor._
+import akka.actor.{IO => AkkaIO, _}
 import akka.dispatch.{Future, Promise}
-import akka.util.{ByteString, Duration, Timeout}
+import akka.util.{Duration, Timeout}
 import akka.util.duration._
 
 import org.acplt.oncrpc.OncRpcProtocols

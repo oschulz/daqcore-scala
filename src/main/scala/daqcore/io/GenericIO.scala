@@ -19,8 +19,9 @@ package daqcore.io
 
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.dispatch.Future
-import akka.util.{ByteString, Timeout}
+import akka.util.{Timeout}
 
+import daqcore.util._
 import daqcore.actors._
 
 

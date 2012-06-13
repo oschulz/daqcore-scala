@@ -20,9 +20,12 @@ package daqcore
 
 package object util {
 
-type ByteString = akka.util.ByteString
-val  ByteString = akka.util.ByteString
-implicit def byteStringOps(bs: ByteString) = new ByteStringOps(bs)
+type ByteString = akka.util.contrib.daqcore.ByteString
+val  ByteString = akka.util.contrib.daqcore.ByteString
+type ByteIterator = akka.util.contrib.daqcore.ByteIterator
+val  ByteIterator = akka.util.contrib.daqcore.ByteIterator
+type ByteStringBuilder = akka.util.contrib.daqcore.ByteStringBuilder
+object ByteStringBuilder { def apply() = ByteString.newBuilder }
 
 type Duration = akka.util.Duration
 val  Duration = akka.util.Duration
@@ -30,9 +33,6 @@ implicit def long2Duration (x: Int): akka.util.DurationLong = akka.util.duration
 
 type Timeout = akka.util.Timeout
 val  Timeout = akka.util.Timeout
-
-type ByteStringBuilder = akka.util.ByteStringBuilder
-object ByteStringBuilder { def apply() = new ByteStringBuilder }
 
 implicit def iteratorOps[A](it: Iterator[A])  = new IteratorOps(it)
 implicit def iterableOps[A](coll: Iterable[A]) = new IterableOps(coll)

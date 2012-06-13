@@ -66,13 +66,13 @@ case class TimeTicks(value: Long) extends SMIValue { def toLong = value }
 
 case class OctetString(value: String) extends SMIValue
 
-case class IpAddress(value: ByteSeq) extends SMIValue {
+case class IpAddress(value: ByteString) extends SMIValue {
   require(value.length == 4)
-  def toByteSeq = value
+  def toByteString = value
   override def toString = value map {b: Byte => b.toInt & 0xff} mkString "."
 }
 
-case class OpaqueData(value: ByteSeq) extends SMIValue {
+case class OpaqueData(value: ByteString) extends SMIValue {
   override def toString = "OpaqueData(%s)".format(value map hex mkString " ")
 }
 

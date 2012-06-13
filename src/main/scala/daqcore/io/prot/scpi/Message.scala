@@ -24,7 +24,7 @@ sealed abstract class Message extends HasByteRep
 
 
 case class Response(val results: Result*) extends Message {
-  def putBytes(builder: ByteSeqBuilder) = {
+  def putBytes(builder: ByteStringBuilder) = {
     var first = true
     for (x <- results) {
       if (first) {first = false} else {builder += ';'.toByte}
@@ -35,7 +35,7 @@ case class Response(val results: Result*) extends Message {
 
 
 case class Result(values: ByteCharSeq*) extends HasByteRep {
-  def putBytes(builder: ByteSeqBuilder) = {
+  def putBytes(builder: ByteStringBuilder) = {
     var first = true
     for (x <- values) {
       if (first) {first = false} else {builder += ','.toByte}
@@ -46,7 +46,7 @@ case class Result(values: ByteCharSeq*) extends HasByteRep {
 
 
 case class Request(val instr: Instruction*) extends Message {
-  def putBytes(builder: ByteSeqBuilder) = {
+  def putBytes(builder: ByteStringBuilder) = {
     var first = true
     for (x <- instr) {
       if (first) {first = false} else {builder += ';'.toByte}
@@ -65,7 +65,7 @@ sealed abstract class Instruction extends HasByteRep {
 
 
 case class Command(header: Header, params: ByteCharSeq*) extends Instruction {
-  def putBytes(builder: ByteSeqBuilder) = {
+  def putBytes(builder: ByteStringBuilder) = {
     header.putBytes(builder)
     if (!params.isEmpty) {
       builder += ' '.toByte
@@ -80,7 +80,7 @@ case class Command(header: Header, params: ByteCharSeq*) extends Instruction {
 
 
 case class Query(header: Header, params: ByteCharSeq*) extends Instruction {
-  def putBytes(builder: ByteSeqBuilder) = {
+  def putBytes(builder: ByteStringBuilder) = {
     header.putBytes(builder)
     builder += '?'.toByte
     if (!params.isEmpty) {
