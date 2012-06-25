@@ -72,3 +72,5 @@ libraryDependencies += "org.snmp4j" % "snmp4j" % "1.11.3"
 libraryDependencies += "net.percederberg.mibble" % "mibble-parser" % "2.9.2"
 
 libraryDependencies += "net.percederberg.mibble" % "mibble-mibs" % "2.9.2" % "runtime"
+
+libraryDependencies += "net.wimpi" % "jamod" % "1.2"
