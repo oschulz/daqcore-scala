@@ -39,7 +39,12 @@ trait VXI11Link extends RawMsgIO with CloseableTA {
 }
 
 
-object VXI11Link {
+object VXI11Link extends IOResourceCompanion[VXI11Link] {
+  def newInstance = {
+    case AuthorityURL(Some("vxi11"), _, Some(host), None, Some(device), _, _) =>
+      () => new LinkImpl(InetAddr(host), device.drop(1))
+  }
+
   def apply(address: InetAddress, device: String)(implicit rf: ActorRefFactory): VXI11Link =
     typedActorOf[VXI11Link](new LinkImpl(address, device))
 

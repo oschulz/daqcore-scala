@@ -56,7 +56,10 @@ trait ByteStreamOutput extends GenericOutput[ByteString] {
 trait ByteStreamIO extends GenericIO[ByteString] with ByteStreamInput with ByteStreamOutput
 
 object ByteStreamIO extends IOResourceCompanion[ByteStreamIO] {
-  def newInstance = InetConnection.newInstance
+  def newInstance =
+    RawMsgIO.newInstance orElse
+    InetConnection.newInstance orElse
+    VICPLink.newInstance
 }
 
 
@@ -65,3 +68,7 @@ trait RawMsgInput extends ByteStreamInput
 trait RawMsgOutput extends ByteStreamOutput
 
 trait RawMsgIO extends ByteStreamIO with RawMsgInput with RawMsgOutput
+
+object RawMsgIO extends IOResourceCompanion[RawMsgIO] {
+  def newInstance = VXI11Link.newInstance
+}
