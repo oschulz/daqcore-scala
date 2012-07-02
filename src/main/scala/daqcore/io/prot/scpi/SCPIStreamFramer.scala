@@ -22,7 +22,7 @@ import daqcore.io._
 import daqcore.util._
 
 
-object SCPIStreamCodec extends Codec[ByteString, ByteString] {
+object SCPIStreamFramer extends Codec[ByteString, ByteString] {
   def charEncoding = "ASCII"
 
   val DQUOTE = ByteString("\"")

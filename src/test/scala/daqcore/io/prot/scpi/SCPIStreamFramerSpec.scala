@@ -24,13 +24,13 @@ import daqcore.io._, daqcore.util._
 import daqcore.io.prot.scpi._, daqcore.io.prot.scpi.mnemonics._
 
 
-class SCPIStreamCodecSpec extends WordSpec with MustMatchers {
-  "An SCPIStreamCodec" should {
+class SCPIStreamFramerSpec extends WordSpec with MustMatchers {
+  "An SCPIStreamFramer" should {
     "work correctly" in {
 
-      import SCPIStreamCodec.{CR, NL, CRNL}
+      import SCPIStreamFramer.{CR, NL, CRNL}
 
-      val codec = SCPIStreamCodec
+      val codec = SCPIStreamFramer
 
       val msg = ByteString("*IDN?;SET:VOLT2:DC 5,\"String with \"\" quote\", 5.5 , 'String with '' quote',#225SomeBinaryDataDummyString,7")
 
