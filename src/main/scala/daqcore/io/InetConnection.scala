@@ -73,7 +73,7 @@ object InetConnection extends IOResourceCompanion[InetConnection] {
   }
 
 
-  class ClientConnectionImpl(address: SocketAddress) extends ConnectionImpl with TypedActorImpl with CloseableTAImpl {
+  class ClientConnectionImpl(address: SocketAddress) extends ConnectionImpl with TypedActorImpl {
     val socket: IO.SocketHandle = IOManager(actorSystem).connect(address)(selfRef)
   }
 }
@@ -101,7 +101,7 @@ object InetServer {
     apply(new InetSocketAddress(port), name)(body)
 
 
-  class ServerConnectionImpl(serverHandle: IO.ServerHandle) extends ConnectionImpl with TypedActorImpl with CloseableTAImpl  {
+  class ServerConnectionImpl(serverHandle: IO.ServerHandle) extends ConnectionImpl with TypedActorImpl {
     val socket: IO.SocketHandle = serverHandle.accept()(selfRef)
   }
 

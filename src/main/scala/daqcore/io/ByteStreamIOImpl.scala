@@ -28,16 +28,7 @@ import daqcore.util._
 import daqcore.actors._, daqcore.actors.TypedActorTraits._
 
 
-trait FooBarxvc extends CloseableTAImpl {
-  val isOpenPromise = Promise[Boolean]()
-}
-
-trait ByteStreamIOImpl extends ByteStreamIO with CloseableTAImpl
-  with SyncableImpl
-{
-  val inputQueue = DataDecoderQueue()
-  val outputQueue = new ByteStringBuilder
-
+trait CloseableResourceImpl extends CloseableTAImpl {
   val isOpenPromise = Promise[Boolean]()
 
   def setIsOpen(status: Boolean): Unit = isOpenPromise success status
@@ -47,6 +38,18 @@ trait ByteStreamIOImpl extends ByteStreamIO with CloseableTAImpl
     case Some(Right(v)) => Some(v)
   }
 
+  override def close(): Unit = {
+    if (isOpenOpt.isEmpty) setIsOpen(false)
+    super.close()
+  }
+}
+
+
+trait ByteStreamOutputImpl extends ByteStreamOutput with ConditionallyOpenImpl
+  with SyncableImpl
+{
+  val outputQueue = new ByteStringBuilder
+
   def flush(): Unit
   
   override def sync() = {
@@ -54,13 +57,22 @@ trait ByteStreamIOImpl extends ByteStreamIO with CloseableTAImpl
     super.sync()
   }
 
-  def recv(): Future[ByteString] = recv(IO takeAny)
-  def recv(receiver: ActorRef, repeat: Boolean): Unit = recv(receiver, IO takeAny, repeat)
-  
   def send(data: ByteString) : Unit = if (! data.isEmpty) {
     outputQueue ++= data
     flush()
   }
+  
+  def send[A](data: A, encoder: Encoder[A]) : Unit = {
+    encoder(outputQueue, data)
+    flush()
+  }
+}
+
+trait ByteStreamInputImpl extends ByteStreamInput with ConditionallyOpenImpl {
+  val inputQueue = DataDecoderQueue()
+
+  def recv(): Future[ByteString] = recv(IO takeAny)
+  def recv(receiver: ActorRef, repeat: Boolean): Unit = recv(receiver, IO takeAny, repeat)
   
   def recv[A](decoder: Decoder[A]): Future[A] = {
     val result = Promise[A]()
@@ -68,19 +80,13 @@ trait ByteStreamIOImpl extends ByteStreamIO with CloseableTAImpl
     result
   }
 
-  def send[A](data: A, encoder: Encoder[A]) : Unit = {
-    encoder(outputQueue, data)
-    flush()
-  }
-
   def recv(receiver: ActorRef, decoder: Decoder[_], repeat: Boolean): Unit = inputQueue pushDecoder {
     val action = decoder map { receiver ! _ }
     if (repeat) IO.repeat { action }
     else action
   }
-  
-  override def close(): Unit = {
-    if (isOpenOpt.isEmpty) setIsOpen(false)
-    super.close()
-  }
 }
+
+
+trait ByteStreamIOImpl extends ByteStreamInputImpl with ByteStreamOutputImpl
+  with ByteStreamIO
