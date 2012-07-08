@@ -90,6 +90,7 @@ object PropVal {
     case x: Long => NumPropVal(x)
     case x: Float => NumPropVal(x)
     case x: Double => NumPropVal(x)
+    case x: String => StringPropVal(x)
     case x: Unit => throw new IllegalArgumentException(classOf[PropVal].getName + " cannot represent " + classOf[Unit].getName)
     case x: Map[_, _] => Props.fromNative(x)
     case x: Seq[_] => SeqPropVal.fromNative(x)
