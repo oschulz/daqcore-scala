@@ -27,5 +27,9 @@ trait Device extends Syncable with CloseableTA {
 }
 
 
+abstract class DeviceCompanion[+A <: AnyRef : ClassManifest] extends TypedActorCompanion[A] {
+}
+
+
 object Device {
 }
