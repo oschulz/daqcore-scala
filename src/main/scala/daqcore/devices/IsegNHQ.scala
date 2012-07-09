@@ -208,9 +208,10 @@ class IseqNHQImpl(io: ByteStreamIO) extends IseqXHQImpl(io) {
   }
 
   def getOutVoltSensed(channels: Int*) = successful(getChannelsIntDouble("U", channels))
+  def getOutCurrSensed(channels: Int*) = successful(getChannelsDouble("I", channels))
 
-  def getOutCurrentTrip(channels: Int*) = successful(getChannelsIntDouble("L", channels))
-  def setOutCurrentTrip(vals: (Int, Double)*) = successful(setChannelsIntDouble("L", vals))
+  def getOutCurrTrip(channels: Int*) = successful(getChannelsIntDouble("L", channels))
+  def setOutCurrTrip(vals: (Int, Double)*) = successful(setChannelsIntDouble("L", vals))
 }
 
 
@@ -227,10 +228,11 @@ class IseqSHQImpl(io: ByteStreamIO) extends IseqXHQImpl(io) {
   }
 
   def getOutVoltSensed(channels: Int*) = successful(getChannelsDouble("U", channels))
+  def getOutCurrSensed(channels: Int*) = successful(getChannelsDouble("I", channels))
 
-  def getOutCurrentTrip(channels: Int*): Future[Seq[(Int, Double)]] =
-    throw new UnsupportedOperationException("getOutCurrentTrip not implemented yet")
+  def getOutCurrTrip(channels: Int*): Future[Seq[(Int, Double)]] =
+    throw new UnsupportedOperationException("getOutCurrTrip not implemented yet")
 
-  def setOutCurrentTrip(vals: (Int, Double)*): Future[Seq[(Int, Double)]]=
-    throw new UnsupportedOperationException("setOutCurrentTrip not implemented yet")
+  def setOutCurrTrip(vals: (Int, Double)*): Future[Seq[(Int, Double)]]=
+    throw new UnsupportedOperationException("setOutCurrTrip not implemented yet")
 }

@@ -31,6 +31,7 @@ trait PowerSupply extends Device {
   def setOutVoltDesired(vals: (Int, Double)*): Future[Seq[(Int, Double)]]
 
   def getOutVoltSensed(channels: Int*): Future[Seq[(Int, Double)]]
+  def getOutCurrSensed(channels: Int*): Future[Seq[(Int, Double)]]
 
   def getOutVoltRiseRate(channels: Int*): Future[Seq[(Int, Double)]]
   def setOutVoltRiseRate(vals: (Int, Double)*): Future[Seq[(Int, Double)]]
@@ -38,6 +39,6 @@ trait PowerSupply extends Device {
   def getOutVoltFallRate(channels: Int*): Future[Seq[(Int, Double)]]
   def setOutVoltFallRate(vals: (Int, Double)*): Future[Seq[(Int, Double)]]
 
-  def getOutCurrentTrip(channels: Int*): Future[Seq[(Int, Double)]]
-  def setOutCurrentTrip(vals: (Int, Double)*): Future[Seq[(Int, Double)]]
+  def getOutCurrTrip(channels: Int*): Future[Seq[(Int, Double)]]
+  def setOutCurrTrip(vals: (Int, Double)*): Future[Seq[(Int, Double)]]
 }
