@@ -22,7 +22,7 @@ import akka.actor.{IO => AkkaIO, _}
 import daqcore.actors._
 
 
-abstract class IOResourceCompanion[+A <: AnyRef : ClassManifest] {
+abstract class IOResourceCompanion[+A <: AnyRef : ClassManifest] extends TypedActorCompanion[A] {
   import IOResourceCompanion._
 
   def newInstance: PartialFunction[URI, () => A]

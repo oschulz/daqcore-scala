@@ -45,6 +45,11 @@ trait TypedActorBasics
 }
 
 
+abstract class TypedActorCompanion[+A <: AnyRef : ClassManifest] {
+  def apply(aref: ActorRef)(implicit sys: ActorSystem) = typedActor[A](aref)
+}
+
+
 trait TypedActorImpl extends TypedActorBasics with Logging with Profiling
   with PreStart with PostStop with PreRestart with PostRestart with TypedActorReceive
 {
