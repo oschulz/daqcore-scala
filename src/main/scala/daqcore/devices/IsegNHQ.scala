@@ -29,6 +29,9 @@ import collection.immutable.Queue
 
 trait IseqXHQ extends PowerSupply {
   def query(cmd: String): Future[String]
+
+  def getOutStatus(channels: Int*): Future[Seq[(Int, String)]]
+  def getOutVoltStable(channels: Int*): Future[Seq[(Int, Boolean)]]
 }
 
 
@@ -115,7 +118,6 @@ abstract class IseqXHQImpl(io: ByteStreamIO) extends IseqNHQ
   protected def setChannelsIntDouble(cmd: String, vals: Seq[(Int, Double)]) =
     setChannels (cmd, vals) { _.toInt.toString } { _.toDouble }
 
-
   protected def getIdentity() = isegQry("#")
   protected val idn = getIdentity()
   def identity = successful(idn)
@@ -127,7 +129,7 @@ abstract class IseqXHQImpl(io: ByteStreamIO) extends IseqNHQ
   }
 
   checkConnection()
- 
+
   protected val outs = {
     var nouts = 0
     try { while (nouts < 1000) { val ch = nouts + 1; isegCmd("S" + ch); nouts = ch } } catch { case e: IllegalArgumentException => }
@@ -148,6 +150,20 @@ abstract class IseqXHQImpl(io: ByteStreamIO) extends IseqNHQ
 
   def getOutVoltFallRate(channels: Int*) = successful(getChannelsIntDouble("V", channels))
   def setOutVoltFallRate(vals: (Int, Double)*) = successful(setChannelsIntDouble("V", vals))
+
+  def getOutStatus(channels: Int*) = successful(getChannels("S", channels){a => a})
+
+  val outStateExpr="""S[0-9]=(.*)""".r
+  def getOutVoltStable(channels: Int*): Future[Seq[(Int, Boolean)]] = successful (
+      getChannels("S", channels) { s => s.trim match {
+        case outStateExpr("ON") => true
+        case outStateExpr("L2H") => false
+        case outStateExpr("H2L") => false
+        case outStateExpr("QUA") => false
+        case _ => throw new RuntimeException("Can't reach stable output voltage: status code '%s', %s".format(s, s.getClass))
+      }
+    }
+  )
 
   override def receive = extend(super.receive) {
     case CheckConnection => checkConnection()
