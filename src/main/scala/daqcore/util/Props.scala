@@ -26,7 +26,9 @@ case class PropPath(parts: collection.immutable.Queue[String]) {
   def tail: PropPath = PropPath(parts.tail)
 
   def %(k: Any): PropPath = k match {
-    case k: String => PropPath(parts ++ k.split("[.]").toSeq)
+    case k: String =>
+      if (k contains '.') PropPath(parts ++ k.split("[.]").toSeq)
+      else PropPath(parts :+ k)
     case k: Symbol => PropPath(parts enqueue k.name)
     case k: Int => PropPath(parts enqueue k.toString)
     case k: Seq[_] => PropPath(parts ++ (k map {_.toString}))
