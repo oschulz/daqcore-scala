@@ -28,7 +28,8 @@ import daqcore.util._
 trait ForkedForeach[A] extends Closeable {
   def pause(): Unit
   def isPaused: Future[Boolean]
-
+  def current: Future[Option[A]]
+  
   def cont(): Unit
   def stop(): Unit
   
@@ -38,48 +39,75 @@ trait ForkedForeach[A] extends Closeable {
 
 object ForkedForeach {
   protected case object DoNext
+  protected case class ElemDone(result: Either[Throwable, _])
 
-  def apply[A](input: Seq[A], start: Boolean = true, name: String = "")(body: A => Unit)(onDone: => Unit = {})(implicit rf: ActorRefFactory): ForkedForeach[A] =
+  def apply[A, B](input: Seq[A], start: Boolean = true, name: String = "")(body: A => B)(onDone: => Unit = {})(implicit rf: ActorRefFactory): ForkedForeach[A] =
     typedActorOf[ForkedForeach[A]](new ForeachImpl(input, body, start, onDone), name)
 
 
-  class ForeachImpl[A](input: Seq[A], body: A => Unit, start: Boolean, onDone: => Unit) extends ForkedForeach[A] with TypedActorImpl with CloseableTAImpl {
-    var iterator = input.iterator
-    var paused = !start
-    var doNextPending = false
+  class ForeachImpl[A, B](input: Seq[A], body: A => B, start: Boolean, onDone: => Unit) extends ForkedForeach[A] with TypedActorImpl with CloseableTAImpl {
+    protected var pendingInput = input
+    protected var paused = !start
+    protected var currentElem: Option[A] = None
+    protected var doNextPending = false
+    protected var elemDonePending = false
 
+    protected def doNext() = if (!doNextPending) selfRef ! DoNext
+    
     if (!paused) cont()
     
     def pause() { paused = true }
     
     def isPaused() = successful(paused)
 
+    def current() = successful(currentElem)
+
     def cont() {
       paused = false
-      if (!doNextPending) {
-        selfRef ! ForkedForeach.DoNext
-        doNextPending = true
-      }
+      if (!elemDonePending) doNext()
     }
-    def stop { close() }
 
-    def pending = {
-      val (a, b) = iterator.duplicate
-      iterator = a
-      successful(b.toSeq)
+    def stop {
+      onDone
+      close()
     }
+
+    def pending = successful(pendingInput)
 
     override def receive = extend(super.receive) {
-      case ForkedForeach.DoNext => {
+      case DoNext => {
         doNextPending = false
-        if (iterator.hasNext) {
+        if (!pendingInput.isEmpty) {
           if (!paused) {
-            body(iterator.next())
-            cont()
+            val elem = pendingInput.head
+            pendingInput = pendingInput.tail
+            currentElem = Some(elem)
+            log.trace("Processing next element: " + loggable(elem))
+            val result = body(elem)
+            log.trace("Immediate result: " + loggable(result))
+            result match {
+              case future: Future[_] =>
+                elemDonePending = true
+                future onComplete { r => selfRef ! ElemDone(r) }
+              case r => doNext()
+            }
+          } else {
+            currentElem = None
           }
         } else {
           onDone
           close()
+        }
+      }
+
+      case ElemDone(result) => {
+        elemDonePending = false
+        log.trace("Future element result: " + loggable(result))
+        result match {
+          case Left(t) => throw t
+          case Right(_) =>
+            if (!paused) doNext()
+            else currentElem = None
         }
       }
     }
