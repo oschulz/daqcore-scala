@@ -39,11 +39,11 @@ trait ForkedForeach[A] extends Closeable {
 object ForkedForeach {
   protected case object DoNext
 
-  def apply[A](input: Seq[A], start: Boolean = true, name: String = "")(body: A => Unit)(implicit rf: ActorRefFactory): ForkedForeach[A] =
-    typedActorOf[ForkedForeach[A]](new ForeachImpl(input, body), name)
+  def apply[A](input: Seq[A], start: Boolean = true, name: String = "")(body: A => Unit)(onDone: => Unit = {})(implicit rf: ActorRefFactory): ForkedForeach[A] =
+    typedActorOf[ForkedForeach[A]](new ForeachImpl(input, body, start, onDone), name)
 
 
-  class ForeachImpl[A](input: Seq[A], body: A => Unit, start: Boolean = true) extends ForkedForeach[A] with TypedActorImpl with CloseableTAImpl {
+  class ForeachImpl[A](input: Seq[A], body: A => Unit, start: Boolean, onDone: => Unit) extends ForkedForeach[A] with TypedActorImpl with CloseableTAImpl {
     var iterator = input.iterator
     var paused = !start
     var doNextPending = false
@@ -77,7 +77,10 @@ object ForkedForeach {
             body(iterator.next())
             cont()
           }
-        } else close()
+        } else {
+          onDone
+          close()
+        }
       }
     }
   }
