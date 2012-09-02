@@ -21,6 +21,7 @@ import akka.actor._
 import akka.dispatch.{Future, Promise}
 
 import daqcore.util._
+import daqcore.io.prot.canopen._
 
 
 trait CANOpenServer {
@@ -33,4 +34,20 @@ trait CANOpenServer {
   def writeByteObject(node: Int, idx: Int, subIdx: Int, value: Byte): Future[Unit]
   def writeShortObject(node: Int, idx: Int, subIdx: Int, value: Short): Future[Unit]
   def writeIntObject(node: Int, idx: Int, subIdx: Int, value: Int): Future[Unit]
+}
+
+
+object CANOpenServer {
+  case class VariableIO(server: CANOpenServer, node: Int) {
+    class VariableReader[A](variable: COReadableVariable[A]) {
+      def read: Future[A] = server.readObject(node, variable.index, variable.subIndex) map variable.decode
+    }
+
+    class VariableWriter[A](variable: COWritableVariable[A]) {
+      def write(value: A): Future[Unit] = server.writeObject(node, variable.index, variable.subIndex, variable.encode(value))
+    }
+
+    implicit def reader[A](variable: COReadableVariable[A]) = new VariableReader(variable)
+    implicit def writer[A](variable: COWritableVariable[A]) = new VariableWriter(variable)
+  }
 }
