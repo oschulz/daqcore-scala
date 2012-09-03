@@ -18,7 +18,7 @@
 package daqcore.io
 
 import akka.actor._
-import akka.dispatch.{Future, Promise}
+import akka.dispatch.{Future, ExecutionContext}
 
 import daqcore.util._
 import daqcore.io.prot.canopen._
@@ -39,15 +39,36 @@ trait CANOpenServer {
 
 object CANOpenServer {
   case class VariableIO(server: CANOpenServer, node: Int) {
-    class VariableReader[A](variable: COReadableVariable[A]) {
-      def read: Future[A] = server.readObject(node, variable.index, variable.subIndex) map variable.decode
+    class VariableReader[A](variable: COVar[A, COReadable[A]]) {
+      def read: Future[A] = server.readObject(node, variable.index, variable.subIndex) map variable.access.decode
     }
 
-    class VariableWriter[A](variable: COWritableVariable[A]) {
-      def write(value: A): Future[Unit] = server.writeObject(node, variable.index, variable.subIndex, variable.encode(value))
+    class VariableWriter[A](variable: COVar[A, COWritable[A]]) {
+      def write(value: A): Future[Unit] = server.writeObject(node, variable.index, variable.subIndex, variable.access.encode(value))
     }
 
-    implicit def reader[A](variable: COReadableVariable[A]) = new VariableReader(variable)
-    implicit def writer[A](variable: COWritableVariable[A]) = new VariableWriter(variable)
+    class ArrayReader[A](array: COArray[A, COReadable[A], COSize])(implicit ctx: ExecutionContext) {
+      def read: Future[Seq[A]] = for {
+		n <- new VariableReader(array.size).read
+		r <- Future.sequence( for { i <- 1 to n } yield new VariableReader(array(i)).read )
+      } yield r
+    }
+
+    class RecordReader(record: CORecord)(implicit ctx: ExecutionContext) {
+      def read: Future[Seq[(String, Any)]] = Future.sequence (
+        for {
+          m <- record.members
+          if (m.isReadable)
+        } yield {
+          val value = new VariableReader(m.asInstanceOf[COReadableVar[Any]]).read
+          value map { v => m.name -> v}
+        }
+      )
+    }
+
+    implicit def varReader[A](variable: COVar[A, COReadable[A]]) = new VariableReader(variable)
+    implicit def varWriter[A](variable: COVar[A, COWritable[A]]) = new VariableWriter(variable)
+    implicit def arrayReader[A](array: COArray[A, COReadable[A], COSize])(implicit ctx: ExecutionContext) = new ArrayReader(array)
+    implicit def recordReader[A](record: CORecord)(implicit ctx: ExecutionContext) = new RecordReader(record)
   }
 }

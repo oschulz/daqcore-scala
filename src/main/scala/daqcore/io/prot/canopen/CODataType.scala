@@ -20,7 +20,7 @@ package daqcore.io.prot.canopen
 import daqcore.util._
 
 
-trait CODataType[A] {
+abstract class CODataType[A] {
   implicit final def nioByteOrder = java.nio.ByteOrder.LITTLE_ENDIAN
 
   def id: Int
@@ -28,6 +28,11 @@ trait CODataType[A] {
 
   def encode(builder: ByteStringBuilder, value: A): ByteStringBuilder
   def decode(iterator: ByteIterator): A
+
+  def ro = COTypedRO(this)
+  def wo = COTypedWO(this)
+  def rw = COTypedRW(this)
+  def const = COTypedConst(this)
 }
 
 case object COBoolean extends CODataType[Boolean]  {
