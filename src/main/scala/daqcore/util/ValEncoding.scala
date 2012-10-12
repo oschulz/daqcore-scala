@@ -17,6 +17,8 @@
 
 package daqcore.util
 
+import scala.reflect.{ClassTag, classTag}
+
 
 trait ValEncoding {
   def putByte(target: ByteStringBuilder, x: Byte): Unit
@@ -116,29 +118,29 @@ trait ValEncoding {
     ArrayVec.wrap(target)
   }
 
-  def fromBytes[A <: AnyVal : ClassManifest](bytes: ByteString): ArrayVec[A] = {
-    val mf = classManifest[A]
-    if (mf == classManifest[Byte]) getBytes(bytes.iterator, bytes.length / sizeOf[Byte]).asInstanceOf[ArrayVec[A]]
-    else if (mf == classManifest[Short]) getShorts(bytes.iterator, bytes.length / sizeOf[Short]).asInstanceOf[ArrayVec[A]]
-    else if (mf == classManifest[Int]) getInts(bytes.iterator, bytes.length / sizeOf[Int]).asInstanceOf[ArrayVec[A]]
-    else if (mf == classManifest[Long]) getLongs(bytes.iterator, bytes.length / sizeOf[Long]).asInstanceOf[ArrayVec[A]]
-    else if (mf == classManifest[Float]) getFloats(bytes.iterator, bytes.length / sizeOf[Float]).asInstanceOf[ArrayVec[A]]
-    else if (mf == classManifest[Double]) getDoubles(bytes.iterator, bytes.length / sizeOf[Double]).asInstanceOf[ArrayVec[A]]
-    else throw new UnsupportedOperationException("ByteOrder.fromBytes() does not support " + mf)
+  def fromBytes[A <: AnyVal : ClassTag](bytes: ByteString): ArrayVec[A] = {
+    val ct = classTag[A]
+    if (ct == classTag[Byte]) getBytes(bytes.iterator, bytes.length / sizeOf[Byte]).asInstanceOf[ArrayVec[A]]
+    else if (ct == classTag[Short]) getShorts(bytes.iterator, bytes.length / sizeOf[Short]).asInstanceOf[ArrayVec[A]]
+    else if (ct == classTag[Int]) getInts(bytes.iterator, bytes.length / sizeOf[Int]).asInstanceOf[ArrayVec[A]]
+    else if (ct == classTag[Long]) getLongs(bytes.iterator, bytes.length / sizeOf[Long]).asInstanceOf[ArrayVec[A]]
+    else if (ct == classTag[Float]) getFloats(bytes.iterator, bytes.length / sizeOf[Float]).asInstanceOf[ArrayVec[A]]
+    else if (ct == classTag[Double]) getDoubles(bytes.iterator, bytes.length / sizeOf[Double]).asInstanceOf[ArrayVec[A]]
+    else throw new UnsupportedOperationException("ByteOrder.fromBytes() does not support " + ct)
   }
 
 
-  def toBytes[A <: AnyVal : ClassManifest](seq: ArrayVec[A]): ByteString = {
-    val mf = classManifest[A]
+  def toBytes[A <: AnyVal : ClassTag](seq: ArrayVec[A]): ByteString = {
+    val ct = classTag[A]
     val builder = ByteString.newBuilder
     builder.sizeHint(builder.length + seq.length * sizeOf[A])
-    if (mf == classManifest[Byte]) putBytes(builder, seq.asInstanceOf[ArrayVec[Byte]])
-    else if (mf == classManifest[Short]) putShorts(builder, seq.asInstanceOf[ArrayVec[Short]])
-    else if (mf == classManifest[Int]) putInts(builder, seq.asInstanceOf[ArrayVec[Int]])
-    else if (mf == classManifest[Long]) putLongs(builder, seq.asInstanceOf[ArrayVec[Long]])
-    else if (mf == classManifest[Float]) putFloats(builder, seq.asInstanceOf[ArrayVec[Float]])
-    else if (mf == classManifest[Double]) putDoubles(builder, seq.asInstanceOf[ArrayVec[Double]])
-    else throw new UnsupportedOperationException("ByteOrder.fromBytes() does not support " + mf)
+    if (ct == classTag[Byte]) putBytes(builder, seq.asInstanceOf[ArrayVec[Byte]])
+    else if (ct == classTag[Short]) putShorts(builder, seq.asInstanceOf[ArrayVec[Short]])
+    else if (ct == classTag[Int]) putInts(builder, seq.asInstanceOf[ArrayVec[Int]])
+    else if (ct == classTag[Long]) putLongs(builder, seq.asInstanceOf[ArrayVec[Long]])
+    else if (ct == classTag[Float]) putFloats(builder, seq.asInstanceOf[ArrayVec[Float]])
+    else if (ct == classTag[Double]) putDoubles(builder, seq.asInstanceOf[ArrayVec[Double]])
+    else throw new UnsupportedOperationException("ByteOrder.fromBytes() does not support " + ct)
     builder.result
   }
 }

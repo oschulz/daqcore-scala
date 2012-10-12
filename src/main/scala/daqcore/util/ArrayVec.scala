@@ -18,19 +18,20 @@
 package daqcore
 package util
 
+import scala.reflect.{ClassTag, classTag}
 import scala.collection.{TraversableLike, IndexedSeqLike}
 import scala.collection.GenTraversableOnce
 import scala.collection.generic.CanBuildFrom
 import scala.collection.mutable.{Builder,ArrayBuffer,ArrayBuilder}
 
 
-sealed class ArrayVec[@specialized A: ClassManifest](private val array: Array[A]) extends
+sealed class ArrayVec[@specialized A: ClassTag](private val array: Array[A]) extends
   collection.immutable.IndexedSeq[A] with IndexedSeqLike[A, ArrayVec[A]] with
   Serializable
 {
   protected[util] def internalArray = array
 
-  final def classMf = classManifest[A]
+  final def cTag = classTag[A]
   
   @inline final def length = array.length
   @inline final override def size = length
@@ -39,10 +40,10 @@ sealed class ArrayVec[@specialized A: ClassManifest](private val array: Array[A]
     that match {
       case thatASeq: ArrayVec[_] => {
         val that = thatASeq.asInstanceOf[ArrayVec[B]]
-        val target = Array.ofDim[B](this.length + that.length)(that.classMf)
+        val target = Array.ofDim[B](this.length + that.length)(that.cTag)
         this.copyToArray(target, 0)
         that.copyToArray(target, this.length)
-        ArrayVec.wrap(target)(that.classMf).asInstanceOf[That]
+        ArrayVec.wrap(target)(that.cTag).asInstanceOf[That]
       }
       case _ => super.++(that)(bf)
     }
@@ -77,7 +78,7 @@ sealed class ArrayVec[@specialized A: ClassManifest](private val array: Array[A]
 
   final override def reverse = reverseIterator.toArrayVec
 
-  final override def toArray [B >: A] (implicit arg0: ClassManifest[B]) = iterator.toArray
+  final override def toArray [B >: A] (implicit arg0: ClassTag[B]) = iterator.toArray
   final override def copyToArray [B >: A] (xs: Array[B], start: Int, len: Int) = iterator.copyToArray(xs, start, len)
   
   @inline final override def foreach[@specialized U](f: A => U): Unit = iterator foreach f
@@ -101,23 +102,23 @@ sealed class ArrayVec[@specialized A: ClassManifest](private val array: Array[A]
   
     if (bf.isInstanceOf[ArrayVec.ArrayVecCanBuildFrom[_, _]]) {
       val bfrom = bf.asInstanceOf[ArrayVec.ArrayVecCanBuildFrom[A, B]]
-      val mfA = classManifest[A]
-      val mfB = bfrom.mfB.asInstanceOf[ClassManifest[Any]]
+      val mfA = classTag[A]
+      val mfB = bfrom.mfB.asInstanceOf[ClassTag[Any]]
 
       try {
-        if (mfA == classManifest[Int]) {
+        if (mfA == classTag[Int]) {
           val f = op.asInstanceOf[Int => _]
           val opt = new IntArrayVecOpt(this.asInstanceOf[ArrayVec[Int]])
           opt.map(f)(mfB).asInstanceOf[That]
-        } else if (mfA == classManifest[Long]) {
+        } else if (mfA == classTag[Long]) {
           val f = op.asInstanceOf[Long => _]
           val opt = new LongArrayVecOpt(this.asInstanceOf[ArrayVec[Long]])
           opt.map(f)(mfB).asInstanceOf[That]
-        } else if (mfA == classManifest[Float]) {
+        } else if (mfA == classTag[Float]) {
           val f = op.asInstanceOf[Float => _]
           val opt = new FloatArrayVecOpt(this.asInstanceOf[ArrayVec[Float]])
           opt.map(f)(mfB).asInstanceOf[That]
-        } else if (mfA == classManifest[Double]) {
+        } else if (mfA == classTag[Double]) {
           val f = op.asInstanceOf[Double => _]
           val opt = new DoubleArrayVecOpt(this.asInstanceOf[ArrayVec[Double]])
           opt.map(f)(mfB).asInstanceOf[That]
@@ -131,38 +132,38 @@ sealed class ArrayVec[@specialized A: ClassManifest](private val array: Array[A]
 
 
 object ArrayVec {
-  def apply[@specialized A: ClassManifest](values: A*) = values match {
+  def apply[@specialized A: ClassTag](values: A*) = values match {
     case _: Immutable => new ArrayVec(values.toArray)
     case _ => new ArrayVec(values.toArray.clone)
   }
   
-  def empty[@specialized A: ClassManifest] = apply()
+  def empty[@specialized A: ClassTag] = apply()
   
-  protected [util] def wrap[@specialized A: ClassManifest](array: Array[A]): ArrayVec[A] = new ArrayVec(array)
+  protected [util] def wrap[@specialized A: ClassTag](array: Array[A]): ArrayVec[A] = new ArrayVec(array)
 
-  def fill[@specialized A: ClassManifest](N: Int)(f: => A): ArrayVec[A] = {
+  def fill[@specialized A: ClassTag](N: Int)(f: => A): ArrayVec[A] = {
     val array = Array.ofDim[A](N)
     for (index <- Range(0, array.length)) array(index) = f
     wrap(array)
   }
 
 
-  class ArrayVecCanBuildFrom[A, @specialized B: ClassManifest] extends CanBuildFrom[ArrayVec[A], B, ArrayVec[B]] {
-    val mfB = classManifest[B]
+  class ArrayVecCanBuildFrom[A, @specialized B: ClassTag] extends CanBuildFrom[ArrayVec[A], B, ArrayVec[B]] {
+    val mfB = classTag[B]
 
     final def apply(): Builder[B, ArrayVec[B]] = new ArrayVecBuilder[B](0)
 
     final def apply(from: ArrayVec[A]): Builder[B, ArrayVec[B]] = new ArrayVecBuilder[B](0)
   }
 
-  implicit def canBuildFrom[A: ClassManifest, B: ClassManifest]: ArrayVecCanBuildFrom[A, B] =
+  implicit def canBuildFrom[A: ClassTag, B: ClassTag]: ArrayVecCanBuildFrom[A, B] =
     new ArrayVecCanBuildFrom[A, B]
 }
 
 
 
-class ArrayVecBuilder[@specialized A: ClassManifest](initialCapacity: Int) extends Builder[A, ArrayVec[A]] {
-  val mfA = classManifest[A]
+class ArrayVecBuilder[@specialized A: ClassTag](initialCapacity: Int) extends Builder[A, ArrayVec[A]] {
+  val mfA = classTag[A]
 
   var array = Array.ofDim[A](initialCapacity)
   
@@ -204,7 +205,7 @@ class ArrayVecBuilder[@specialized A: ClassManifest](initialCapacity: Int) exten
 
 
 object ArrayVecBuilder {
-  final def apply[@specialized A: ClassManifest](initialCapacity: Int) = new ArrayVecBuilder(initialCapacity)
+  final def apply[@specialized A: ClassTag](initialCapacity: Int) = new ArrayVecBuilder(initialCapacity)
 }
 
 

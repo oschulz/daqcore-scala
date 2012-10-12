@@ -17,8 +17,10 @@
 
 package daqcore
 
-import akka.actor._
+import scala.reflect.{ClassTag, classTag}
 import scala.concurrent.Future
+import akka.actor._
+
 import daqcore.util.{Duration, Timeout}
 
 
@@ -53,11 +55,11 @@ package object actors {
     else rf.actorOf(Props(creator), name)
   }
   
-  def typedActor[T <: AnyRef](aref: ActorRef)(implicit mf: ClassManifest[T], rf: ActorRefFactory) =
+  def typedActor[T <: AnyRef](aref: ActorRef)(implicit mf: ClassTag[T], rf: ActorRefFactory) =
     TypedActor(currentActorSystem(rf)).typedActorOf(TypedProps[T](), aref)
 
-  def typedActorOf[R <: AnyRef](creator: => R, name: String = "")(implicit mf: ClassManifest[R], rf: ActorRefFactory): R = {
-    val cl = mf.erasure.asInstanceOf[Class[_ >: AnyRef]]
+  def typedActorOf[R <: AnyRef](creator: => R, name: String = "")(implicit mf: ClassTag[R], rf: ActorRefFactory): R = {
+    val cl = mf.runtimeClass.asInstanceOf[Class[_ >: AnyRef]]
     val props = TypedProps[R](cl, creator)
     val factory = rf match {
       case sys: ActorSystem => TypedActor(sys)

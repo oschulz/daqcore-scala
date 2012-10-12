@@ -17,8 +17,9 @@
 
 package daqcore.actors
 
-import akka.actor._
+import scala.reflect.{ClassTag, classTag}
 import scala.concurrent.{Future, Promise}
+import akka.actor._
 
 import daqcore.util._
 import TypedActorTraits._
@@ -45,7 +46,7 @@ trait TypedActorBasics
 }
 
 
-abstract class TypedActorCompanion[+A <: AnyRef : ClassManifest] {
+abstract class TypedActorCompanion[+A <: AnyRef : ClassTag] {
   def apply(aref: ActorRef)(implicit sys: ActorSystem) = typedActor[A](aref)
 }
 

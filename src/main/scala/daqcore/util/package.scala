@@ -17,6 +17,8 @@
 
 package daqcore
 
+import scala.reflect.{ClassTag, classTag}
+
 
 package object util {
 
@@ -38,14 +40,11 @@ val  Timeout = akka.util.Timeout
 implicit def iteratorOps[A](it: Iterator[A])  = new IteratorOps(it)
 implicit def iterableOps[A](coll: Iterable[A]) = new IterableOps(coll)
 implicit def traversableOnceOps[A](coll: TraversableOnce[A]) = new TraversableOnceOps(coll)
-implicit def nestedSeqOps[A: ClassManifest](seq: Seq[Seq[A]]) = new NestedSeqOps(seq)
-implicit def seqOps[A: ClassManifest](seq: Seq[A]) = new SeqOps(seq)
-implicit def arrayOps[A: ClassManifest](array: Array[A]) = new ArrayOps(array)
+implicit def nestedSeqOps[A: ClassTag](seq: Seq[Seq[A]]) = new NestedSeqOps(seq)
+implicit def seqOps[A: ClassTag](seq: Seq[A]) = new SeqOps(seq)
+implicit def arrayOps[A: ClassTag](array: Array[A]) = new ArrayOps(array)
 
 implicit def urlOps(url: java.net.URL) = new URLOps(url)
-
-implicit def classOps(cl: java.lang.Class[_]) = new ClassOps(cl)
-implicit def methodOps(m: java.lang.reflect.Method) = new MethodOps(m)
 
 implicit def randomOps(rnd: scala.util.Random) = new RandomOps(rnd)
 implicit val defaultRandom = scala.util.Random
@@ -71,7 +70,7 @@ implicit def arrayVecToArrayVecFloat(v: ArrayVec[Float]) = new ArrayVecFloat(v)
 implicit def arrayVecToArrayVecDouble(v: ArrayVec[Double]) = new ArrayVecDouble(v)
 
 
-def fast[A: ClassManifest](seq: Seq[A]) = FastSeqOps[A](seq)
+def fast[A: ClassTag](seq: Seq[A]) = FastSeqOps[A](seq)
 
 
 implicit def string2PropPath(s: String) = PropPath(s)
@@ -80,42 +79,42 @@ implicit def string2PropPath(s: String) = PropPath(s)
 def fctResponder[A](x: () => A) = new Responder[A] { def respond(k: A => Unit) = k(x()) }
 
 
-def classMF(a: Any): ClassManifest[_] = a match {
-  case a:Boolean => classManifest[Boolean]
-  case a:Byte => classManifest[Byte]
-  case a:Char => classManifest[Char]
-  case a:Short => classManifest[Short]
-  case a:Int => classManifest[Int]
-  case a:Long => classManifest[Long]
-  case a:Float => classManifest[Float]
-  case a:Double => classManifest[Double]
-  case a:Unit => classManifest[Unit]
-  case a:AnyRef => scala.reflect.ClassManifest.fromClass(a.getClass)
+def classTagFrom(a: Any): ClassTag[_] = a match {
+  case a:Boolean => classTag[Boolean]
+  case a:Byte => classTag[Byte]
+  case a:Char => classTag[Char]
+  case a:Short => classTag[Short]
+  case a:Int => classTag[Int]
+  case a:Long => classTag[Long]
+  case a:Float => classTag[Float]
+  case a:Double => classTag[Double]
+  case a:Unit => classTag[Unit]
+  case a:AnyRef => scala.reflect.ClassTag(a.getClass)
 }
 
 
-def genClassMF[A: ClassManifest](a: A) = classManifest[A]
+def genClassTag[A: ClassTag](a: A) = classTag[A]
 
 
 def as[A](x:Any) = x.asInstanceOf[A]
 
 
-def sizeOf[A <: AnyVal : ClassManifest]: Int = {
-  val mf = classManifest[A]
+def sizeOf[A <: AnyVal : ClassTag]: Int = {
+  val ct = classTag[A]
 
-  if (mf == classManifest[Byte])         1
-  else if (mf == classManifest[Char])    2
-  else if (mf == classManifest[Short])   2
-  else if (mf == classManifest[Int])     4
-  else if (mf == classManifest[Long])    8
-  else if (mf == classManifest[Float])   4
-  else if (mf == classManifest[Double])  8
-  else throw new IllegalArgumentException("sizeOf() does not support %s".format(mf))
+  if (ct == classTag[Byte])         1
+  else if (ct == classTag[Char])    2
+  else if (ct == classTag[Short])   2
+  else if (ct == classTag[Int])     4
+  else if (ct == classTag[Long])    8
+  else if (ct == classTag[Float])   4
+  else if (ct == classTag[Double])  8
+  else throw new IllegalArgumentException("sizeOf() does not support %s".format(ct))
 }
 
 
 def hex(v: AnyVal) : String = {
-  def byteMF = classManifest[Byte]
+  def byteMF = classTag[Byte]
 
   v match {
     case x: Byte     =>  "%02x".format(x)
@@ -123,7 +122,7 @@ def hex(v: AnyVal) : String = {
     case x: Int      =>  "%08x".format(x)
     case x: Long     =>  "%016x".format(x)
     case x: Boolean  =>  if (x) "1" else "0"
-    case _ => throw new IllegalArgumentException("hex() does not support %s".format(classMF(v)))
+    case _ => throw new IllegalArgumentException("hex() does not support %s".format(classTagFrom(v)))
   }
 }
 

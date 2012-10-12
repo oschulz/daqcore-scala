@@ -17,9 +17,12 @@
 
 package daqcore.util
 
-import cern.jet.math.Arithmetic.binomial
-import daqcore.util._
+import scala.reflect.{ClassTag, classTag}
 import scala.math._
+
+import cern.jet.math.Arithmetic.binomial
+
+import daqcore.util._
 
 
 class IntArrayIteratorOpt(it: ArrayIterator[Int]) {
@@ -67,30 +70,30 @@ class IntArrayIteratorOpt(it: ArrayIterator[Int]) {
     (m, sqrt(v / (len-1)))
   }
 
-  def map[B: ClassManifest] (op: Int => B): ArrayIterator[B] = {
-    val mfB = classManifest[B]
+  def map[B: ClassTag] (op: Int => B): ArrayIterator[B] = {
+    val mfB = classTag[B]
     
-    if (mfB == classManifest[Unit]) {
+    if (mfB == classTag[Unit]) {
       val f = op.asInstanceOf[Int => Unit]
       val target = Array.ofDim[Unit](length)
       for (index <- Range(0, length)) target(index) = f(next)
       ArrayIterator.forArray(target).asInstanceOf[ArrayIterator[B]]
-    } else if (mfB == classManifest[Int]) {
+    } else if (mfB == classTag[Int]) {
       val f = op.asInstanceOf[Int => Int]
       val target = Array.ofDim[Int](length)
       for (index <- Range(0, length)) target(index) = f(next)
       ArrayIterator.forArray(target).asInstanceOf[ArrayIterator[B]]
-    } else if (mfB == classManifest[Long]) {
+    } else if (mfB == classTag[Long]) {
       val f = op.asInstanceOf[Int => Long]
       val target = Array.ofDim[Long](length)
       for (index <- Range(0, length)) target(index) = f(next)
       ArrayIterator.forArray(target).asInstanceOf[ArrayIterator[B]]
-    } else if (mfB == classManifest[Float]) {
+    } else if (mfB == classTag[Float]) {
       val f = op.asInstanceOf[Int => Float]
       val target = Array.ofDim[Float](length)
       for (index <- Range(0, length)) target(index) = f(next)
       ArrayIterator.forArray(target).asInstanceOf[ArrayIterator[B]]
-    } else if (mfB == classManifest[Double]) {
+    } else if (mfB == classTag[Double]) {
       val f = op.asInstanceOf[Int => Double]
       val target = Array.ofDim[Double](length)
       for (index <- Range(0, length)) target(index) = f(next)
@@ -146,30 +149,30 @@ class LongArrayIteratorOpt(it: ArrayIterator[Long]) {
     (m, sqrt(v / (len-1)))
   }
 
-  def map[B: ClassManifest] (op: Long => B): ArrayIterator[B] = {
-    val mfB = classManifest[B]
+  def map[B: ClassTag] (op: Long => B): ArrayIterator[B] = {
+    val mfB = classTag[B]
     
-    if (mfB == classManifest[Unit]) {
+    if (mfB == classTag[Unit]) {
       val f = op.asInstanceOf[Long => Unit]
       val target = Array.ofDim[Unit](length)
       for (index <- Range(0, length)) target(index) = f(next)
       ArrayIterator.forArray(target).asInstanceOf[ArrayIterator[B]]
-    } else if (mfB == classManifest[Int]) {
+    } else if (mfB == classTag[Int]) {
       val f = op.asInstanceOf[Long => Int]
       val target = Array.ofDim[Int](length)
       for (index <- Range(0, length)) target(index) = f(next)
       ArrayIterator.forArray(target).asInstanceOf[ArrayIterator[B]]
-    } else if (mfB == classManifest[Long]) {
+    } else if (mfB == classTag[Long]) {
       val f = op.asInstanceOf[Long => Long]
       val target = Array.ofDim[Long](length)
       for (index <- Range(0, length)) target(index) = f(next)
       ArrayIterator.forArray(target).asInstanceOf[ArrayIterator[B]]
-    } else if (mfB == classManifest[Float]) {
+    } else if (mfB == classTag[Float]) {
       val f = op.asInstanceOf[Long => Float]
       val target = Array.ofDim[Float](length)
       for (index <- Range(0, length)) target(index) = f(next)
       ArrayIterator.forArray(target).asInstanceOf[ArrayIterator[B]]
-    } else if (mfB == classManifest[Double]) {
+    } else if (mfB == classTag[Double]) {
       val f = op.asInstanceOf[Long => Double]
       val target = Array.ofDim[Double](length)
       for (index <- Range(0, length)) target(index) = f(next)
@@ -225,30 +228,30 @@ class FloatArrayIteratorOpt(it: ArrayIterator[Float]) {
     (m, sqrt(v / (len-1)))
   }
 
-  def map[B: ClassManifest] (op: Float => B): ArrayIterator[B] = {
-    val mfB = classManifest[B]
+  def map[B: ClassTag] (op: Float => B): ArrayIterator[B] = {
+    val mfB = classTag[B]
     
-    if (mfB == classManifest[Unit]) {
+    if (mfB == classTag[Unit]) {
       val f = op.asInstanceOf[Float => Unit]
       val target = Array.ofDim[Unit](length)
       for (index <- Range(0, length)) target(index) = f(next)
       ArrayIterator.forArray(target).asInstanceOf[ArrayIterator[B]]
-    } else if (mfB == classManifest[Int]) {
+    } else if (mfB == classTag[Int]) {
       val f = op.asInstanceOf[Float => Int]
       val target = Array.ofDim[Int](length)
       for (index <- Range(0, length)) target(index) = f(next)
       ArrayIterator.forArray(target).asInstanceOf[ArrayIterator[B]]
-    } else if (mfB == classManifest[Long]) {
+    } else if (mfB == classTag[Long]) {
       val f = op.asInstanceOf[Float => Long]
       val target = Array.ofDim[Long](length)
       for (index <- Range(0, length)) target(index) = f(next)
       ArrayIterator.forArray(target).asInstanceOf[ArrayIterator[B]]
-    } else if (mfB == classManifest[Float]) {
+    } else if (mfB == classTag[Float]) {
       val f = op.asInstanceOf[Float => Float]
       val target = Array.ofDim[Float](length)
       for (index <- Range(0, length)) target(index) = f(next)
       ArrayIterator.forArray(target).asInstanceOf[ArrayIterator[B]]
-    } else if (mfB == classManifest[Double]) {
+    } else if (mfB == classTag[Double]) {
       val f = op.asInstanceOf[Float => Double]
       val target = Array.ofDim[Double](length)
       for (index <- Range(0, length)) target(index) = f(next)
@@ -304,30 +307,30 @@ class DoubleArrayIteratorOpt(it: ArrayIterator[Double]) {
     (m, sqrt(v / (len-1)))
   }
 
-  def map[B: ClassManifest] (op: Double => B): ArrayIterator[B] = {
-    val mfB = classManifest[B]
+  def map[B: ClassTag] (op: Double => B): ArrayIterator[B] = {
+    val mfB = classTag[B]
     
-    if (mfB == classManifest[Unit]) {
+    if (mfB == classTag[Unit]) {
       val f = op.asInstanceOf[Double => Unit]
       val target = Array.ofDim[Unit](length)
       for (index <- Range(0, length)) target(index) = f(next)
       ArrayIterator.forArray(target).asInstanceOf[ArrayIterator[B]]
-    } else if (mfB == classManifest[Int]) {
+    } else if (mfB == classTag[Int]) {
       val f = op.asInstanceOf[Double => Int]
       val target = Array.ofDim[Int](length)
       for (index <- Range(0, length)) target(index) = f(next)
       ArrayIterator.forArray(target).asInstanceOf[ArrayIterator[B]]
-    } else if (mfB == classManifest[Long]) {
+    } else if (mfB == classTag[Long]) {
       val f = op.asInstanceOf[Double => Long]
       val target = Array.ofDim[Long](length)
       for (index <- Range(0, length)) target(index) = f(next)
       ArrayIterator.forArray(target).asInstanceOf[ArrayIterator[B]]
-    } else if (mfB == classManifest[Float]) {
+    } else if (mfB == classTag[Float]) {
       val f = op.asInstanceOf[Double => Float]
       val target = Array.ofDim[Float](length)
       for (index <- Range(0, length)) target(index) = f(next)
       ArrayIterator.forArray(target).asInstanceOf[ArrayIterator[B]]
-    } else if (mfB == classManifest[Double]) {
+    } else if (mfB == classTag[Double]) {
       val f = op.asInstanceOf[Double => Double]
       val target = Array.ofDim[Double](length)
       for (index <- Range(0, length)) target(index) = f(next)

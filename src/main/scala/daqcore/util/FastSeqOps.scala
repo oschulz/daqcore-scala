@@ -17,63 +17,65 @@
 
 package daqcore.util
 
+import scala.reflect.{ClassTag, classTag}
 
-case class FastSeqOps[T: ClassManifest](seq: Seq[T]) {
-  val mfT = classManifest[T]
+
+case class FastSeqOps[T: ClassTag](seq: Seq[T]) {
+  val cTagT = classTag[T]
   lazy val array = seq.toArray
 
 
   def take(n: Int): IndexedSeq[T] = {
     if (n >= seq.size) seq.toIISeq
     else if (n <= 0) IISeq[T]()
-    else if (mfT == classManifest[Int]) {
+    else if (cTagT == classTag[Int]) {
       val inArray = array.asInstanceOf[Array[Int]]
       val outArray = Array.ofDim[Int](n)
       for (i <- 0 to outArray.size - 1) outArray(i) = inArray(i)
       outArray.toSeq.asInstanceOf[IndexedSeq[T]]
-    } else if (mfT == classManifest[Boolean]) {
+    } else if (cTagT == classTag[Boolean]) {
       val inArray = array.asInstanceOf[Array[Boolean]]
       val outArray = Array.ofDim[Boolean](n)
       for (i <- 0 to outArray.size - 1) outArray(i) = inArray(i)
       outArray.toSeq.asInstanceOf[IndexedSeq[T]]
-    } else if (mfT == classManifest[Float]) {
+    } else if (cTagT == classTag[Float]) {
       val inArray = array.asInstanceOf[Array[Float]]
       val outArray = Array.ofDim[Float](n)
       for (i <- 0 to outArray.size - 1) outArray(i) = inArray(i)
       outArray.toSeq.asInstanceOf[IndexedSeq[T]]
-    } else if (mfT == classManifest[Double]) {
+    } else if (cTagT == classTag[Double]) {
       val inArray = array.asInstanceOf[Array[Double]]
       val outArray = Array.ofDim[Double](n)
       for (i <- 0 to outArray.size - 1) outArray(i) = inArray(i)
       outArray.toSeq.asInstanceOf[IndexedSeq[T]]
-    } else throw new UnsupportedOperationException("FastOps.take does not support (%s)".format(mfT))
+    } else throw new UnsupportedOperationException("FastOps.take does not support (%s)".format(cTagT))
   }
 
   
   def drop(n: Int): IndexedSeq[T] = {
     if (n >= seq.size) IISeq[T]()
     else if (n <= 0) seq.toIISeq
-    else if (mfT == classManifest[Int]) {
+    else if (cTagT == classTag[Int]) {
       val inArray = array.asInstanceOf[Array[Int]]
       val outArray = Array.ofDim[Int](inArray.size - n)
       for (i <- 0 to outArray.size - 1) outArray(i) = inArray(i + n)
       outArray.toSeq.asInstanceOf[IndexedSeq[T]]
-    } else if (mfT == classManifest[Boolean]) {
+    } else if (cTagT == classTag[Boolean]) {
       val inArray = array.asInstanceOf[Array[Boolean]]
       val outArray = Array.ofDim[Boolean](inArray.size - n)
       for (i <- 0 to outArray.size - 1) outArray(i) = inArray(i + n)
       outArray.toSeq.asInstanceOf[IndexedSeq[T]]
-    } else if (mfT == classManifest[Float]) {
+    } else if (cTagT == classTag[Float]) {
       val inArray = array.asInstanceOf[Array[Float]]
       val outArray = Array.ofDim[Float](inArray.size - n)
       for (i <- 0 to outArray.size - 1) outArray(i) = inArray(i + n)
       outArray.toSeq.asInstanceOf[IndexedSeq[T]]
-    } else if (mfT == classManifest[Double]) {
+    } else if (cTagT == classTag[Double]) {
       val inArray = array.asInstanceOf[Array[Double]]
       val outArray = Array.ofDim[Double](inArray.size - n)
       for (i <- 0 to outArray.size - 1) outArray(i) = inArray(i + n)
       outArray.toSeq.asInstanceOf[IndexedSeq[T]]
-    } else throw new UnsupportedOperationException("FastOps.drop does not support (%s)".format(mfT))
+    } else throw new UnsupportedOperationException("FastOps.drop does not support (%s)".format(cTagT))
   }
   
   
@@ -84,7 +86,7 @@ case class FastSeqOps[T: ClassManifest](seq: Seq[T]) {
     require(n > 0)
     val nGroups = (seq.size + n - 1) / n
     if (nGroups == 1) IISeq(seq.toIISeq).iterator
-    else if  (mfT == classManifest[Int]) {
+    else if  (cTagT == classTag[Int]) {
       val inArray = array.asInstanceOf[Array[Int]]
       val outArrays = Array.ofDim[IndexedSeq[T]](nGroups)
       for (group <- 0 to nGroups - 1) {
@@ -93,7 +95,7 @@ case class FastSeqOps[T: ClassManifest](seq: Seq[T]) {
         outArrays(group) = outArray.toSeq.asInstanceOf[IndexedSeq[T]]
       }
       outArrays.toSeq.iterator
-    } else if  (mfT == classManifest[Boolean]) {
+    } else if  (cTagT == classTag[Boolean]) {
       val inArray = array.asInstanceOf[Array[Boolean]]
       val outArrays = Array.ofDim[IndexedSeq[T]](nGroups)
       for (group <- 0 to nGroups - 1) {
@@ -102,7 +104,7 @@ case class FastSeqOps[T: ClassManifest](seq: Seq[T]) {
         outArrays(group) = outArray.toSeq.asInstanceOf[IndexedSeq[T]]
       }
       outArrays.toSeq.iterator
-    } else if  (mfT == classManifest[Float]) {
+    } else if  (cTagT == classTag[Float]) {
       val inArray = array.asInstanceOf[Array[Float]]
       val outArrays = Array.ofDim[IndexedSeq[T]](nGroups)
       for (group <- 0 to nGroups - 1) {
@@ -111,7 +113,7 @@ case class FastSeqOps[T: ClassManifest](seq: Seq[T]) {
         outArrays(group) = outArray.toSeq.asInstanceOf[IndexedSeq[T]]
       }
       outArrays.toSeq.iterator
-    } else if  (mfT == classManifest[Double]) {
+    } else if  (cTagT == classTag[Double]) {
       val inArray = array.asInstanceOf[Array[Double]]
       val outArrays = Array.ofDim[IndexedSeq[T]](nGroups)
       for (group <- 0 to nGroups - 1) {
@@ -120,53 +122,53 @@ case class FastSeqOps[T: ClassManifest](seq: Seq[T]) {
         outArrays(group) = outArray.toSeq.asInstanceOf[IndexedSeq[T]]
       }
       outArrays.toSeq.iterator
-    } else throw new UnsupportedOperationException("FastOps.group does not support (%s)".format(mfT))
+    } else throw new UnsupportedOperationException("FastOps.group does not support (%s)".format(cTagT))
   }
   
 
-  def map[U: ClassManifest](f: Function1[T, U]): IndexedSeq[U] = {
-    val mfU = classManifest[U]
+  def map[U: ClassTag](f: Function1[T, U]): IndexedSeq[U] = {
+    val mfU = classTag[U]
     
-    if ((mfT == classManifest[Int]) && (mfU == classManifest[Int])) {
+    if ((cTagT == classTag[Int]) && (mfU == classTag[Int])) {
       val inArray = array.asInstanceOf[Array[Int]]
       val outArray = Array.ofDim[Int](inArray.size)
       for (i <- 0 to inArray.size-1) outArray(i) = f.asInstanceOf[Function[Int, Int]](inArray(i))
       outArray.toSeq.asInstanceOf[IndexedSeq[U]]
-    } else if ((mfT == classManifest[Int]) && (mfU == classManifest[Boolean])) {
+    } else if ((cTagT == classTag[Int]) && (mfU == classTag[Boolean])) {
       val inArray = array.asInstanceOf[Array[Int]]
       val outArray = Array.ofDim[Boolean](inArray.size)
       for (i <- 0 to inArray.size-1) outArray(i) = f.asInstanceOf[Function[Int, Boolean]](inArray(i))
       outArray.toSeq.asInstanceOf[IndexedSeq[U]]
-    } else if ((mfT == classManifest[Int]) && (mfU == classManifest[Float])) {
+    } else if ((cTagT == classTag[Int]) && (mfU == classTag[Float])) {
       val inArray = array.asInstanceOf[Array[Int]]
       val outArray = Array.ofDim[Float](inArray.size)
       for (i <- 0 to inArray.size-1) outArray(i) = f.asInstanceOf[Function[Int, Float]](inArray(i))
       outArray.toSeq.asInstanceOf[IndexedSeq[U]]
-    } else if ((mfT == classManifest[Int]) && (mfU == classManifest[Double])) {
+    } else if ((cTagT == classTag[Int]) && (mfU == classTag[Double])) {
       val inArray = array.asInstanceOf[Array[Int]]
       val outArray = Array.ofDim[Double](inArray.size)
       for (i <- 0 to inArray.size-1) outArray(i) = f.asInstanceOf[Function[Int, Double]](inArray(i))
       outArray.toSeq.asInstanceOf[IndexedSeq[U]]
-    } else if ((mfT == classManifest[Float]) && (mfU == classManifest[Float])) {
+    } else if ((cTagT == classTag[Float]) && (mfU == classTag[Float])) {
       val inArray = array.asInstanceOf[Array[Float]]
       val outArray = Array.ofDim[Float](inArray.size)
       for (i <- 0 to inArray.size-1) outArray(i) = f.asInstanceOf[Function[Float, Float]](inArray(i))
       outArray.toSeq.asInstanceOf[IndexedSeq[U]]
-    } else if ((mfT == classManifest[Float]) && (mfU == classManifest[Int])) {
+    } else if ((cTagT == classTag[Float]) && (mfU == classTag[Int])) {
       val inArray = array.asInstanceOf[Array[Float]]
       val outArray = Array.ofDim[Int](inArray.size)
       for (i <- 0 to inArray.size-1) outArray(i) = f.asInstanceOf[Function[Float, Int]](inArray(i))
       outArray.toSeq.asInstanceOf[IndexedSeq[U]]
-    } else if ((mfT == classManifest[Double]) && (mfU == classManifest[Double])) {
+    } else if ((cTagT == classTag[Double]) && (mfU == classTag[Double])) {
       val inArray = array.asInstanceOf[Array[Double]]
       val outArray = Array.ofDim[Double](inArray.size)
       for (i <- 0 to inArray.size-1) outArray(i) = f.asInstanceOf[Function[Double, Double]](inArray(i))
       outArray.toSeq.asInstanceOf[IndexedSeq[U]]
-    } else if ((mfT == classManifest[Double]) && (mfU == classManifest[Double])) {
+    } else if ((cTagT == classTag[Double]) && (mfU == classTag[Double])) {
       val inArray = array.asInstanceOf[Array[Int]]
       val outArray = Array.ofDim[Double](inArray.size)
       for (i <- 0 to inArray.size-1) outArray(i) = f.asInstanceOf[Function[Double, Int]](inArray(i))
       outArray.toSeq.asInstanceOf[IndexedSeq[U]]
-    } else throw new UnsupportedOperationException("FastOps.map does not support (%s, %s)".format(mfT, mfU))
+    } else throw new UnsupportedOperationException("FastOps.map does not support (%s, %s)".format(cTagT, mfU))
   }
 }

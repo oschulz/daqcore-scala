@@ -21,7 +21,7 @@ import scala.math._
 import scala.util.Random
 
 
-class RandomOps[A: ClassManifest](rnd: Random) {
+class RandomOps(rnd: Random) {
   def nextTriangular: Double = {
     val r = rnd.nextDouble
     if (r >= 0.5) 1 - sqrt(2 - 2*r)

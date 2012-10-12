@@ -17,32 +17,33 @@
 
 package daqcore.util
 
+import scala.reflect.{ClassTag, classTag}
 import scala.collection.mutable.ArrayBuilder
 
 
-class SeqOps[A: ClassManifest](thisSeq: Seq[A]) {
+class SeqOps[A: ClassTag](thisSeq: Seq[A]) {
   def toIISeq = thisSeq.toArray.toSeq.asInstanceOf[IndexedSeq[A]]
 }
 
 
 object IISeq {
-  def apply[A: ClassManifest](v: A*) = v.toIISeq
-   def fill[T: ClassManifest](n: Int)(elem: => T) = Array.fill(n)(elem).toIISeq
+  def apply[A: ClassTag](v: A*) = v.toIISeq
+   def fill[T: ClassTag](n: Int)(elem: => T) = Array.fill(n)(elem).toIISeq
 }
 
 
-class NestedSeqOps[A: ClassManifest](thisSeq: Seq[Seq[A]]) extends SeqOps[Seq[A]](thisSeq) {
+class NestedSeqOps[A: ClassTag](thisSeq: Seq[Seq[A]]) extends SeqOps[Seq[A]](thisSeq) {
   def flat: Seq[A] = thisSeq.view.flatMap{a=>a}
   def flatWithSep(sep: Seq[A]): Seq[A] = new FlattenedWithSep(thisSeq, sep)
 }
 
 
-class FlattenedWithSep[A: ClassManifest](val thisSeq: Seq[Seq[A]], val sep: Seq[A]) extends Seq[A] {
+class FlattenedWithSep[A: ClassTag](val thisSeq: Seq[Seq[A]], val sep: Seq[A]) extends Seq[A] {
   lazy val length: Int = (thisSeq.view map {_.length} sum) + (0 max ((thisSeq.length - 1) * sep.length))
   
-  lazy val contents: IndexedSeq[A] = toArray(classManifest[A]).toSeq.asInstanceOf[IndexedSeq[A]]
+  lazy val contents: IndexedSeq[A] = toArray(classTag[A]).toSeq.asInstanceOf[IndexedSeq[A]]
   
-  override def toArray[B >: A](implicit arg0: ClassManifest[B]): Array[B] = {
+  override def toArray[B >: A](implicit arg0: ClassTag[B]): Array[B] = {
     val builder = ArrayBuilder.make[B]
     var first = true
     for (s <- thisSeq) {
