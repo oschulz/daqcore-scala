@@ -104,7 +104,7 @@ abstract class CharacterData {
   def apply(mnemonic: SpecMnemonic): ByteCharSeq = mnemonic.getByteCharSeq
 
   def unapply(bs: ByteCharSeq) : Option[RecMnemonic] =
-    try { Some(RecMnemonic(bs)) } catch { case _ => None }
+    try { Some(RecMnemonic(bs)) } catch { case _: Throwable => None }
 }
 
 /** Character Program Data. Unquoted mnemonics in short

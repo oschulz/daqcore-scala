@@ -48,7 +48,7 @@ trait Codec[A, B] {
     }
     Some(buffer.result)
   } catch {
-    case e => None
+    case e: Throwable => None
   }
 }
 

@@ -38,7 +38,7 @@ class JFreeChartOps(chart: JFreeChart) {
       if (handlerFunc isDefinedAt event) {
         var again = false
         try { again = handlerFunc(event) }
-        catch { case e => log.error(e.getMessage) }
+        catch { case e: Throwable => log.error(e.getMessage) }
         finally { if (!again) chart.removeProgressListener(this) }
       }
     }

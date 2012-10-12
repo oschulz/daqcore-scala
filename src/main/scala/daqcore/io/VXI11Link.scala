@@ -59,7 +59,7 @@ object VXI11Link extends IOResourceCompanion[VXI11Link] {
     val clnt: vxi11core.Client = {
       log.debug("Opening VXI11 client connection to " + address)
       try { new vxi11core.Client(address, OncRpcProtocols.ONCRPC_TCP) }
-      catch { case e => throw new java.io.IOException("Could not open VXI11 client connection to " + address, e) }
+      catch { case e: Throwable => throw new java.io.IOException("Could not open VXI11 client connection to " + address, e) }
     }
     atCleanup {
       clnt.close()
@@ -69,7 +69,7 @@ object VXI11Link extends IOResourceCompanion[VXI11Link] {
     val lnk: LinkHandle = {
       log.debug("Opening VXI11 link to device " + device)
       try { openLinkImpl(device, defaultTimeout) }
-      catch { case e => throw new java.io.IOException("Could not open VXI11 link to device " + device, e) }
+      catch { case e: Throwable => throw new java.io.IOException("Could not open VXI11 link to device " + device, e) }
     }
     atCleanup {
       closeLinkImpl(lnk)

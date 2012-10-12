@@ -123,7 +123,7 @@ trait TypedActorImpl extends TypedActorBasics with Logging with Profiling
     while (cleanupActions != Nil) {
       val action::rest = cleanupActions
       cleanupActions = rest
-      try { action() } catch { case e => log.error(e.toString) }
+      try { action() } catch { case e: Throwable => log.error(e.toString) }
     }
   }
 
@@ -133,7 +133,7 @@ trait TypedActorImpl extends TypedActorBasics with Logging with Profiling
     while (shutdownActions != Nil) {
       val action::rest = shutdownActions
       shutdownActions = rest
-      try { action() } catch { case e => log.error(e.toString) }
+      try { action() } catch { case e: Throwable => log.error(e.toString) }
     }
   }
 
