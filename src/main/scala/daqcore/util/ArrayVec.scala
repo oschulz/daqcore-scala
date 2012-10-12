@@ -19,6 +19,7 @@ package daqcore
 package util
 
 import scala.collection.{TraversableLike, IndexedSeqLike}
+import scala.collection.GenTraversableOnce
 import scala.collection.generic.CanBuildFrom
 import scala.collection.mutable.{Builder,ArrayBuffer,ArrayBuilder}
 
@@ -34,7 +35,7 @@ sealed class ArrayVec[@specialized A: ClassManifest](private val array: Array[A]
   @inline final def length = array.length
   @inline final override def size = length
   
-  final override def ++[B >: A, That] (that: TraversableOnce[B])(implicit bf: CanBuildFrom[ArrayVec[A], B, That]) : That = {
+  final override def ++[B >: A, That] (that: GenTraversableOnce[B])(implicit bf: CanBuildFrom[ArrayVec[A], B, That]) : That = {
     that match {
       case thatASeq: ArrayVec[_] => {
         val that = thatASeq.asInstanceOf[ArrayVec[B]]
@@ -72,7 +73,7 @@ sealed class ArrayVec[@specialized A: ClassManifest](private val array: Array[A]
   final override def splitAt(n: Int): (ArrayVec[A], ArrayVec[A]) = (take(n), drop(n))
   
   final override def indexWhere(p: A => Boolean): Int = iterator.indexWhere(p)
-  override def indexOf[@specialized B >: A](elem: B): Int = iterator.indexOf(elem)
+  override def indexOf[B >: A](elem: B): Int = iterator.indexOf(elem)
 
   final override def reverse = reverseIterator.toArrayVec
 
