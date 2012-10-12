@@ -27,7 +27,7 @@ trait StartInfo {
   def startTime: Double
 
   // never negative
-  def currentDuration: Double = (currentTime - startTime) max 0.
+  def currentDuration: Double = (currentTime - startTime) max 0.0
 }
 
 

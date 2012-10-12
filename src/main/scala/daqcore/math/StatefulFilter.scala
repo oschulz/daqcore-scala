@@ -41,7 +41,7 @@ abstract class IIRFilter extends StatefulFilter[Double, Double] {
       initialized = true
     } else x.pushFront(in)
     
-    var out = 0.;
+    var out = 0.0;
     for (i <- 0 to b.size - 1) out += b(i)*x(i)
     for (i <- 1 to a.size - 1) out -= a(i)*y(i-1)
     out = out / a(0)
@@ -61,8 +61,8 @@ object IIRFilter {
 
 
 case class RCFilter(c: Double) extends IIRFilter {
-  val alpha = 1. / (1. + c)
-  val a = ArrayVec(1., alpha-1)
+  val alpha = 1.0 / (1.0 + c)
+  val a = ArrayVec(1.0, alpha-1)
   val b = ArrayVec(alpha)
 }
 

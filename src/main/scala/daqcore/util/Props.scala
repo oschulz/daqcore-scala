@@ -129,7 +129,7 @@ case class NumPropVal(value: Double) extends PropVal {
 
 
 case class BoolPropVal(value: Boolean) extends PropVal {
-  def toDouble = if (value) 1. else 0.
+  def toDouble = if (value) 1.0 else 0.0
   def toBoolean = value
   def toNative: Boolean = value
   def toJsValue: JsBoolean = if (value) JsTrue else JsFalse
