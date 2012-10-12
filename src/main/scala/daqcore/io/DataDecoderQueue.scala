@@ -40,17 +40,15 @@ class DataDecoderQueue {
             case IO.Chunk(bytes) =>
               // remaining data, push to front of dataQueue
               if (! bytes.isEmpty) bytes +=: dataQueue
-            case IO.EOF(Some(exception)) => throw exception
-            case IO.EOF(None) =>
+            case IO.EOF =>
+            case IO.Error(cause) => throw cause
           }
         }
-        case (cont: IO.Cont[_], rest) => rest match { // decoder needs more data
-          case IO.EOF(Some(exception)) => throw exception
-          case _ => cont.error match {
-            case Some(error) => throw error
-            case None =>
-          }
+        case (cont: IO.Next[_], rest) => rest match { // decoder needs more data
+          case IO.Error(cause) => throw cause
+          case _ =>
         }
+        case (IO.Failure(cause), rest) => throw cause
       }
     }
   }

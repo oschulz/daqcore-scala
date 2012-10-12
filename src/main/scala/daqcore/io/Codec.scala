@@ -42,11 +42,8 @@ trait Codec[A, B] {
       state = state._1(state._2)
       state match {
         case (_: IO.Done[_], rest) => state = (initial, rest)
-        case (cont: IO.Cont[_], rest) => cont.error match {
-          case Some(error) => throw error
-          case None => throw new IllegalArgumentException("Unexpected EOI")
-        }
-        case _ => throw new IllegalArgumentException("Unexpected EOI")
+        case (cont: IO.Next[_], _) => throw new IllegalArgumentException("Unexpected EOI")
+        case (IO.Failure(cause), _) => throw cause
       }
     }
     Some(buffer.result)
