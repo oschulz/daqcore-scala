@@ -29,13 +29,13 @@ trait TypedActorReceive extends TypedActor.Receiver with Logging {
   def receive: Receiver = { case _ if false => }
 
   def scheduleSelf(initialDelay: Duration, frequency: Duration)(f: => Unit): Cancellable =
-    TypedActor.context.system.scheduler.schedule(initialDelay, frequency, TypedActor.context.self, ExecScheduled(() => f))
+    TypedActor.context.system.scheduler.schedule(initialDelay, frequency, TypedActor.context.self, ExecScheduled(() => f))(TypedActor.dispatcher)
 
   def scheduleSelf(initialDelay: Long, frequency: Long)(f: => Unit): Cancellable =
     scheduleSelf(initialDelay milliseconds, frequency milliseconds)(f)
 
   def scheduleSelfOnce(delay: Duration)(f: => Unit): Cancellable =
-    TypedActor.context.system.scheduler.scheduleOnce(delay, TypedActor.context.self, ExecScheduled(() => f))
+    TypedActor.context.system.scheduler.scheduleOnce(delay, TypedActor.context.self, ExecScheduled(() => f))(TypedActor.dispatcher)
 
   def scheduleSelfOnce(delay: Long)(f: => Unit): Cancellable =
     scheduleSelfOnce(delay milliseconds)(f)

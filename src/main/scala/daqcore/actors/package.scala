@@ -73,14 +73,14 @@ package object actors {
 
 
   def schedule(initialDelay: Duration, frequency: Duration)(f: => Unit)(implicit asys: ActorSystem): Cancellable =
-    asys.scheduler.schedule(initialDelay, frequency)(f)
+    asys.scheduler.schedule(initialDelay, frequency)(f)(asys.dispatcher)
 
   def schedule(initialDelay: Duration, frequency: Duration, receiver: ActorRef, message: Any)(implicit asys: ActorSystem): Cancellable =
-    asys.scheduler.schedule(initialDelay, frequency, receiver, message)
+    asys.scheduler.schedule(initialDelay, frequency, receiver, message)(asys.dispatcher)
   
   def scheduleOnce(delay: Duration)(f: => Unit)(implicit asys: ActorSystem): Cancellable =
-    asys.scheduler.scheduleOnce(delay)(f)
+    asys.scheduler.scheduleOnce(delay)(f)(asys.dispatcher)
 
   def scheduleOnce(delay: Duration, receiver: ActorRef, message: Any)(implicit asys: ActorSystem): Cancellable =
-    asys.scheduler.scheduleOnce(delay, receiver, message)
+    asys.scheduler.scheduleOnce(delay, receiver, message)(asys.dispatcher)
 }
