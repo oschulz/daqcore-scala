@@ -20,7 +20,7 @@ package daqcore.io
 import java.net.{SocketAddress, InetSocketAddress}
 
 import akka.actor.{IO => AkkaIO, IOManager => AkkaIOManager, _}
-import akka.actor.contrib.daqcore.{IOManager}
+import akka.actor.IOManager
 import scala.concurrent.{Future, Promise}
 
 import daqcore.util._

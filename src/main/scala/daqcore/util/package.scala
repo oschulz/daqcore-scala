@@ -20,11 +20,11 @@ package daqcore
 
 package object util {
 
-type ByteString = akka.util.contrib.daqcore.ByteString
-val  ByteString = akka.util.contrib.daqcore.ByteString
-type ByteIterator = akka.util.contrib.daqcore.ByteIterator
-val  ByteIterator = akka.util.contrib.daqcore.ByteIterator
-type ByteStringBuilder = akka.util.contrib.daqcore.ByteStringBuilder
+type ByteString = akka.util.ByteString
+val  ByteString = akka.util.ByteString
+type ByteIterator = akka.util.ByteIterator
+val  ByteIterator = akka.util.ByteIterator
+type ByteStringBuilder = akka.util.ByteStringBuilder
 object ByteStringBuilder { def apply() = ByteString.newBuilder }
 
 type Duration = scala.concurrent.util.Duration

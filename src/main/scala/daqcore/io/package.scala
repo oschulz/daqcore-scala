@@ -22,7 +22,7 @@ import daqcore.util.{ByteString, ByteStringBuilder}
 
 
 package object io {
-  val IO = akka.actor.contrib.daqcore.IO
+  val IO = akka.actor.IO
 
   type URI = java.net.URI
   val URI = GenericURI
