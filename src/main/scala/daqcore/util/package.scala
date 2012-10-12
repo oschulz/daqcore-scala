@@ -27,9 +27,10 @@ val  ByteIterator = akka.util.contrib.daqcore.ByteIterator
 type ByteStringBuilder = akka.util.contrib.daqcore.ByteStringBuilder
 object ByteStringBuilder { def apply() = ByteString.newBuilder }
 
-type Duration = akka.util.Duration
-val  Duration = akka.util.Duration
-implicit def long2Duration (x: Int): akka.util.DurationLong = akka.util.duration.longToDurationLong(x)
+type Duration = scala.concurrent.util.Duration
+val  Duration = scala.concurrent.util.Duration
+implicit def long2Duration (x: Long): scala.concurrent.util.DurationLong = scala.concurrent.util.duration.longToDurationLong(x)
+implicit def int2Duration (x: Int): scala.concurrent.util.DurationInt = scala.concurrent.util.duration.intToDurationInt(x)
 
 type Timeout = akka.util.Timeout
 val  Timeout = akka.util.Timeout

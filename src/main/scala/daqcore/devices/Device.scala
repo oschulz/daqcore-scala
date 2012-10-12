@@ -17,7 +17,7 @@
 
 package daqcore.devices
 
-import akka.dispatch.Future
+import scala.concurrent.Future
 
 import daqcore.actors._
 

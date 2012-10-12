@@ -18,10 +18,8 @@
 package daqcore.actors
 
 import akka.actor._
-import akka.util.Duration
-import akka.util.duration._
 
-import daqcore.util.Logging
+import daqcore.util._
 
 
 trait TypedActorReceive extends TypedActor.Receiver with Logging {

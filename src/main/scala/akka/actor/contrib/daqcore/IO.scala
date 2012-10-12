@@ -4,7 +4,7 @@
 package akka.actor.contrib.daqcore
 import akka.actor._
 
-import akka.dispatch.{ Future, ExecutionContext }
+import scala.concurrent.{ Future, ExecutionContext }
 import akka.util.{ Duration, NonFatal }
 import akka.util.contrib.daqcore.{ ByteString  }
 import java.net.{ SocketAddress, InetSocketAddress }
@@ -561,7 +561,7 @@ object IO {
    * A mutable reference to an [[akka.actor.IO.Iteratee]]. Not thread safe.
    *
    * Designed for use within an [[akka.actor.Actor]], although all actions
-   * perfomed on the Iteratee are processed within a [[akka.dispatch.Future]]
+   * perfomed on the Iteratee are processed within a [[scala.concurrent.Future]]
    * so it is not safe to refer to the Actor's state from within this Iteratee.
    * Messages should instead be sent to the Actor in order to modify state.
    *

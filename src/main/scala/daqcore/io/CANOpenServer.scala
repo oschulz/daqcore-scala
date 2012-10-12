@@ -18,7 +18,7 @@
 package daqcore.io
 
 import akka.actor._
-import akka.dispatch.{Future, ExecutionContext}
+import scala.concurrent.{Future, ExecutionContext}
 
 import daqcore.util._
 import daqcore.io.prot.canopen._
@@ -40,11 +40,11 @@ trait CANOpenServer {
 object CANOpenServer {
   case class VariableIO(server: CANOpenServer, node: Int) {
     class VariableReader[A](variable: COVar[A, COReadable[A]]) {
-      def read: Future[A] = server.readObject(node, variable.index, variable.subIndex) map variable.access.decode
+      def read(implicit ctx: ExecutionContext): Future[A] = server.readObject(node, variable.index, variable.subIndex) map variable.access.decode
     }
 
     class VariableWriter[A](variable: COVar[A, COWritable[A]]) {
-      def write(value: A): Future[Unit] = server.writeObject(node, variable.index, variable.subIndex, variable.access.encode(value))
+      def write(value: A)(implicit ctx: ExecutionContext): Future[Unit] = server.writeObject(node, variable.index, variable.subIndex, variable.access.encode(value))
     }
 
     class ArrayReader[A](array: COArray[A, COReadable[A], COSize])(implicit ctx: ExecutionContext) {

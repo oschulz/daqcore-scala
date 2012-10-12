@@ -17,7 +17,7 @@
 
 package daqcore.io
 
-import akka.dispatch.Future
+import scala.concurrent.Future
 
 import daqcore.util._
 

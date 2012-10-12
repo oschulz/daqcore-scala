@@ -18,7 +18,7 @@
 package daqcore.actors
 
 import akka.actor.{ActorRef, ActorSystem}
-import akka.dispatch.Future
+import scala.concurrent.Future
 
 
 class ActorRefOps(aref: ActorRef) {

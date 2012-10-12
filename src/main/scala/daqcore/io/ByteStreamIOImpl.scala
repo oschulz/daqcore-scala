@@ -20,9 +20,8 @@ package daqcore.io
 import java.net.{SocketAddress, InetSocketAddress}
 
 import akka.actor.{IO => AkkaIO, _}
-import akka.dispatch.{Future, Promise}
-import akka.util.{Duration, Timeout}
-import akka.util.duration._
+import scala.util.{Try, Success, Failure}
+import scala.concurrent.{Future, Promise}
 
 import daqcore.util._
 import daqcore.actors._, daqcore.actors.TypedActorTraits._
@@ -30,12 +29,13 @@ import daqcore.actors._, daqcore.actors.TypedActorTraits._
 
 trait CloseableResourceImpl extends CloseableTAImpl {
   val isOpenPromise = Promise[Boolean]()
+  val isOpenFuture = isOpenPromise.future
 
   def setIsOpen(status: Boolean): Unit = isOpenPromise success status
-  def isOpenOpt: Option[Boolean] = isOpenPromise.value match {
+  def isOpenOpt: Option[Boolean] = isOpenFuture.value match {
     case None => None
-    case Some(Left(error)) => throw error
-    case Some(Right(v)) => Some(v)
+    case Some(Failure(error)) => throw error
+    case Some(Success(v)) => Some(v)
   }
 
   override def close(): Unit = {
@@ -77,7 +77,7 @@ trait ByteStreamInputImpl extends ByteStreamInput with ConditionallyOpenImpl {
   def recv[A](decoder: Decoder[A]): Future[A] = {
     val result = Promise[A]()
     inputQueue pushDecoder { decoder map { result success _ } }
-    result
+    result.future
   }
 
   def recv(receiver: ActorRef, decoder: Decoder[_], repeat: Boolean): Unit = inputQueue pushDecoder {

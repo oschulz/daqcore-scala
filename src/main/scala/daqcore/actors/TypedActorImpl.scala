@@ -18,7 +18,7 @@
 package daqcore.actors
 
 import akka.actor._
-import akka.dispatch.{Future, Promise}
+import scala.concurrent.{Future, Promise}
 
 import daqcore.util._
 import TypedActorTraits._
@@ -33,7 +33,7 @@ trait TypedActorBasics
   def self[A <: AnyRef]: A = TypedActor.self[A]
   def actorSystem: ActorSystem = context.system
 
-  def successful[A](x: A): Future[A] = Promise successful x
+  def successful[A](x: A): Future[A] = Promise successful x future
   
   def selfStop(): Unit = context.stop(selfRef)
 

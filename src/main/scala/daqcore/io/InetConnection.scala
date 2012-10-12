@@ -21,7 +21,7 @@ import java.net.{SocketAddress, InetSocketAddress}
 
 import akka.actor.{IO => AkkaIO, IOManager => AkkaIOManager, _}
 import akka.actor.contrib.daqcore.{IOManager}
-import akka.dispatch.{Future, Promise}
+import scala.concurrent.{Future, Promise}
 
 import daqcore.util._
 import daqcore.actors._, daqcore.actors.TypedActorTraits._

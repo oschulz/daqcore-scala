@@ -18,10 +18,8 @@
 package daqcore
 
 import akka.actor._
-import akka.util.{Duration, Timeout}
-import akka.util.duration._
 import java.util.concurrent.TimeUnit.MILLISECONDS
-
+import daqcore.util.{Duration, Timeout}
 
 package object defaults {
   implicit val daqcoreSystem = ActorSystem("daqcore")

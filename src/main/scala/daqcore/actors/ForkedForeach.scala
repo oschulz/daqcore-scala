@@ -20,7 +20,8 @@ package daqcore.actors
 import java.net.{SocketAddress, InetSocketAddress}
 
 import akka.actor.{ActorRef, ActorRefFactory}
-import akka.dispatch.{Future, Promise}
+import scala.util.{Try, Success, Failure}
+import scala.concurrent.{Future, Promise}
 
 import daqcore.util._
 
@@ -39,7 +40,7 @@ trait ForkedForeach[A] extends Closeable {
 
 object ForkedForeach {
   protected case object DoNext
-  protected case class ElemDone(result: Either[Throwable, _])
+  protected case class ElemDone(result: Try[_])
 
   def apply[A, B](input: Seq[A], start: Boolean = true, name: String = "")(body: A => B)(onDone: => Unit = {})(implicit rf: ActorRefFactory): ForkedForeach[A] =
     typedActorOf[ForkedForeach[A]](new ForeachImpl(input, body, start, onDone), name)
@@ -104,8 +105,8 @@ object ForkedForeach {
         elemDonePending = false
         log.trace("Future element result: " + loggable(result))
         result match {
-          case Left(t) => throw t
-          case Right(_) =>
+          case Failure(t) => throw t
+          case Success(_) =>
             if (!paused) doNext()
             else currentElem = None
         }

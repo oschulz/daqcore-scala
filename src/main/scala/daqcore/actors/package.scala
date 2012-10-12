@@ -18,8 +18,8 @@
 package daqcore
 
 import akka.actor._
-import akka.dispatch.Future
-import akka.util.{Timeout, Duration}
+import scala.concurrent.Future
+import daqcore.util.{Duration, Timeout}
 
 
 package object actors {

@@ -20,7 +20,7 @@ package daqcore.io
 import java.io.{OutputStream, File, FileOutputStream}
 
 import akka.actor.{IO => AkkaIO, IOManager => AkkaIOManager, _}
-import akka.dispatch.{Future, Promise}
+import scala.concurrent.{Future, Promise}
 
 import daqcore.util._
 import daqcore.actors._, daqcore.actors.TypedActorTraits._

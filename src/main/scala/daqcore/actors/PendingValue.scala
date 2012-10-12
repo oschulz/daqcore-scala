@@ -17,7 +17,7 @@
 
 package daqcore.actors
 
-import akka.dispatch.{Future, Promise, ExecutionContext}
+import scala.concurrent.{Future, Promise, ExecutionContext}
 
 
 // Intended to be used within an actor, not thread safe.
@@ -26,7 +26,7 @@ case class PendingValue[A](initial: Option[A] = None)(implicit executor: Executi
   protected var valueVar: Option[A] = initial
   protected var promiseVar = newPromise(valueVar)
 
-  protected def newPromise(optValue: Option[A]) = optValue match {
+  protected def newPromise(optValue: Option[A]): Promise[A] = optValue match {
     case Some(x) => Promise successful x
     case None => Promise[A]()
   }

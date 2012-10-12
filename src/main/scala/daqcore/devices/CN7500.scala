@@ -18,7 +18,7 @@
 package daqcore.devices
 
 import akka.actor._
-import akka.dispatch.{Future, Promise}
+import scala.concurrent.{Future, Promise}
 
 import daqcore.actors._, daqcore.actors.TypedActorTraits._
 import daqcore.util._

@@ -18,7 +18,7 @@
 package daqcore.devices
 
 import daqcore.actors._
-import akka.dispatch.Future
+import scala.concurrent.Future
 
 
 trait PowerSupply extends Device {
