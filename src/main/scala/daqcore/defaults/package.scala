@@ -24,5 +24,7 @@ import daqcore.util.{Duration, Timeout}
 package object defaults {
   implicit val daqcoreSystem = ActorSystem("daqcore")
 
+  implicit val defaultExecutionContext = daqcoreSystem.dispatcher
+
   implicit val defaultTimeout = Timeout(Duration(daqcoreSystem.settings.config.getMilliseconds("akka.actor.typed.timeout"), MILLISECONDS))
 }
