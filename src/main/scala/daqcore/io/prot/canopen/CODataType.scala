@@ -100,7 +100,6 @@ case object COVisibleString extends CODataType[String] {
 }
 
 case object COOctetString extends CODataType[ByteString] {
-  def encoding = "ASCII"
   def id = 0x0A
   def name = "Visible_String"
   def encode(builder: ByteStringBuilder, value: ByteString) = builder ++= value
