@@ -14,7 +14,7 @@ addCompilerPlugin("org.scala-lang.plugins" % "continuations" % "2.10.0")
 
 Classpaths.compilerPluginConfig
 
-scalacOptions ++= Seq("-unchecked", "-deprecation", "-P:continuations:enable")
+scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature", "-P:continuations:enable")
 
 libraryDependencies += "org.scala-lang" % "scala-swing" % "2.10.0"
 
