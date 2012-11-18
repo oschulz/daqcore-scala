@@ -19,6 +19,7 @@ package daqcore.actors
 
 import scala.reflect.{ClassTag, classTag}
 import scala.concurrent.{Future, Promise}
+import scala.concurrent.duration._
 import akka.actor._
 
 import daqcore.util._
@@ -38,10 +39,10 @@ trait TypedActorBasics
   
   def selfStop(): Unit = context.stop(selfRef)
 
-  def schedule(initialDelay: Duration, frequency: Duration, receiver: ActorRef, message: Any): Cancellable =
+  def schedule(initialDelay: FiniteDuration, frequency: FiniteDuration, receiver: ActorRef, message: Any): Cancellable =
     actorSystem.scheduler.schedule(initialDelay, frequency, receiver, message)
   
-  def scheduleOnce(delay: Duration, receiver: ActorRef, message: Any): Cancellable =
+  def scheduleOnce(delay: FiniteDuration, receiver: ActorRef, message: Any): Cancellable =
     actorSystem.scheduler.scheduleOnce(delay, receiver, message)
 }
 

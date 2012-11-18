@@ -17,6 +17,7 @@
 
 package daqcore.actors
 
+import scala.concurrent.duration._
 import akka.actor._
 
 import daqcore.util._
@@ -28,13 +29,13 @@ trait TypedActorReceive extends TypedActor.Receiver with Logging {
   
   def receive: Receiver = { case _ if false => }
 
-  def scheduleSelf(initialDelay: Duration, frequency: Duration)(f: => Unit): Cancellable =
+  def scheduleSelf(initialDelay: FiniteDuration, frequency: FiniteDuration)(f: => Unit): Cancellable =
     TypedActor.context.system.scheduler.schedule(initialDelay, frequency, TypedActor.context.self, ExecScheduled(() => f))(TypedActor.dispatcher)
 
   def scheduleSelf(initialDelay: Long, frequency: Long)(f: => Unit): Cancellable =
     scheduleSelf(initialDelay milliseconds, frequency milliseconds)(f)
 
-  def scheduleSelfOnce(delay: Duration)(f: => Unit): Cancellable =
+  def scheduleSelfOnce(delay: FiniteDuration)(f: => Unit): Cancellable =
     TypedActor.context.system.scheduler.scheduleOnce(delay, TypedActor.context.self, ExecScheduled(() => f))(TypedActor.dispatcher)
 
   def scheduleSelfOnce(delay: Long)(f: => Unit): Cancellable =

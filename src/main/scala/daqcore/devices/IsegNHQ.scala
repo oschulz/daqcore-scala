@@ -17,8 +17,9 @@
 
 package daqcore.devices
 
-import akka.actor._
 import scala.concurrent.{Future, Promise}
+import scala.concurrent.duration._
+import akka.actor._
 
 import daqcore.util._
 import daqcore.io._

@@ -19,9 +19,10 @@ package daqcore.io
 
 import java.net.{SocketAddress, InetSocketAddress}
 
+import scala.concurrent.{Future, Promise}
+import scala.concurrent.duration._
 import akka.actor.{IO => AkkaIO, IOManager => AkkaIOManager, _}
 import akka.actor.IOManager
-import scala.concurrent.{Future, Promise}
 
 import daqcore.util._
 import daqcore.actors._, daqcore.actors.TypedActorTraits._

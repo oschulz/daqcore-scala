@@ -18,7 +18,7 @@
 package daqcore.actors
 
 import scala.concurrent.{Future, Promise}
-import daqcore.util.Duration
+import scala.concurrent.duration._
 
 
 trait Syncable {

@@ -18,6 +18,7 @@
 package daqcore.io
 
 import scala.concurrent.Future
+import scala.concurrent.duration._
 
 import daqcore.util._
 

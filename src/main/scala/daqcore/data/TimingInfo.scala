@@ -18,6 +18,7 @@
 package daqcore.data
 
 import java.util.UUID
+import scala.concurrent.duration._
 
 import daqcore.util._
 import java.io.File

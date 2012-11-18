@@ -29,11 +29,6 @@ val  ByteIterator = akka.util.ByteIterator
 type ByteStringBuilder = akka.util.ByteStringBuilder
 object ByteStringBuilder { def apply() = ByteString.newBuilder }
 
-type Duration = scala.concurrent.duration.FiniteDuration
-val  Duration = scala.concurrent.duration.FiniteDuration
-implicit def long2Duration (x: Long) = new scala.concurrent.duration.DurationLong(x)
-implicit def int2Duration (x: Int) = new scala.concurrent.duration.DurationInt(x)
-
 type Timeout = akka.util.Timeout
 val  Timeout = akka.util.Timeout
 
