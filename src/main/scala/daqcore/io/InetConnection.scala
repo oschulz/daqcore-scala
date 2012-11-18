@@ -25,6 +25,7 @@ import akka.actor.{IO => AkkaIO, IOManager => AkkaIOManager, _}
 import akka.actor.IOManager
 
 import daqcore.util._
+import akka.actor.{IO => AkkaIO}
 import daqcore.actors._, daqcore.actors.TypedActorTraits._
 
 
@@ -58,15 +59,15 @@ object InetConnection extends IOResourceCompanion[InetConnection] {
     }
     
     override def receive = extend(super.receive) {
-      case IO.Connected(socket, address) => {
+      case AkkaIO.Connected(_, address) => {
         setIsOpen(true)
         log.trace("Established connection to " + address)
       }
-      case IO.Read(socket, bytes) => {
+      case AkkaIO.Read(socket, bytes) => {
         log.trace("Received: " + loggable(bytes))
         inputQueue pushData bytes
       }
-      case IO.Closed(socket: IO.SocketHandle, cause) => {
+      case AkkaIO.Closed(socket: IO.SocketHandle, cause) => {
         log.trace("Connection closed because: " + cause)
         close()
       }
@@ -112,13 +113,13 @@ object InetServer {
     atCleanup { serverHandle.close() }
 
     def supervisorStrategy = OneForOneStrategy() { case _ ⇒ SupervisorStrategy.Stop }
-    
+
     override def receive = extend(super.receive) {
-      case IO.Listening(server, address) => {
+      case AkkaIO.Listening(server, address) => {
         log.trace("Server is listening on " + address)
       }
        
-      case (IO.NewClient(server), _) => {
+      case (AkkaIO.NewClient(server), _) => {
         log.trace("New connection to server")
         val connection = typedActorOf[InetConnection](new ServerConnectionImpl(serverHandle))
         connection.isOpen.getOpt(100 milliseconds) match {
@@ -127,7 +128,7 @@ object InetServer {
         }
       }
        
-      case (IO.Closed(server: IO.ServerHandle, cause), _) => {
+      case (AkkaIO.Closed(server: IO.ServerHandle, cause), _) => {
         log.trace("Server socket has closed because: " + cause)
       }
     }
