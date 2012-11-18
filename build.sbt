@@ -40,9 +40,7 @@ libraryDependencies += "com.typesafe.akka" % "akka-slf4j_2.10" % "2.1.0"
 
 libraryDependencies += "org.scalatest" % "scalatest_2.10" % "2.0.M5b" % "test"
 
-libraryDependencies += "net.databinder" % "dispatch-http_2.9.1" % "0.8.7" % "compile"
-
-libraryDependencies += "net.databinder" % "dispatch-http-json_2.9.1" % "0.8.7" % "compile"
+libraryDependencies += "play" % "play_2.10" % "2.1-RC1"
 
 
 libraryDependencies +=  "ch.qos.logback" % "logback-core" % "1.0.0"
