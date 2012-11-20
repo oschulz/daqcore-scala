@@ -32,7 +32,7 @@ class MnemonicSpec extends WordSpec with MustMatchers {
 
   "A RecMnemonic" should {
     "match a SpecMnemonic according to SCPI specs" in {
-      expect(false)( VOLTage == RecMnemonic(ByteCharSeq("VOLTage")) )
+      expectResult(false)( VOLTage == RecMnemonic(ByteCharSeq("VOLTage")) )
       assert( VOLTage === RecMnemonic(ByteCharSeq("VOLTAGE")) )
       assert( VOLTage === RecMnemonic(ByteCharSeq("voltage")) )
       assert( VOLTage === RecMnemonic(ByteCharSeq("volt")) ) 
