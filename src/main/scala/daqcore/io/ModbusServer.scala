@@ -58,6 +58,7 @@ object ModbusServer {
   def apply(uri: URI, name: String)(implicit rf: ActorRefFactory): ModbusServer = uri match {
     case AkkaActorPath(path) => typedActor[ModbusServer](actorFor(path))
     case HostURL("modbus-ascii", host, port) => typedActorOf[ModbusASCIIServer](new ASCIIImpl(HostURL("tcp", host, port).toString), name)
+    case HostURL("modbus-tcp", host, port) => typedActorOf[ModbusASCIIServer](new TCPImpl(HostURL("tcp", host, port).toString), name)
     case uri => throw new IllegalArgumentException("URI \"%s\" not supported".format(uri))
   }
 
@@ -156,6 +157,17 @@ object ModbusServer {
       // RS485 bus (or similar), have to wait for response
       result.get
       result
+    }
+  }
+
+  class TCPImpl(val ioURI: String) extends ModbusServer.DefaultImpl with ModbusASCIIServer {
+    val io = ByteStreamIO(ioURI, "io-connection")
+    val transport = ModbusTCPCodec
+    val codec = ModbusMasterCodec(transport)
+
+    def query(req: ModbusReq): Future[ModbusResp] = {
+      io.send(req, codec.enc)
+      io.recv(codec.dec)
     }
   }
 }
