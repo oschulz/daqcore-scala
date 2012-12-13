@@ -31,9 +31,9 @@ import collection.immutable.Queue
 
 
 trait CN7500 extends Device {
-  def readRegister(address: Int): Future[Int]
-  def readRegisters(address: Int, count: Int): Future[ArrayVec[Int]]
-  def writeRegister(address: Int, value: Int): Future[Int]
+  def readRegister(address: Int): Future[Short]
+  def readRegisters(address: Int, count: Int): Future[ArrayVec[Short]]
+  def writeRegister(address: Int, value: Short): Future[Short]
 
   def readBit(address: Int): Future[Boolean]
   def readBits(address: Int, count: Int): Future[ArrayVec[Boolean]]
@@ -68,8 +68,8 @@ class CN7500Impl(busURI: String, slave: Int) extends CN7500
   
   val bus = ModbusServer(busURI, "modbus")
   
-  def reg2temp(x: Int): Double = x * 0.1
-  def temp2reg(x: Double): Int = (x / 0.1).toInt & 0xffff
+  def reg2temp(x: Short): Double = (x.toInt & 0xffff) * 0.1
+  def temp2reg(x: Double): Short = ((x / 0.1).toInt & 0xffff).toShort
   
   def identity = successful("CN7500")
 
@@ -86,7 +86,7 @@ class CN7500Impl(busURI: String, slave: Int) extends CN7500
 
   def readRegister(address: Int) = bus.readRegister(slave, address)
   def readRegisters(address: Int, count: Int) = bus.readRegisters(slave, address, count)
-  def writeRegister(address: Int, value: Int) = bus.writeRegister(slave, address, value)
+  def writeRegister(address: Int, value: Short) = bus.writeRegister(slave, address, value)
 
   def readBit(address: Int) = bus.readBitInput(slave, address)
   def readBits(address: Int, count: Int) = bus.readBitInputs(slave, address, count)

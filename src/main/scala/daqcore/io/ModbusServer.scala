@@ -33,13 +33,13 @@ import collection.immutable.Queue
 trait ModbusServer {
   def query(req: ModbusReq): Future[ModbusResp]
 
-  def readRegisterInput(slave: Int, address: Int): Future[Int]
-  def readRegisterInputs(slave: Int, address: Int, count: Int): Future[ArrayVec[Int]]
+  def readRegisterInput(slave: Int, address: Int): Future[Short]
+  def readRegisterInputs(slave: Int, address: Int, count: Int): Future[ArrayVec[Short]]
 
-  def readRegister(slave: Int, address: Int): Future[Int]
-  def readRegisters(slave: Int, address: Int, count: Int): Future[ArrayVec[Int]]
-  def writeRegister(slave: Int, address: Int, value: Int): Future[Int]
-  def writeRegisters(slave: Int, address: Int, values: ArrayVec[Int]): Future[Int]
+  def readRegister(slave: Int, address: Int): Future[Short]
+  def readRegisters(slave: Int, address: Int, count: Int): Future[ArrayVec[Short]]
+  def writeRegister(slave: Int, address: Int, value: Short): Future[Short]
+  def writeRegisters(slave: Int, address: Int, values: ArrayVec[Short]): Future[Int]
 
   def readBitInput(slave: Int, address: Int): Future[Boolean]
   def readBitInputs(slave: Int, address: Int, count: Int): Future[ArrayVec[Boolean]]
@@ -84,30 +84,30 @@ object ModbusServer {
     }
 
 
-    def readRegisterInput(slave: Int, address: Int): Future[Int] = readRegisterInputs(slave, address, 1) map {_.head}
+    def readRegisterInput(slave: Int, address: Int): Future[Short] = readRegisterInputs(slave, address, 1) map {_.head}
     
-    def readRegisterInputs(slave: Int, address: Int, count: Int): Future[ArrayVec[Int]] = {
+    def readRegisterInputs(slave: Int, address: Int, count: Int): Future[ArrayVec[Short]] = {
       checkedQuery(ReadRegisterInputsReq(slave, address, count)) { _ match {
         case ReadRegisterInputsResp(`slave`, values) => values
       } }
     }
 
 
-    def readRegister(slave: Int, address: Int): Future[Int] = readRegisters(slave, address, 1) map {_.head}
+    def readRegister(slave: Int, address: Int): Future[Short] = readRegisters(slave, address, 1) map {_.head}
 
-    def readRegisters(slave: Int, address: Int, count: Int): Future[ArrayVec[Int]] = {
+    def readRegisters(slave: Int, address: Int, count: Int): Future[ArrayVec[Short]] = {
       checkedQuery(ReadRegistersReq(slave, address, count)) { _ match {
         case ReadRegistersResp(`slave`, values) => values
       } }
     }
 
-    def writeRegister(slave: Int, address: Int, value: Int): Future[Int] = {
+    def writeRegister(slave: Int, address: Int, value: Short): Future[Short] = {
       checkedQuery(WriteRegisterReq(slave, address, value)) { _ match {
         case WriteRegisterResp(`slave`, `address`, value) => value
       } }
     }
 
-    def writeRegisters(slave: Int, address: Int, values: ArrayVec[Int]): Future[Int] = {
+    def writeRegisters(slave: Int, address: Int, values: ArrayVec[Short]): Future[Int] = {
       checkedQuery(WriteRegistersReq(slave, address, values)) { _ match {
         case WriteRegistersResp(`slave`, `address`, count) => count
       } }

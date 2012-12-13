@@ -60,11 +60,11 @@ object ModbusReq {
       case msg: jamsg.ReadMultipleRegistersRequest =>
         ReadRegistersReq(msg.getUnitID, msg.getReference, msg.getWordCount)
       case msg: jamsg.WriteSingleRegisterRequest =>
-        WriteRegisterReq(msg.getUnitID, msg.getReference, msg.getRegister.getValue)
+        WriteRegisterReq(msg.getUnitID, msg.getReference, msg.getRegister.getValue.toShort)
       case msg: jamsg.WriteMultipleCoilsRequest =>
         WriteCoilsReq(msg.getUnitID, msg.getReference, ArrayVec( ((0 to msg.getCoils.size-1) map msg.getCoils.getBit) : _*) )
       case msg: jamsg.WriteMultipleRegistersRequest =>
-        WriteRegistersReq(msg.getUnitID, msg.getReference, ArrayVec( ((0 to msg.getWordCount-1) map {i => msg.getRegister(i).getValue}) : _*) )
+        WriteRegistersReq(msg.getUnitID, msg.getReference, ArrayVec( ((0 to msg.getWordCount-1) map {i => msg.getRegister(i).getValue.toShort}) : _*) )
       case msg: jamsg.IllegalFunctionRequest =>
         RawReq(slave, function, data)
       case msg => throw new IllegalArgumentException("Modbus message of type %s can't be interpreted as a request".format(msg.getClass.getName))
@@ -98,11 +98,11 @@ object ModbusResp {
       case msg: jamsg.WriteCoilResponse =>
         WriteCoilResp(msg.getUnitID, msg.getReference, msg.getCoil)
       case msg: jamsg.ReadInputRegistersResponse =>
-        ReadRegisterInputsResp(msg.getUnitID, ArrayVec( ((0 to msg.getWordCount-1) map msg.getRegisterValue) : _*) )
+        ReadRegisterInputsResp(msg.getUnitID, ArrayVec( ((0 to msg.getWordCount-1) map {i => msg.getRegisterValue(i).toShort}) : _*) )
       case msg: jamsg.ReadMultipleRegistersResponse =>
-        ReadRegistersResp(msg.getUnitID, ArrayVec( ((0 to msg.getWordCount-1) map msg.getRegisterValue) : _*) )
+        ReadRegistersResp(msg.getUnitID, ArrayVec( ((0 to msg.getWordCount-1) map {i => msg.getRegisterValue(i).toShort}) : _*) )
       case msg: jamsg.WriteSingleRegisterResponse =>
-        WriteRegisterResp(msg.getUnitID, msg.getReference, msg.getRegisterValue)
+        WriteRegisterResp(msg.getUnitID, msg.getReference, msg.getRegisterValue.toShort)
       case msg: jamsg.WriteMultipleCoilsResponse =>
         WriteCoilsResp(msg.getUnitID, msg.getReference, msg.getBitCount)
       case msg: jamsg.WriteMultipleRegistersResponse =>
@@ -117,9 +117,6 @@ object ModbusResp {
 }
 
 object ModbusMsg {
-  private def checkWord(x: Int): Unit =
-    if ( (x < 0) || (x >= (1<<16)) ) throw new IllegalArgumentException("Value outside range for Modbus register: " + x)
-
   private def putMsgBytes(builder: ByteStringBuilder, slave: Int, msg: jamsg.ModbusMessageImpl): Unit = {
     msg.setUnitID(slave)
     msg.setHeadless()
@@ -137,13 +134,11 @@ object ModbusMsg {
   
   
   trait MobusSingleRegMsg {
-    val value: Int
-    checkWord(value)
+    val value: Short
   }
 
   trait MobusMultRegMsg {
-    val values: ArrayVec[Int]
-    values foreach checkWord
+    val values: ArrayVec[Short]
   }
 
   // Modbus function code 2
@@ -177,20 +172,20 @@ object ModbusMsg {
   // Modbus function code 4
   case class ReadRegisterInputsReq(slave: Int, address: Int, count: Int) extends ModbusRead
     { def putBytes(builder: ByteStringBuilder) = putMsgBytes(builder, slave, new jamsg.ReadInputRegistersRequest(address, count)) }
-  case class ReadRegisterInputsResp(slave: Int, values: ArrayVec[Int]) extends ModbusReadResp with MobusMultRegMsg
-    { def putBytes(builder: ByteStringBuilder) = putMsgBytes(builder, slave, new jamsg.ReadInputRegistersResponse((values map (new jaimg.SimpleRegister(_))).toArray)) }
+  case class ReadRegisterInputsResp(slave: Int, values: ArrayVec[Short]) extends ModbusReadResp with MobusMultRegMsg
+    { def putBytes(builder: ByteStringBuilder) = putMsgBytes(builder, slave, new jamsg.ReadInputRegistersResponse((values map {v => new jaimg.SimpleRegister(v.toInt)}).toArray)) }
 
   // Modbus function code 3
   case class ReadRegistersReq(slave: Int, address: Int, count: Int) extends ModbusRead
     { def putBytes(builder: ByteStringBuilder) = putMsgBytes(builder, slave, new jamsg.ReadMultipleRegistersRequest(address, count)) }
-  case class ReadRegistersResp(slave: Int, values: ArrayVec[Int]) extends ModbusReadResp with MobusMultRegMsg
-    { def putBytes(builder: ByteStringBuilder) = putMsgBytes(builder, slave, new jamsg.ReadMultipleRegistersResponse((values map (new jaimg.SimpleRegister(_))).toArray)) }
+  case class ReadRegistersResp(slave: Int, values: ArrayVec[Short]) extends ModbusReadResp with MobusMultRegMsg
+    { def putBytes(builder: ByteStringBuilder) = putMsgBytes(builder, slave, new jamsg.ReadMultipleRegistersResponse((values map {v => new jaimg.SimpleRegister(v.toInt)}).toArray)) }
 
   // Modbus function code 6
-  case class WriteRegisterReq(slave: Int, address: Int, value: Int) extends ModbusWrite with MobusSingleRegMsg
-    { def putBytes(builder: ByteStringBuilder) = putMsgBytes(builder, slave, new jamsg.WriteSingleRegisterRequest(address, new jaimg.SimpleRegister(value))) }
-  case class WriteRegisterResp(slave: Int, address: Int, value: Int) extends ModbusWriteResp with MobusSingleRegMsg
-    { def putBytes(builder: ByteStringBuilder) = putMsgBytes(builder, slave, new jamsg.WriteSingleRegisterRequest(address, new jaimg.SimpleRegister(value))) }
+  case class WriteRegisterReq(slave: Int, address: Int, value: Short) extends ModbusWrite with MobusSingleRegMsg
+    { def putBytes(builder: ByteStringBuilder) = putMsgBytes(builder, slave, new jamsg.WriteSingleRegisterRequest(address, new jaimg.SimpleRegister(value.toInt))) }
+  case class WriteRegisterResp(slave: Int, address: Int, value: Short) extends ModbusWriteResp with MobusSingleRegMsg
+    { def putBytes(builder: ByteStringBuilder) = putMsgBytes(builder, slave, new jamsg.WriteSingleRegisterRequest(address, new jaimg.SimpleRegister(value.toInt))) }
 
   // Modbus function code 15
   case class WriteCoilsReq(slave: Int, address: Int, values: ArrayVec[Boolean]) extends ModbusWrite {
@@ -204,8 +199,8 @@ object ModbusMsg {
     { def putBytes(builder: ByteStringBuilder) = putMsgBytes(builder, slave, new jamsg.WriteMultipleCoilsResponse(address, count)) }
 
   // Modbus function code 16
-  case class WriteRegistersReq(slave: Int, address: Int, values: ArrayVec[Int]) extends ModbusWrite with MobusMultRegMsg
-    { def putBytes(builder: ByteStringBuilder) = putMsgBytes(builder, slave, new jamsg.WriteMultipleRegistersRequest(address, (values map (new jaimg.SimpleRegister(_))).toArray)) }
+  case class WriteRegistersReq(slave: Int, address: Int, values: ArrayVec[Short]) extends ModbusWrite with MobusMultRegMsg
+    { def putBytes(builder: ByteStringBuilder) = putMsgBytes(builder, slave, new jamsg.WriteMultipleRegistersRequest(address, (values map {v => new jaimg.SimpleRegister(v.toInt)}).toArray)) }
   case class WriteRegistersResp(slave: Int, address: Int, count: Int) extends ModbusWriteResp
     { def putBytes(builder: ByteStringBuilder) = putMsgBytes(builder, slave, new jamsg.WriteMultipleRegistersResponse(address, count)) }
   
