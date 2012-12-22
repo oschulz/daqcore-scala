@@ -39,22 +39,22 @@ trait CANOpenServer {
 
 object CANOpenServer {
   case class VariableIO(server: CANOpenServer, node: Int) {
-    class VariableReader[A](variable: COVar[A, COReadable[A]]) {
+    implicit class VariableReader[A](variable: COVar[A, COReadable[A]]) {
       def read(implicit ctx: ExecutionContext): Future[A] = server.readObject(node, variable.index, variable.subIndex) map variable.access.decode
     }
 
-    class VariableWriter[A](variable: COVar[A, COWritable[A]]) {
+    implicit class VariableWriter[A](variable: COVar[A, COWritable[A]]) {
       def write(value: A)(implicit ctx: ExecutionContext): Future[Unit] = server.writeObject(node, variable.index, variable.subIndex, variable.access.encode(value))
     }
 
-    class ArrayReader[A](array: COArray[A, COReadable[A], COSize])(implicit ctx: ExecutionContext) {
+    implicit class ArrayReader[A](array: COArray[A, COReadable[A], COSize])(implicit ctx: ExecutionContext) {
       def read: Future[Seq[A]] = for {
 		n <- new VariableReader(array.size).read
 		r <- Future.sequence( for { i <- 1 to n } yield new VariableReader(array(i)).read )
       } yield r
     }
 
-    class RecordReader(record: CORecord)(implicit ctx: ExecutionContext) {
+    implicit class RecordReader(record: CORecord)(implicit ctx: ExecutionContext) {
       def read: Future[Seq[(String, Any)]] = Future.sequence (
         for {
           m <- record.members
@@ -65,10 +65,5 @@ object CANOpenServer {
         }
       )
     }
-
-    implicit def varReader[A](variable: COVar[A, COReadable[A]]) = new VariableReader(variable)
-    implicit def varWriter[A](variable: COVar[A, COWritable[A]]) = new VariableWriter(variable)
-    implicit def arrayReader[A](array: COArray[A, COReadable[A], COSize])(implicit ctx: ExecutionContext) = new ArrayReader(array)
-    implicit def recordReader[A](record: CORecord)(implicit ctx: ExecutionContext) = new RecordReader(record)
   }
 }

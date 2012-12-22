@@ -122,7 +122,7 @@ object InetServer {
       case (AkkaIO.NewClient(server), _) => {
         log.trace("New connection to server")
         val connection = typedActorOf[InetConnection](new ServerConnectionImpl(serverHandle))
-        connection.isOpen.getOpt(100 milliseconds) match {
+        connection.isOpen.getOpt(100.milliseconds) match {
           case Some(true) => connection.isOpen onSuccess { case true => body(connection) }
           case _ => log.trace("Could not open connection - client no longer interested?")
         }

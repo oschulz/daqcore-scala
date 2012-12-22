@@ -17,6 +17,8 @@
 
 package daqcore.data
 
+import scala.language.implicitConversions
+
 
 package object units {
 

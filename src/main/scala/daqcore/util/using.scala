@@ -17,6 +17,9 @@
 
 package daqcore.util
 
+import scala.language.reflectiveCalls
+
+
 /** Language extensions to use resources and close them afterwards, exception
  * safe.
  */

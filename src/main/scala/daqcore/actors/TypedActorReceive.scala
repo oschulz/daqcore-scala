@@ -17,6 +17,8 @@
 
 package daqcore.actors
 
+import scala.language.postfixOps
+
 import scala.concurrent.duration._
 import akka.actor._
 

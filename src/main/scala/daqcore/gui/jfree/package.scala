@@ -17,6 +17,8 @@
 
 package daqcore.gui
 
+import scala.language.implicitConversions
+
 
 package object jfree {
   import org.jfree.chart._

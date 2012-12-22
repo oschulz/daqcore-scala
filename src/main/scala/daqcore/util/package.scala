@@ -17,6 +17,8 @@
 
 package daqcore
 
+import scala.language.implicitConversions
+
 import scala.reflect.{ClassTag, classTag}
 
 

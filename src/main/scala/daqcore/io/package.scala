@@ -17,6 +17,8 @@
 
 package daqcore
 
+import scala.language.implicitConversions
+
 import java.net.{URI => JavaURI}
 import daqcore.util.{ByteString, ByteStringBuilder}
 

@@ -18,6 +18,9 @@
 package daqcore.util
 
 
+import scala.language.implicitConversions
+import scala.language.postfixOps
+
 import scala.util.parsing.combinator._
 import scala.util.parsing.input._
 import scala.util.matching.Regex

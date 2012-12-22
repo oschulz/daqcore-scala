@@ -77,7 +77,7 @@ class CN7500Impl(busURI: String, slave: Int) extends CN7500
     assert( bus.query(RawReq(slave, 0x67, ByteString(0x00, 0x12, 0x00, 0x03))).get ==
       RawResp(slave, 0x67, ByteString(0x06, 0x00, 0x02, 0x00, 0x01, 0x00, 0x00)) )
 
-    scheduleOnce(30 seconds, selfRef, CheckConnection)
+    scheduleOnce(30.seconds, selfRef, CheckConnection)
     log.trace("Connection checked")
   }
 

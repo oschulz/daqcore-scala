@@ -46,7 +46,8 @@ object ArrayOps {
     
     val from = if (src eq dest) copyOf(src, src.length) else src
     val to = dest
-    val (fromClass, toClass) = (from.getClass, to.getClass)
+    val fromClass = from.getClass
+    val toClass = to.getClass
 
     if ((fromClass == classOf[Array[Byte]]) && (toClass == classOf[Array[Byte]])) {
       val (source, target) = (from.asInstanceOf[Array[Byte]], to.asInstanceOf[Array[Byte]])

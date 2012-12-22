@@ -17,6 +17,9 @@
 
 package daqcore.actors
 
+import scala.language.postfixOps
+import scala.language.reflectiveCalls
+
 import scala.reflect.{ClassTag, classTag}
 import scala.concurrent.{Future, Promise}
 import scala.concurrent.duration._
@@ -35,7 +38,7 @@ trait TypedActorBasics
   def self[A <: AnyRef]: A = TypedActor.self[A]
   def actorSystem: ActorSystem = context.system
 
-  def successful[A](x: A): Future[A] = Promise successful x future
+  def successful[A](x: A): Future[A] = (Promise successful x).future
   
   def selfStop(): Unit = context.stop(selfRef)
 

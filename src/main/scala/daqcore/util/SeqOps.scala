@@ -39,7 +39,7 @@ class NestedSeqOps[A: ClassTag](thisSeq: Seq[Seq[A]]) extends SeqOps[Seq[A]](thi
 
 
 class FlattenedWithSep[A: ClassTag](val thisSeq: Seq[Seq[A]], val sep: Seq[A]) extends Seq[A] {
-  lazy val length: Int = (thisSeq.view map {_.length} sum) + (0 max ((thisSeq.length - 1) * sep.length))
+  lazy val length: Int = (thisSeq.view.map{_.length}.sum) + (0 max ((thisSeq.length - 1) * sep.length))
   
   lazy val contents: IndexedSeq[A] = toArray(classTag[A]).toSeq.asInstanceOf[IndexedSeq[A]]
   

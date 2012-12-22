@@ -71,8 +71,8 @@ trait ByteStreamOutputImpl extends ByteStreamOutput with ConditionallyOpenImpl
 trait ByteStreamInputImpl extends ByteStreamInput with ConditionallyOpenImpl {
   val inputQueue = DataDecoderQueue()
 
-  def recv(): Future[ByteString] = recv(IO takeAny)
-  def recv(receiver: ActorRef, repeat: Boolean): Unit = recv(receiver, IO takeAny, repeat)
+  def recv(): Future[ByteString] = recv(IO.takeAny)
+  def recv(receiver: ActorRef, repeat: Boolean): Unit = recv(receiver, IO.takeAny, repeat)
   
   def recv[A](decoder: Decoder[A]): Future[A] = {
     val result = Promise[A]()

@@ -96,7 +96,7 @@ abstract class JFreeChartCompanion {
     }
 
     def ofValues[A](values: Seq[A], options: Options = Options())(implicit num: Numeric[A]): JFreeChart = {
-      ofPoints(values.view.zipWithIndex map {_ swap}, options)
+      ofPoints(values.view.zipWithIndex map {_.swap}, options)
     }
   }
 

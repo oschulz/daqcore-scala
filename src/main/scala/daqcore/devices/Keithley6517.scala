@@ -17,6 +17,8 @@
 
 package daqcore.devices
 
+import scala.language.postfixOps
+
 import akka.actor._
 import scala.concurrent.{Future, Promise}
 
