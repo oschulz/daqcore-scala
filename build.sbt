@@ -49,7 +49,6 @@ libraryDependencies +=  "ch.qos.logback" % "logback-classic" % "1.0.0" % "runtim
 
 libraryDependencies +=  "org.slf4j" % "log4j-over-slf4j" % "1.6.4" % "runtime" intransitive()
 
-
 libraryDependencies += "jfree" % "jfreechart" % "1.0.13"
 
 
@@ -57,6 +56,8 @@ libraryDependencies += "com.thoughtworks.xstream" % "xstream" % "1.4.2"
 
 libraryDependencies += "org.codehaus.jettison" % "jettison" % "1.0.1"
 
+
+libraryDependencies += "com.nativelibs4java" % "bridj" % "0.6.1"
 
 libraryDependencies += "colt" % "colt" % "1.2.0"
 
