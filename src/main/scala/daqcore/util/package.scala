@@ -24,6 +24,8 @@ import scala.reflect.{ClassTag, classTag}
 
 package object util {
 
+type Closeable = java.io.Closeable // Change to java-1.7 AutoCloseable when java-1.6 support can be dropped
+
 type ByteString = akka.util.ByteString
 val  ByteString = akka.util.ByteString
 type ByteIterator = akka.util.ByteIterator
