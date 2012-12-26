@@ -25,14 +25,14 @@ import daqcore.util._
 import daqcore.actors._
 
 
-trait GenericInput[+A] {
+trait GenericInput[+A] extends Closeable {
   def recv(): Future[A]
 
   def recv(receiver: ActorRef, repeat: Boolean): Unit
 }
 
 
-trait GenericOutput[-A] extends Syncable {
+trait GenericOutput[-A] extends Closeable with Syncable {
   def send(data: A) : Unit
 
   def flush() : Unit
