@@ -17,8 +17,13 @@
 
 package daqcore.actors
 
+import scala.language.postfixOps
+import scala.language.reflectiveCalls
+
+import scala.reflect.{ClassTag, classTag}
+import scala.concurrent.{Future, Promise}
+import scala.concurrent.duration._
 import akka.actor._
-import akka.dispatch.{Future, Promise}
 
 import daqcore.util._
 import TypedActorTraits._
@@ -33,19 +38,19 @@ trait TypedActorBasics
   def self[A <: AnyRef]: A = TypedActor.self[A]
   def actorSystem: ActorSystem = context.system
 
-  def successful[A](x: A): Future[A] = Promise successful x
+  def successful[A](x: A): Future[A] = (Promise successful x).future
   
   def selfStop(): Unit = context.stop(selfRef)
 
-  def schedule(initialDelay: Duration, frequency: Duration, receiver: ActorRef, message: Any): Cancellable =
+  def schedule(initialDelay: FiniteDuration, frequency: FiniteDuration, receiver: ActorRef, message: Any): Cancellable =
     actorSystem.scheduler.schedule(initialDelay, frequency, receiver, message)
   
-  def scheduleOnce(delay: Duration, receiver: ActorRef, message: Any): Cancellable =
+  def scheduleOnce(delay: FiniteDuration, receiver: ActorRef, message: Any): Cancellable =
     actorSystem.scheduler.scheduleOnce(delay, receiver, message)
 }
 
 
-abstract class TypedActorCompanion[+A <: AnyRef : ClassManifest] {
+abstract class TypedActorCompanion[+A <: AnyRef : ClassTag] {
   def apply(aref: ActorRef)(implicit sys: ActorSystem) = typedActor[A](aref)
 }
 
@@ -122,7 +127,7 @@ trait TypedActorImpl extends TypedActorBasics with Logging with Profiling
     while (cleanupActions != Nil) {
       val action::rest = cleanupActions
       cleanupActions = rest
-      try { action() } catch { case e => log.error(e.toString) }
+      try { action() } catch { case e: Throwable => log.error(e.toString) }
     }
   }
 
@@ -132,7 +137,7 @@ trait TypedActorImpl extends TypedActorBasics with Logging with Profiling
     while (shutdownActions != Nil) {
       val action::rest = shutdownActions
       shutdownActions = rest
-      try { action() } catch { case e => log.error(e.toString) }
+      try { action() } catch { case e: Throwable => log.error(e.toString) }
     }
   }
 

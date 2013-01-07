@@ -33,9 +33,9 @@ object NR1 {
 object NR1Seq {
   def apply(values: Int*) = for { x <- values } yield NR1(x)
 
-  def unapplySeq(args: Seq[_]) = try {
-    Some( for { arg <- args} yield
-      { val NR1(i) = arg.asInstanceOf[ByteCharSeq]; i } )
+  def unapplySeq(args: Seq[ByteCharSeq]): Option[Seq[Int]] = try {
+    Some( for { arg <- args } yield
+      { val NR1(i) = arg; i } )
   } catch {
     case e: scala.MatchError => None
     case e: java.lang.ClassCastException => None
@@ -63,7 +63,7 @@ object NRf {
 object NRfSeq {
   def apply(values: Double*) = for { x <- values } yield NRf(x)
 
-  def unapplySeq(args: Seq[_]) = try {
+  def unapplySeq(args: Seq[ByteCharSeq]): Option[Seq[Double]] = try {
     Some( for { arg <- args} yield
       { val NRf(i) = arg.asInstanceOf[ByteCharSeq]; i } )
   } catch {
@@ -104,7 +104,7 @@ abstract class CharacterData {
   def apply(mnemonic: SpecMnemonic): ByteCharSeq = mnemonic.getByteCharSeq
 
   def unapply(bs: ByteCharSeq) : Option[RecMnemonic] =
-    try { Some(RecMnemonic(bs)) } catch { case _ => None }
+    try { Some(RecMnemonic(bs)) } catch { case _: Throwable => None }
 }
 
 /** Character Program Data. Unquoted mnemonics in short

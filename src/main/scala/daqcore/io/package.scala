@@ -17,12 +17,14 @@
 
 package daqcore
 
+import scala.language.implicitConversions
+
 import java.net.{URI => JavaURI}
 import daqcore.util.{ByteString, ByteStringBuilder}
 
 
 package object io {
-  val IO = akka.actor.contrib.daqcore.IO
+  val IO = akka.actor.IO
 
   type URI = java.net.URI
   val URI = GenericURI

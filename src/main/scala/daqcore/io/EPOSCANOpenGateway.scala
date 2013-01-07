@@ -17,8 +17,10 @@
 
 package daqcore.io
 
+import scala.language.postfixOps
+
 import akka.actor._
-import akka.dispatch.{Future, Promise}
+import scala.concurrent.{Future, Promise}
 
 import daqcore.util._
 import daqcore.io._
@@ -134,7 +136,7 @@ object EPOSCANOpenGateway {
       if (io.recv(SerialCodec.decOpCode).get != ack) throw new RuntimeException("Received NACK")
       io.send(msg, SerialCodec.encDataAndCRC)
       if (io.recv(SerialCodec.decOpCode).get != ack) throw new RuntimeException("Received NACK")
-      Promise successful {}
+      Promise successful {} future
     }
 
     def query(msg: SerialMsg): Future[ByteString] = {
@@ -150,7 +152,7 @@ object EPOSCANOpenGateway {
 
       if (!crcOK) throw new RuntimeException("CRC error")
       else if (revcOpCode != opCodeResponse) throw new RuntimeException("Received unexpexted opcode 0x%02x in response".format(revcOpCode))
-      else Promise successful recvMsg.data
+      else Promise successful recvMsg.data future
     }
 
     def readObject(node: Int, idx: Int, subIdx: Int): Future[ByteString] = {
@@ -159,8 +161,8 @@ object EPOSCANOpenGateway {
       val respData = resp.iterator
       val error = respData.getInt
       val value = respData.toByteString
-      if (error != 0) Promise failed (new RuntimeException("EPOS error 0x%08x".format(error)))
-      else Promise successful value
+      if (error != 0) Promise failed (new RuntimeException("EPOS error 0x%08x".format(error))) future
+      else Promise successful value future
     }
 
     def readByteObject(node: Int, idx: Int, subIdx: Int): Future[Byte] =
@@ -177,8 +179,8 @@ object EPOSCANOpenGateway {
       val cmd = SerialMsg(opCodeWriteObject, encodeODIdx(ByteString.newBuilder, node, idx, subIdx).++=(v).result)
       val resp = query(cmd).get
       val error = resp.iterator.getInt
-      if (error != 0) Promise failed (new RuntimeException("EPOS error 0x%08x".format(error)))
-      else Promise successful {}
+      if (error != 0) Promise failed (new RuntimeException("EPOS error 0x%08x".format(error))) future
+      else Promise successful {} future
     }
 
     def writeByteObject(node: Int, idx: Int, subIdx: Int, value: Byte): Future[Unit] =

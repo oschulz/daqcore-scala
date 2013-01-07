@@ -40,7 +40,7 @@ package object gui {
         Swing.onEDT {
           lock.synchronized {
             try { result = Some(body) }
-            catch { case e => exception = e }
+            catch { case e: Throwable => exception = e }
             finally { lock.notify() }
           }
         }

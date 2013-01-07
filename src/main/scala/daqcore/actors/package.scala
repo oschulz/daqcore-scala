@@ -17,9 +17,14 @@
 
 package daqcore
 
+import scala.language.implicitConversions
+
+import scala.reflect.{ClassTag, classTag}
+import scala.concurrent.Future
+import scala.concurrent.duration._
 import akka.actor._
-import akka.dispatch.Future
-import akka.util.{Timeout, Duration}
+
+import daqcore.util.Timeout
 
 
 package object actors {
@@ -53,11 +58,11 @@ package object actors {
     else rf.actorOf(Props(creator), name)
   }
   
-  def typedActor[T <: AnyRef](aref: ActorRef)(implicit mf: ClassManifest[T], rf: ActorRefFactory) =
+  def typedActor[T <: AnyRef](aref: ActorRef)(implicit mf: ClassTag[T], rf: ActorRefFactory) =
     TypedActor(currentActorSystem(rf)).typedActorOf(TypedProps[T](), aref)
 
-  def typedActorOf[R <: AnyRef](creator: => R, name: String = "")(implicit mf: ClassManifest[R], rf: ActorRefFactory): R = {
-    val cl = mf.erasure.asInstanceOf[Class[_ >: AnyRef]]
+  def typedActorOf[R <: AnyRef](creator: => R, name: String = "")(implicit mf: ClassTag[R], rf: ActorRefFactory): R = {
+    val cl = mf.runtimeClass.asInstanceOf[Class[_ >: AnyRef]]
     val props = TypedProps[R](cl, creator)
     val factory = rf match {
       case sys: ActorSystem => TypedActor(sys)
@@ -72,15 +77,15 @@ package object actors {
   def spawn(body: => Unit)(implicit rf: ActorRefFactory): ActorRef = ForkedTask(body)(rf)
 
 
-  def schedule(initialDelay: Duration, frequency: Duration)(f: => Unit)(implicit asys: ActorSystem): Cancellable =
-    asys.scheduler.schedule(initialDelay, frequency)(f)
+  def schedule(initialDelay: FiniteDuration, frequency: FiniteDuration)(f: => Unit)(implicit asys: ActorSystem): Cancellable =
+    asys.scheduler.schedule(initialDelay, frequency)(f)(asys.dispatcher)
 
-  def schedule(initialDelay: Duration, frequency: Duration, receiver: ActorRef, message: Any)(implicit asys: ActorSystem): Cancellable =
-    asys.scheduler.schedule(initialDelay, frequency, receiver, message)
+  def schedule(initialDelay: FiniteDuration, frequency: FiniteDuration, receiver: ActorRef, message: Any)(implicit asys: ActorSystem): Cancellable =
+    asys.scheduler.schedule(initialDelay, frequency, receiver, message)(asys.dispatcher)
   
-  def scheduleOnce(delay: Duration)(f: => Unit)(implicit asys: ActorSystem): Cancellable =
-    asys.scheduler.scheduleOnce(delay)(f)
+  def scheduleOnce(delay: FiniteDuration)(f: => Unit)(implicit asys: ActorSystem): Cancellable =
+    asys.scheduler.scheduleOnce(delay)(f)(asys.dispatcher)
 
-  def scheduleOnce(delay: Duration, receiver: ActorRef, message: Any)(implicit asys: ActorSystem): Cancellable =
-    asys.scheduler.scheduleOnce(delay, receiver, message)
+  def scheduleOnce(delay: FiniteDuration, receiver: ActorRef, message: Any)(implicit asys: ActorSystem): Cancellable =
+    asys.scheduler.scheduleOnce(delay, receiver, message)(asys.dispatcher)
 }

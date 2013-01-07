@@ -17,7 +17,8 @@
 
 package daqcore.devices
 
-import akka.dispatch.Future
+import scala.reflect.{ClassTag, classTag}
+import scala.concurrent.Future
 
 import daqcore.actors._
 
@@ -27,7 +28,7 @@ trait Device extends Syncable with CloseableTA {
 }
 
 
-abstract class DeviceCompanion[+A <: AnyRef : ClassManifest] extends TypedActorCompanion[A] {
+abstract class DeviceCompanion[+A <: AnyRef : ClassTag] extends TypedActorCompanion[A] {
 }
 
 

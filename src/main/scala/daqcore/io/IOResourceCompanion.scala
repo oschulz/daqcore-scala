@@ -17,12 +17,13 @@
 
 package daqcore.io
 
+import scala.reflect.{ClassTag, classTag}
 import akka.actor.{IO => AkkaIO, _}
 
 import daqcore.actors._
 
 
-abstract class IOResourceCompanion[+A <: AnyRef : ClassManifest] extends TypedActorCompanion[A] {
+abstract class IOResourceCompanion[+A <: AnyRef : ClassTag] extends TypedActorCompanion[A] {
   import IOResourceCompanion._
 
   def newInstance: PartialFunction[URI, () => A]

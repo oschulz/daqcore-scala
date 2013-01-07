@@ -17,8 +17,6 @@
 
 package daqcore.actors
 
-import scala.actors._
-
 
 trait ActorRequest[R] extends Product
 

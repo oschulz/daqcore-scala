@@ -17,8 +17,10 @@
 
 package daqcore.util
 
+import scala.reflect.{ClassTag, classTag}
 
-sealed class ArrayIterator[@specialized A: ClassManifest] private[util] (private val array: Array[A], private var from: Int, private var until: Int, private var isReversed: Boolean) extends
+
+sealed class ArrayIterator[@specialized A: ClassTag] private[util] (private val array: Array[A], private var from: Int, private var until: Int, private var isReversed: Boolean) extends
   BufferedIterator[A]
 {
   protected[util] final def internalArray = array
@@ -49,7 +51,7 @@ sealed class ArrayIterator[@specialized A: ClassManifest] private[util] (private
   final override def length = { val l = len; drop(len); l }
   final override def size = len
   
-  final override def toArray [B >: A] (implicit arg0: ClassManifest[B]) : Array[B] = {
+  final override def toArray [B >: A] (implicit arg0: ClassTag[B]) : Array[B] = {
     val target = Array.ofDim[B](len)
     copyToArray(target)
     target
@@ -164,12 +166,12 @@ sealed class ArrayIterator[@specialized A: ClassManifest] private[util] (private
 
 
 object ArrayIterator {
-  private[util] def forArray[@specialized A: ClassManifest](array: Array[A]): ArrayIterator[A] =
+  private[util] def forArray[@specialized A: ClassTag](array: Array[A]): ArrayIterator[A] =
     new ArrayIterator(array, 0, array.length, false)
 
-  private[util] def forArrayRange[@specialized A: ClassManifest](array: Array[A], from: Int, until: Int): ArrayIterator[A] =
+  private[util] def forArrayRange[@specialized A: ClassTag](array: Array[A], from: Int, until: Int): ArrayIterator[A] =
     new ArrayIterator(array, from, until, false)
   
-  def empty[@specialized A: ClassManifest]: ArrayIterator[A] =
+  def empty[@specialized A: ClassTag]: ArrayIterator[A] =
     forArray(Array.empty[A])
 }

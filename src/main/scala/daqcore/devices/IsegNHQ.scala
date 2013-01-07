@@ -17,8 +17,9 @@
 
 package daqcore.devices
 
+import scala.concurrent.{Future, Promise}
+import scala.concurrent.duration._
 import akka.actor._
-import akka.dispatch.{Future, Promise}
 
 import daqcore.util._
 import daqcore.io._
@@ -71,7 +72,7 @@ abstract class IseqXHQImpl(io: ByteStreamIO) extends IseqNHQ
   protected def isegQry(cmd: String) = {
     send(cmd)
 
-    val (replyA, replyB) = codec(io).recv get
+    val (replyA, replyB) = codec(io).recv.get
     
     if (replyA != cmd.trim) throw new RuntimeException("Command echo from iseq Supply does not match")
     if (replyB startsWith "?") replyB match {
@@ -124,7 +125,7 @@ abstract class IseqXHQImpl(io: ByteStreamIO) extends IseqNHQ
   
   protected def checkConnection() {
     assert( getIdentity() == idn )
-    scheduleOnce(15 seconds, selfRef, CheckConnection)
+    scheduleOnce(15.seconds, selfRef, CheckConnection)
     log.trace("Connection checked")
   }
 

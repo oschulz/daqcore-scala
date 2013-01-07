@@ -17,6 +17,8 @@
 
 package daqcore.data
 
+import scala.language.implicitConversions
+
 import java.util.UUID
 
 import daqcore.util._

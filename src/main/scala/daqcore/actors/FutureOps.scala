@@ -19,13 +19,13 @@ package daqcore.actors
 
 import java.util.concurrent.TimeoutException
 
-import akka.dispatch.Future
+import scala.concurrent.Future
 import akka.util.Timeout
 
 
 class FutureOps[A](future: Future[A]) {
   def get(implicit timeout: Timeout): A = {
-    akka.dispatch.Await.result(future, timeout.duration)
+    scala.concurrent.Await.result(future, timeout.duration)
   }
   
   def getOpt(implicit timeout: Timeout): Option[A] = {

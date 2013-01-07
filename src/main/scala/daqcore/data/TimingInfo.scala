@@ -18,6 +18,7 @@
 package daqcore.data
 
 import java.util.UUID
+import scala.concurrent.duration._
 
 import daqcore.util._
 import java.io.File
@@ -27,7 +28,7 @@ trait StartInfo {
   def startTime: Double
 
   // never negative
-  def currentDuration: Double = (currentTime - startTime) max 0.
+  def currentDuration: Double = (currentTime - startTime) max 0.0
 }
 
 

@@ -40,7 +40,7 @@ abstract class MaybeFail[+A] extends Product {
 object MaybeFail {
   def apply[A](f: => A): MaybeFail[A] =
     try { Ok(f) }
-    catch { case e => Fail(e) }
+    catch { case e: Throwable => Fail(e) }
 }
 
 

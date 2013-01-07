@@ -35,7 +35,7 @@ class ShutdownTest {
     }
   }
   catch {
-    case e => println("Exception caught")
+    case e: Throwable => println("Exception caught")
     // VM should exit on SIGHUP despite the endless loop below,
     // since it is outside the noshutdown block.
     while (true) Thread.sleep(1000)

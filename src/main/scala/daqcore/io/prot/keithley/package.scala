@@ -17,6 +17,8 @@
 
 package daqcore.io.prot
 
+import scala.language.implicitConversions
+
 import daqcore.util._
 
 

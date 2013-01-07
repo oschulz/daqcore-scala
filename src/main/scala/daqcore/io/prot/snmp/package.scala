@@ -17,8 +17,11 @@
 
 package daqcore.io.prot
 
+import scala.language.implicitConversions
+
 
 package object snmp {
+
 
 import daqcore.util._
 

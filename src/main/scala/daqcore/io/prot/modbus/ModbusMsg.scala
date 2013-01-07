@@ -31,7 +31,7 @@ trait ModbusMsg extends Product with HasByteRep {
 }
 
 
-trait ModbusReq/*[R <: ModbusResp : ClassManifest]*/ extends ModbusMsg
+trait ModbusReq extends ModbusMsg
 
 object ModbusReq {
   def apply(bytes: ByteString): ModbusReq = apply(bytes.iterator)

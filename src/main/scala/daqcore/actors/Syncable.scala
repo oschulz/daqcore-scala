@@ -17,8 +17,8 @@
 
 package daqcore.actors
 
-import akka.dispatch.{Future, Promise}
-import akka.util.{Duration}
+import scala.concurrent.{Future, Promise}
+import scala.concurrent.duration._
 
 
 trait Syncable {

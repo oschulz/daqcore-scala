@@ -17,10 +17,11 @@
 
 package daqcore.util
 
+import scala.reflect.{ClassTag, classTag}
 import scala.collection.mutable.ArrayBuilder
 
 
-class ArrayOps[A: ClassManifest](array: Array[A]) {
+class ArrayOps[A: ClassTag](array: Array[A]) {
   def toIISeq = array.toSeq.asInstanceOf[IndexedSeq[A]]
 
   def toArrayVec: ArrayVec[A] = ArrayVec.wrap(array)
@@ -29,8 +30,8 @@ class ArrayOps[A: ClassManifest](array: Array[A]) {
 
 object ArrayOps {
   def copyOf[A](src: Array[A], newLength: Int): Array[A] = {
-    val mf = scala.reflect.ClassManifest.fromClass(src.getClass.getComponentType)
-    val dest = mf.newArray(newLength).asInstanceOf[Array[A]]
+    val ct = ClassTag(src.getClass.getComponentType)
+    val dest = ct.newArray(newLength).asInstanceOf[Array[A]]
     arrayCopy(src, 0, dest, 0, src.length min dest.length)
     dest
   }
@@ -45,7 +46,8 @@ object ArrayOps {
     
     val from = if (src eq dest) copyOf(src, src.length) else src
     val to = dest
-    val (fromClass, toClass) = (from.getClass, to.getClass)
+    val fromClass = from.getClass
+    val toClass = to.getClass
 
     if ((fromClass == classOf[Array[Byte]]) && (toClass == classOf[Array[Byte]])) {
       val (source, target) = (from.asInstanceOf[Array[Byte]], to.asInstanceOf[Array[Byte]])

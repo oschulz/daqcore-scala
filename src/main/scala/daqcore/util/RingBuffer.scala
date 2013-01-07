@@ -17,7 +17,10 @@
 
 package daqcore.util
 
-case class RingBuffer[A: ClassManifest](val length: Int, initWith: A) extends Mutable with Seq[A] {
+import scala.reflect.{ClassTag, classTag}
+
+
+case class RingBuffer[A: ClassTag](val length: Int, initWith: A) extends Mutable with Seq[A] {
   ringBuffer =>
 
   protected var pos = 0

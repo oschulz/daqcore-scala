@@ -18,6 +18,8 @@
 package daqcore.io
 
 
+import scala.language.postfixOps
+
 import java.net.{URI => JavaURI}
 
 import akka.actor.ActorPath

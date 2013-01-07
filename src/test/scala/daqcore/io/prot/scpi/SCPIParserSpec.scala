@@ -17,6 +17,8 @@
 
 package daqcore.io.prot.scpi
 
+import scala.language.postfixOps
+
 import org.scalatest.WordSpec
 import org.scalatest.matchers.MustMatchers
 

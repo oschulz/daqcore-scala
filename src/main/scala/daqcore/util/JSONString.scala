@@ -19,6 +19,6 @@ package daqcore.util
 
 
 object JSONString {
-  def apply(x: Any): String =  dispatch.json.JsValue(x).toString
+  def apply[A](x: A)(implicit tjs: play.api.libs.json.Writes[A]): String =  play.api.libs.json.Json.toJson(x).toString
   def unapply(s: String): Option[Any] = scala.util.parsing.json.JSON.parseFull(s)
 }

@@ -17,7 +17,7 @@
 
 package daqcore.util
 
-import dispatch.json._
+import play.api.libs.json._
 
 
 case class PropPath(parts: collection.immutable.Queue[String]) {
@@ -105,14 +105,15 @@ object PropVal {
   
   def fromJsValue(value: JsValue): PropVal = value match {
     case JsNull => null
-    case x: JsBoolean => BoolPropVal(x match { case JsTrue => true; case JsFalse => false })
-    case x: JsNumber => NumPropVal(x.self.toDouble)
-    case x: JsString => StringPropVal(x.self)
-    case x: JsArray => SeqPropVal((x.self map {v => PropVal.fromJsValue(v)}): _*)
+    case JsBoolean(x) => BoolPropVal(x)
+    case JsNumber(x) => NumPropVal(x.doubleValue)
+    case JsString(x) => StringPropVal(x)
+    case JsArray(x) => SeqPropVal((x map {v => PropVal.fromJsValue(v)}): _*)
     case x: JsObject => Props.fromJsObject(x)
+    case JsUndefined(error) => throw new RuntimeException("Encountered JsUndefined, " + error)
   }
 
-  def fromJSON(json: String): PropVal = fromJsValue(Js(json))
+  def fromJSON(json: String): PropVal = fromJsValue(Json.parse(json))
 }
 
 
@@ -129,10 +130,10 @@ case class NumPropVal(value: Double) extends PropVal {
 
 
 case class BoolPropVal(value: Boolean) extends PropVal {
-  def toDouble = if (value) 1. else 0.
+  def toDouble = if (value) 1.0 else 0.0
   def toBoolean = value
   def toNative: Boolean = value
-  def toJsValue: JsBoolean = if (value) JsTrue else JsFalse
+  def toJsValue: JsBoolean = JsBoolean(value)
 }
 
 
@@ -154,7 +155,7 @@ trait ComplexPropVal extends PropVal {
 
 case class SeqPropVal(value: PropVal*) extends ComplexPropVal {
   def toNative: Seq[Any] = value map {_.toNative}
-  def toJsValue = JsArray(value.toList map {_ toJsValue})
+  def toJsValue = JsArray(value.toList map {_.toJsValue})
 }
 
 object SeqPropVal {
@@ -198,7 +199,7 @@ case class Props(value: Map[String, PropVal]) extends ComplexPropVal {
   }
 
   def toNative: Map[String, Any] = value map {case (k,v) => (k, v.toNative)}
-  def toJsValue = JsObject(value.toList map {case (k,v) => (JsString(k), v.toJsValue)})
+  def toJsValue = JsObject(value.toList map {case (k,v) => (k, v.toJsValue)})
 }
 
 
@@ -219,7 +220,7 @@ object Props {
     Props((values.toSeq map { case (k, v) => (k, PropVal(v)) }) : _*)
   
   def fromJsObject(obj: JsObject) =
-    Props( obj.self.map{ case (k,v) => (k.self, PropVal.fromJsValue(v)) } )
+    Props( (obj.fields.map{ case (k,v) => (k, PropVal.fromJsValue(v)) }): _* )
   
   def fromJSON(json: String) = PropVal.fromJSON(json).asInstanceOf[Props]
 }

@@ -45,13 +45,13 @@ object SCPIStreamFramer extends Codec[ByteString, ByteString] {
   def decodeBlockData = IO take 1 flatMap {
     lenA =>
     val lengthSize = lenA.decodeString(charEncoding).toInt
-    if (lengthSize == 0) IO throwErr(new UnsupportedOperationException("Indefinite-Length Block Data not supported"))
+    if (lengthSize == 0) IO.Failure(new UnsupportedOperationException("Indefinite-Length Block Data not supported"))
     else for {
       lenB <- IO take lengthSize
       length = lenB.decodeString(charEncoding).toInt
       data <- IO take length
     } yield {
-      if (data.length != length) IO throwErr(new RuntimeException("EOI while expecting more block data"))
+      if (data.length != length) IO.Failure(new RuntimeException("EOI while expecting more block data"))
       (lenA, lenB, data)
     }
   }
@@ -73,7 +73,7 @@ object SCPIStreamFramer extends Codec[ByteString, ByteString] {
       case CR =>
         IO take 1 flatMap {
           case NL => IO Done prev ++ current ++ NL
-          case _ => IO throwErr(new RuntimeException("Expected NL after CR"))
+          case _ => IO.Failure(new RuntimeException("Expected NL after CR"))
         }
       case NL => IO Done prev ++ current
       case HASH => takeBlockData flatMap continue

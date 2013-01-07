@@ -18,7 +18,8 @@
 package daqcore.actors
 
 import akka.actor._
-import akka.dispatch.{Future, Promise}
+import scala.util.{Try, Success, Failure}
+import scala.concurrent.{Future, Promise}
 
 import daqcore.util._
 import TypedActorTraits._
@@ -41,14 +42,15 @@ trait CloseableTAImpl extends Closeable with TypedActorImpl {
 
 trait ConditionallyOpenImpl extends CloseableTAImpl {
   val isOpenPromise = Promise[Boolean]()
+  val isOpenFuture = isOpenPromise.future
 
-  override def isOpen(): Future[Boolean] = isOpenPromise
+  override def isOpen(): Future[Boolean] = isOpenFuture
 
   def setIsOpen(status: Boolean): Unit = isOpenPromise success status
-  def isOpenOpt: Option[Boolean] = isOpenPromise.value match {
+  def isOpenOpt: Option[Boolean] = isOpenFuture.value match {
     case None => None
-    case Some(Left(error)) => throw error
-    case Some(Right(v)) => Some(v)
+    case Some(Failure(exception)) => throw exception
+    case Some(Success(v)) => Some(v)
   }
 
  override def close(): Unit = {

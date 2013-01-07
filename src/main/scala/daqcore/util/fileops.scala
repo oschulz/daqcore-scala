@@ -17,6 +17,8 @@
 
 package daqcore.util
 
+import scala.language.implicitConversions
+
 import java.io.File
 import java.io.IOException
 
@@ -66,7 +68,7 @@ object fileops {
         writer.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
         writer.write("\n<!-- This file is generated automatically. Do not edit! -->\n\n")
         
-        val elem = (nodes flatMap { case elem:xml.Elem => Some(elem); case _ => None } head)
+        val elem = (nodes.flatMap{ case elem:xml.Elem => Some(elem); case _ => None }.head)
         if (elem.namespace == "http://www.w3.org/1999/xhtml")
           writer.write("<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n")
         

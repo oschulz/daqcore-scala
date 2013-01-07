@@ -17,14 +17,15 @@
 
 package daqcore
 
-import akka.actor._
-import akka.util.{Duration, Timeout}
-import akka.util.duration._
+import scala.concurrent.duration._
+import akka.actor._, akka.util.Timeout
 import java.util.concurrent.TimeUnit.MILLISECONDS
 
 
 package object defaults {
   implicit val daqcoreSystem = ActorSystem("daqcore")
+
+  implicit val defaultExecutionContext = daqcoreSystem.dispatcher
 
   implicit val defaultTimeout = Timeout(Duration(daqcoreSystem.settings.config.getMilliseconds("akka.actor.typed.timeout"), MILLISECONDS))
 }

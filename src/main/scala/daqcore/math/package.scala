@@ -17,6 +17,8 @@
 
 package daqcore
 
+import scala.language.implicitConversions
+
 import scala.math._
 import scala.util.Random
 
@@ -40,9 +42,9 @@ def blackmanWindow(N:Int): PartialFunction[Int, Double] = _ match {
   case i if ((i >= 0) && (i < N)) => {
     def a = 0.16
     
-    +((1.-a)/2.) +
-    -(1./2.) * cos(2*Pi*i / (N-1)) +
-    +(a/2.) * cos(4*Pi*i / (N-1))
+    +((1.0-a)/2.0) +
+    -(1.0/2.0) * cos(2*Pi*i / (N-1)) +
+    +(a/2.0) * cos(4*Pi*i / (N-1))
   }
 }
 
@@ -60,7 +62,7 @@ def kaiserWindow(alpha:Int)(N:Int): PartialFunction[Int, Double] = _ match {
     import cern.jet.math.Bessel.i0
     
     i0(
-      Pi * alpha * sqrt(1- pow( (2.*i/(N-1)) - 1, 2) )
+      Pi * alpha * sqrt(1- pow( (2.0*i/(N-1)) - 1, 2) )
     ) / i0 (Pi * alpha)
   }
 }
