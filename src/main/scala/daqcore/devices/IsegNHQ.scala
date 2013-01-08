@@ -198,7 +198,7 @@ object IseqXHQImpl {
   object codec extends Codec[String, (String, String)] {
     import daqcore.io.IO
 
-    val lineCodec = StringLineCodec(LineCodec.CRNL, "ASCII")
+    val lineCodec = StringLineCodec(LineCodec.CRLF, "ASCII")
 
     val enc = lineCodec.enc
 

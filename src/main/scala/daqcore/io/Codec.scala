@@ -78,12 +78,13 @@ case class TypedIO[A, B](codec: Codec[A, B], stream: ByteStreamIO) {
 
 
 object LineCodec {
-  val NL = ByteString("\n")
-  val CRNL = ByteString("\r\n")
+  val CR = ByteString("\r")
+  val LF = ByteString("\n")
+  val CRLF = ByteString("\r\n")
 }
 
 
-case class StringLineCodec(separator: ByteString = LineCodec.NL, charset: String = "UTF-8") extends Codec[String, String] {
+case class StringLineCodec(separator: ByteString = LineCodec.LF, charset: String = "UTF-8") extends Codec[String, String] {
   val enc: Encoder[String] = (out: ByteStringBuilder, in: String) => {
     val bs = ByteString(in, charset)
 	out ++= bs
@@ -94,7 +95,7 @@ case class StringLineCodec(separator: ByteString = LineCodec.NL, charset: String
 }
 
 
-case class RawLineCodec(separator: ByteString = LineCodec.NL) extends FrameCodec {
+case class RawLineCodec(separator: ByteString = LineCodec.LF) extends FrameCodec {
   val enc: Encoder[ByteString] = (out: ByteStringBuilder, bs: ByteString) => {
 	out ++= bs
 	if (! bs.endsWith(separator)) out ++= separator
