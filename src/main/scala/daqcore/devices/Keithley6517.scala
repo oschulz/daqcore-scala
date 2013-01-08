@@ -42,13 +42,7 @@ object Keithley6517 {
 
 
 
-trait Keithley6517Current extends Device {
-  def cmd(instr: Instruction*): Unit
-  def qry(instr: Instruction*): Future[Response]
-
-  def rawCmd(req: ByteString): Unit
-  def rawQry(req: ByteString): Future[ByteString]
-
+trait Keithley6517Current extends SCPIDevice {
   def reset(): Future[Unit]
 
   def getInputZeroCheck(): Future[Boolean]
@@ -74,28 +68,16 @@ object Keithley6517Current extends DeviceCompanion[Keithley6517Current] {
 // responses
 
 class Keithley6517CurrentImpl(busURI: String) extends Keithley6517Current
-  with CloseableTAImpl with SyncableImpl
+  with SCPIDeviceImpl with SyncableImpl
 {
   import Keithley6517._
 
   import daqcore.defaults.defaultTimeout //!! get actor default timeout somehow?
 
-  val io = ByteStreamIO(busURI)
-  val msgIO = SCPIStreamFramer(io)
-  val parser = new SCPIParser
+  val io = ByteStreamIO(busURI, "io")
 
-  def respNRfDouble: PartialFunction[Response, Double] = _ match { case Response(Result(NRf(r))) => r }
-  def respNR1Int: PartialFunction[Response, Int] = _ match { case Response(Result(NR1(r))) => r }
-  def respNR1Boolean: PartialFunction[Response, Boolean] = _ match { case Response(Result(NR1(r))) => if (r>0) true else false }
-  def respNR1One: PartialFunction[Response, Unit] = _ match { case Response(Result(NR1(1))) => {} }
-  def respNR1Zero: PartialFunction[Response, Unit] = _ match { case Response(Result(NR1(0))) => {} }
-  
-  def cmd(instr: Instruction*) = rawCmd(Request(instr: _*).getBytes)
-  def qry(instr: Instruction*) = rawQry(Request(instr: _*).getBytes) map parser.parseResponse
-
-  def rawCmd(req: ByteString) = msgIO.send(req)
   // Can't use msgIO.recv due to "#" characters in instrument responses:
-  def rawQry(req: ByteString) = { msgIO.send(req); io.recv() } 
+  override def rawQry(req: ByteString) = { msgIO.send(req); io.recv() } 
 
   
   protected val deviceIDN = qry(IDN?) map { case Response(Result(AARD(idn))) => idn } get
