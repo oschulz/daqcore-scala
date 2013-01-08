@@ -1,4 +1,4 @@
-// Copyright (C) 2011-2012 Oliver Schulz <oliver.schulz@tu-dortmund.de>
+// Copyright (C) 2011-2013 Oliver Schulz <oliver.schulz@tu-dortmund.de>
 
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -64,8 +64,7 @@ trait Keithley6517Current extends Device {
 
 
 object Keithley6517Current extends DeviceCompanion[Keithley6517Current] {
-  def apply(busURI: String, name: String)(implicit rf: ActorRefFactory): Keithley6517Current =
-    typedActorOf[Keithley6517Current](new Keithley6517CurrentImpl(busURI), name)
+  def impl = { case uri => new Keithley6517CurrentImpl(uri.toString) }
 }
 
 

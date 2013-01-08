@@ -1,4 +1,4 @@
-// Copyright (C) 2012 Oliver Schulz <oliver.schulz@tu-dortmund.de>
+// Copyright (C) 2012-2013 Oliver Schulz <oliver.schulz@tu-dortmund.de>
 
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -28,9 +28,7 @@ abstract class IOResourceCompanion[+A <: AnyRef : ClassTag] extends TypedActorCo
 
   def newInstance: PartialFunction[URI, () => A]
 
-  def apply(uri: URI, name: String = "")(implicit rf: ActorRefFactory): A = uri match {
-    case AkkaActorPath(path) if akkaURISchemes contains uri.getScheme => typedActor[A](actorFor(path))
-    case uri =>
+  def apply(uri: URI, name: String = "")(implicit rf: ActorRefFactory): A = {
       try { typedActorOf[A](newInstance(uri)(), name) }
       catch { case e: MatchError => throw new IllegalArgumentException("URI \"%s\" not supported".format(uri)) }
   }

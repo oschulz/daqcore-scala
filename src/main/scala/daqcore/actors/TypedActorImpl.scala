@@ -1,4 +1,4 @@
-// Copyright (C) 2012 Oliver Schulz <oliver.schulz@tu-dortmund.de>
+// Copyright (C) 2012-2013 Oliver Schulz <oliver.schulz@tu-dortmund.de>
 
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -23,6 +23,7 @@ import scala.language.reflectiveCalls
 import scala.reflect.{ClassTag, classTag}
 import scala.concurrent.{Future, Promise}
 import scala.concurrent.duration._
+import java.net.URI
 import akka.actor._
 
 import daqcore.util._
@@ -51,7 +52,9 @@ trait TypedActorBasics
 
 
 abstract class TypedActorCompanion[+A <: AnyRef : ClassTag] {
-  def apply(aref: ActorRef)(implicit sys: ActorSystem) = typedActor[A](aref)
+  def forActor(aref: ActorRef)(implicit sys: ActorSystem): A = typedActor[A](aref)
+  def forActor(url: String)(implicit sys: ActorSystem): A = forActor(actorFor(ActorPath.fromString(url)))
+  def forActor(url: URI)(implicit sys: ActorSystem): A = forActor(url.toString)
 }
 
 
