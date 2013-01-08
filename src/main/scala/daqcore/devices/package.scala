@@ -1,4 +1,4 @@
-// Copyright (C) 2011 Oliver Schulz <oliver.schulz@tu-dortmund.de>
+// Copyright (C) 2011-2013 Oliver Schulz <oliver.schulz@tu-dortmund.de>
 
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -17,6 +17,29 @@
 
 package daqcore
 
+import scala.language.implicitConversions
+
+import scala.collection.immutable.{SortedMap, SortedSet}
+
 
 package object devices {
+  type ChV[A] = SortedMap[Int, A]
+
+  object ChV {
+    def apply[A](values: (Int, A)*): ChV[A] = SortedMap(values: _*)
+
+    def apply[A](v: (Seq[Int], A)): ChV[A] = apply((v._1 map {ch => (ch, v._2)}): _*)
+
+    def apply[A, B](xs: Seq[A])(f: PartialFunction[(Int, A), (Int, B)]): ChV[B] =
+      SortedMap( xs.zipWithIndex map {_.swap} collect f :_*)
+  }
+
+
+  type Ch = SortedSet[Int]
+
+  object Ch {
+    def apply(ch: Int): Ch = SortedSet[Int](ch)
+    def apply(channels: Seq[Int]*): Ch = SortedSet[Int](channels.flatten: _*)
+    def apply(ch: Int, channels: Int*): Ch = apply(channels) + ch
+  }
 }
