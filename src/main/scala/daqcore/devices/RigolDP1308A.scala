@@ -42,9 +42,11 @@ object RigolDP1308A extends DeviceCompanion[RigolDP1308A] {
 
 
 class RigolDP1308AImpl(ioURI: String) extends RigolDP1308A
-  with CloseableTAImpl with SyncableImpl
+  with CloseableTAImpl with SyncableImpl with DeviceKeepAlive
 {
-  import RigolDP1308AImpl.CheckConnection
+  // Note / Workaround: *Must* mix in DeviceKeepAlive, because native VXI-11
+  // connection to device ethernet port seems to become stale if idle for
+  // too long.
 
   import daqcore.defaults.defaultTimeout
 
@@ -68,28 +70,8 @@ class RigolDP1308AImpl(ioURI: String) extends RigolDP1308A
   }
 
   protected def getIdentity() = qry("*IDN?").get
-  protected val idn = getIdentity()
-  def identity = successful(idn)
-  
-  // Device specific workaround: Native VXI-11 connection becomes stale if idle for too long
-  protected def checkConnection() {
-    assert( getIdentity() == idn )
-    scheduleOnce(10.seconds, selfRef, CheckConnection)
-    log.trace("Connection checked")
-  }
-
-  checkConnection()
 
   def getOutVoltSensed(ch: Ch = Ch(1 to 3)) = readChannels("MEAS:VOLT?", ch)
   def getOutCurrSensed(ch: Ch = Ch(1 to 3)) = readChannels("MEAS:CURR?", ch)
   def getOutPwrSensed(ch: Ch = Ch(1 to 3)) = readChannels("MEAS:POWE?", ch)
-
-  override def receive = extend(super.receive) {
-    case CheckConnection => checkConnection()
-  }
-}
-
-
-object RigolDP1308AImpl {
-  protected case object CheckConnection
 }
