@@ -35,6 +35,8 @@ libraryDependencies += "com.typesafe.akka" % "akka-agent_2.10" % "2.1.0"
 
 libraryDependencies += "com.typesafe.akka" % "akka-transactor_2.10" % "2.1.0"
 
+libraryDependencies += "com.typesafe.akka" % "akka-dataflow_2.10" % "2.1.0"
+
 libraryDependencies += "com.typesafe.akka" % "akka-slf4j_2.10" % "2.1.0"
 
 
