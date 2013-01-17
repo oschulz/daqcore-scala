@@ -30,6 +30,12 @@ trait RigolDP1308A extends Device {
   def cmd(req: String): Unit
   def qry(req: String): Future[String]
 
+  def getOutEnabled(ch: Ch = Ch(1 to 3)): Future[ChV[Boolean]]
+  def setOutEnabled(vals: ChV[Boolean]): Unit
+
+  def getOutVoltDesired(ch: Ch = Ch(1 to 3)): Future[ChV[Double]]
+  def setOutVoltDesired(vals: ChV[Double]): Unit
+
   def getOutVoltSensed(ch: Ch = Ch(1 to 3)): Future[ChV[Double]]
   def getOutCurrSensed(ch: Ch = Ch(1 to 3)): Future[ChV[Double]]
   def getOutPwrSensed(ch: Ch = Ch(1 to 3)): Future[ChV[Double]]
@@ -50,28 +56,35 @@ class RigolDP1308AImpl(ioURI: String) extends RigolDP1308A
 
   import daqcore.defaults.defaultTimeout
 
-  protected val nChannels = 3
+  val chName = ChV(1 -> "P6V", 2 -> "P25V", 3 -> "N25V")
+  protected val nChannels = chName.size
 
   protected val codec = StringLineCodec(LineCodec.LF, "ASCII")
   protected val io = ByteStreamIO(ioURI, "io")
   def cmd(req: String): Unit = io.send(req, codec.enc)
   def qry(req: String): Future[String] = { cmd(req); io.recv(codec.dec) }
   
-  protected def readChannels(req: String, ch: Ch): Future[ChV[Double]] = {
-    if ((ch.min < 1) || (ch.max > nChannels)) throw new IllegalArgumentException("Invalid channel number")
+  protected def getCh[A](req: String, ch: Ch)(f: String => A): Future[ChV[A]] = {
     Future.sequence(
-      for (i <- ch.toSeq) yield {
-        cmd("INST:NSEL %s".format(i))
-        val selInst = qry("INST:NSEL?").get.toInt
-        if (selInst != i) throw new RuntimeException("Channel selection failed")
-        qry(req) map { v => (i, v.toDouble) }
-      }
+      for (i <- ch.toSeq) yield
+        qry("%s? %s".format(req, chName(i))) map { v => (i, f(v)) }
     ) map { xs => ChV(xs: _*) }
   }
 
+  protected def setCh[A](req: String, vals: ChV[A])(f: A => String): Unit = {
+    for ((i, v) <- vals) cmd("%s %s,%s".format(req, chName(i), f(v)))
+  }
+  
   protected def getIdentity() = qry("*IDN?").get
 
-  def getOutVoltSensed(ch: Ch = Ch(1 to 3)) = readChannels("MEAS:VOLT?", ch)
-  def getOutCurrSensed(ch: Ch = Ch(1 to 3)) = readChannels("MEAS:CURR?", ch)
-  def getOutPwrSensed(ch: Ch = Ch(1 to 3)) = readChannels("MEAS:POWE?", ch)
+
+  def getOutEnabled(ch: Ch = Ch(1 to 3)) = getCh("OUTP:STAT", ch){_ match { case "ON" => true; case "OFF" => false}};
+  def setOutEnabled(vals: ChV[Boolean]) = setCh("OUTP:STAT", vals){ v => if (v) "ON" else "OFF" }
+
+  def getOutVoltDesired(ch: Ch = Ch(1 to 3)) = ??? //!! TODO: Implement
+  def setOutVoltDesired(vals: ChV[Double]) = ??? //!! TODO: Implement
+
+  def getOutVoltSensed(ch: Ch = Ch(1 to 3)) = getCh("MEAS:VOLT", ch){_.toDouble}
+  def getOutCurrSensed(ch: Ch = Ch(1 to 3)) = getCh("MEAS:CURR", ch){_.toDouble}
+  def getOutPwrSensed(ch: Ch = Ch(1 to 3)) = getCh("MEAS:POWE", ch){_.toDouble}
 }
