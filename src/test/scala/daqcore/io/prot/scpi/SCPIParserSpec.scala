@@ -56,6 +56,8 @@ class SCPIParserSpec extends WordSpec with MustMatchers {
       val response2 = parser.parseResponse(input2.toByteString)
       println(response2)
       assert( response2.getBytes === ByteCharSeq("1,2,3,#15Hello,4").getBytes )
+      
+      assert( parser.parseResponse(ByteCharSeq("+1;+2").toByteString).getBytes === ByteCharSeq("+1;+2").getBytes )
     }
     
     "parse requests correctly" in {

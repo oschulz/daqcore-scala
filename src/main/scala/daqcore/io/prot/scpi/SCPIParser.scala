@@ -190,9 +190,9 @@ class SCPIParser extends ByteCharSeqParsers {
 object SCPIParser {
   val streamMsgTermExpr = """(\x0D?\x0A)""".r
   val nonBlockStringExpr = """(([^#'"\x0D\x0A]|[#][^0-9])+)""".r
-  val nr1Expr = """-?\d+""".r
+  val nr1Expr = """[+-]?\d+""".r
   val nr2Expr = """(\d+(\.\d*)?|\d*\.\d+)""".r
-  val nr3Expr = """-?(\d+(\.\d*)?|\d*\.\d+)([eE][+-]?\d+)?[fFdD]?""".r
+  val nr3Expr = """[+-]?(\d+(\.\d*)?|\d*\.\d+)([eE][+-]?\d+)?[fFdD]?""".r
   val aardExpr = """(\p{ASCII}+)""".r
   val dqStringExpr = """"([^"]*)"""".r
   val sqStringExpr = """'([^']*)'""".r
