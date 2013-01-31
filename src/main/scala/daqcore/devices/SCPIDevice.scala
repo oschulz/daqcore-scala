@@ -17,6 +17,8 @@
 
 package daqcore.devices
 
+import scala.language.postfixOps
+
 import scala.concurrent.{Future, Promise}
 
 import daqcore.util._
@@ -52,6 +54,23 @@ trait SCPIDeviceImpl extends SCPIDevice with CloseableTAImpl {
   def cmd(instr: Instruction*) = rawCmd(Request(instr: _*).getBytes)
   def qry(instr: Instruction*) = rawQry(Request(instr: _*).getBytes) map parser.parseResponse
 
-  def rawCmd(req: ByteString) = msgIO.send(req)
-  def rawQry(req: ByteString) = { msgIO.send(req); msgIO.recv() } 
+  def rawCmd(req: ByteString) = { log.trace(req.decodeString("ASCII")); msgIO.send(req) }
+  def rawQry(req: ByteString) = { log.trace(req.decodeString("ASCII")); msgIO.send(req); msgIO.recv() } 
+}
+
+
+
+trait SCPICompliantDevice extends SCPIDevice {
+  def reset(): Future[Unit]
+}
+
+
+trait SCPICompliantDeviceImpl extends SCPICompliantDevice with SCPIDeviceImpl with SyncableImpl {
+  def identity() = qry(IDN?) map { case Response(Result(AARD(idn))) => idn }
+
+  def reset() = qry(RST!, OPC?) map respNR1One
+
+  override def sync() = cmd(WAI!)
+
+  override def getSync() = qry(OPC?) map respNR1One
 }
