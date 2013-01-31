@@ -42,9 +42,7 @@ object Keithley6517 {
 
 
 
-trait Keithley6517Current extends SCPIDevice {
-  def reset(): Future[Unit]
-
+trait Keithley6517Current extends SCPICompliantDevice {
   def getInputZeroCheck(): Future[Boolean]
   def setInputZeroCheck(v: Boolean): Future[Boolean]
 
@@ -68,7 +66,7 @@ object Keithley6517Current extends DeviceCompanion[Keithley6517Current] {
 // responses
 
 class Keithley6517CurrentImpl(busURI: String) extends Keithley6517Current
-  with SCPIDeviceImpl with SyncableImpl
+  with SCPICompliantDeviceImpl
 {
   import Keithley6517._
 
@@ -79,21 +77,12 @@ class Keithley6517CurrentImpl(busURI: String) extends Keithley6517Current
   // Can't use msgIO.recv due to "#" characters in instrument responses:
   override def rawQry(req: ByteString) = { msgIO.send(req); io.recv() } 
 
-  
-  protected val deviceIDN = qry(IDN?) map { case Response(Result(AARD(idn))) => idn } get
-  def identity() = successful(deviceIDN)
-
   protected def initDevice() {
     qry(~ABORt!, ESR?).get
     assert { (qry(~SYSTem~ZCHeck!(1), ~CONFigure~CURRent~DC!, ESR?) map respNR1Int get) == 0 }
   }
   initDevice()
   
-  override def sync() = cmd(WAI!)
-  override def getSync() = qry(OPC?) map respNR1One
-
-  def reset() = qry(RST!, OPC?) map respNR1One
-
   def getInputZeroCheck(): Future[Boolean] = qry(~SYSTem~ZCHeck?) map respNR1Boolean
   def setInputZeroCheck(v: Boolean) = qry(~SYSTem~ZCHeck!(if (v) 1 else 0), ~SYSTem~ZCHeck?) map respNR1Boolean
 
