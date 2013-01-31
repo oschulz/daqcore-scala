@@ -288,6 +288,7 @@ package object mnemonics {
   def INITialize = Mnemonic("INITialize")
   def INITiate = Mnemonic("INITiate")
   def INPut = Mnemonic("INPut")
+  def INSTrument = Mnemonic("INSTrument")
   def INTegral = Mnemonic("INTegral")
   def INTernal = Mnemonic("INTernal")
   def INTerpolate = Mnemonic("INTerpolate")
