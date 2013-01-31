@@ -20,9 +20,16 @@ package daqcore.io.prot.scpi
 import daqcore.util._
 
 
+trait SCPIType[A] {
+  def apply(value: A): ByteCharSeq
+
+  def unapply(bs: ByteCharSeq) : Option[A]
+}
+
+
 /** Integral number. Example: 42 */
 
-object NR1 {
+object NR1 extends SCPIType[Int] {
   def apply(value: Int) = ByteCharSeq(value.toString)
 
   def unapply(bs: ByteCharSeq) : Option[Int] =
@@ -52,7 +59,7 @@ object NR1Seq {
 
 
 /** Comprises NR1, NR2 and NR3 */
-object NRf {
+object NRf extends SCPIType[Double] {
   def apply(value: Double) = ByteCharSeq(value.toString)
 
   def unapply(bs: ByteCharSeq) : Option[Double] =
@@ -77,12 +84,29 @@ object NRfSeq {
 // object NRfp - NRF+, not implemented yet
 
 
+/** Boolean Program Data. Examples: 0, 1 */
 // Boolean Program Data: OFF | ON | <NRf>
 // Boolean Response Data: 0 | 1
-// object Bool - not implemented yet
+
+object BPD extends SCPIType[Boolean] {
+  val ZERO = NR1(0)
+  val ONE = NR1(1)
+  val OFF = CPD(Mnemonic("OFF"))
+  val ON = CPD(Mnemonic("ON"))
+  
+  def apply(value: Boolean) = ByteCharSeq(if (value) NR1(1) else NR1(0))
+
+  def unapply(bs: ByteCharSeq) : Option[Boolean] = bs match {
+    case ZERO => Some(false)
+    case ONE => Some(true)
+    case OFF => Some(false)
+    case ON => Some(true)
+    case _ => None
+  }
+}
 
 
-abstract class StringData {
+abstract class StringData extends SCPIType[String] {
   def apply(value: String) = ByteCharSeq("\"") ++ ByteCharSeq(value) ++ ByteCharSeq("\"")
 
   def unapply(bs: ByteCharSeq) : Option[String] = bs match {
@@ -119,7 +143,7 @@ object CRD extends CharacterData
 
 // Arbitrary ASCII Response Data. Undelimited 7-bit ASCII data with implied
 // message terminator.
-object AARD {
+object AARD extends SCPIType[String] {
   def apply(s:String) : ByteCharSeq = ByteCharSeq(s)
   def unapply(bs: ByteCharSeq) : Option[String] = Some(bs.toString.trim)
 }
@@ -131,7 +155,7 @@ object AARD {
   * implemented yet. Only the definite length version is usable with streaming
   * protocols like RS232 or TCP/IP. */
 
-object BlockData {
+object BlockData extends SCPIType[ByteString] {
   def apply(data: ByteString) : ByteCharSeq = {
     val tag = ByteCharSeq("#")
     val sizeStr = ByteCharSeq(data.size.toString)
