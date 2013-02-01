@@ -198,7 +198,7 @@ object SCPIParser {
   val sqStringExpr = """'([^']*)'""".r
   val mnemSuffixExpr = """[1-9][0-9]*""".r
   val recMnemonicExpr = """[A-Z]+|[a-z]+""".r
-  val charsExpr = """([A-Z]+|[a-z]+)([1-9][0-9]*)?""".r
+  val charsExpr = """[A-Z][A-Z0-9]*|[a-z][a-z0-9]*""".r
   val EOI = """\z""".r
   
   protected val tlParser = new ThreadLocal[SCPIParser]
