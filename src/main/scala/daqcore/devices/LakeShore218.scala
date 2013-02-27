@@ -39,17 +39,22 @@ object LakeShore218 extends DeviceCompanion[LakeShore218] {
 class Lakeshore218(ioURI: String) extends LakeShore218
   with CloseableTAImpl with SyncableImpl
 {
+  import daqcore.defaults.defaultTimeout //!! get actor default timeout somehow?
+
+  import AgilentE3648A.VoltageRangeSpec
+
   import daqcore.io.prot.modbus.BigEndianShortCoding._
 
   protected val nChannels = 8
 
   protected val codec = StringLineCodec(LineCodec.CRLF, "ASCII")
   protected val io = ByteStreamIO(ioURI, "io")
-  protected def query(qry: String) = { codec(io).send(qry); codec(io).recv() }
+  protected def query(qry: String) = { codec(io).send(qry); codec(io).recv().get }
 
   protected def readChannels(qry: String, ch: Ch): Future[ChV[Double]] = {
     if ((ch.min < 1) || (ch.max > nChannels)) throw new IllegalArgumentException("Invalid channel number")
-    query(qry) map { r => ChV(r.split(",")) { case (i, v) if (ch contains i+1) => (i+1, v.toDouble) } }
+    val r = query(qry) 
+    successful( ChV(r.split(",")) { case (i, v) if (ch contains i+1) => (i+1, v.toDouble) } )
   }
 
   def identity = successful("LakeShore218")
