@@ -39,10 +39,10 @@ die() {
 }
 
 # todo - make this dynamic
-declare -r sbt_release_version=0.11.3
+declare -r sbt_release_version=0.12.3
 unset sbt_rc_version
 # declare -r sbt_rc_version=
-declare -r sbt_snapshot_version=0.11.4-SNAPSHOT
+declare -r sbt_snapshot_version=0.13.0-SNAPSHOT
 declare -r sbt_snapshot_baseurl="http://typesafe.artifactoryonline.com/typesafe/ivy-snapshots/org.scala-sbt/sbt-launch/"
 
 declare -r default_java_opts="-Dfile.encoding=UTF8"
@@ -53,7 +53,7 @@ declare -r sbt_opts_file=".sbtopts"
 declare -r etc_sbt_opts_file="/etc/sbt/sbtopts"
 declare -r latest_28="2.8.2"
 declare -r latest_29="2.9.1"
-declare -r latest_210="2.10.0-SNAPSHOT"
+declare -r latest_210="2.10.1"
 
 declare -r script_path=$(get_script_path "$BASH_SOURCE")
 if test -z "$HOME"; then
