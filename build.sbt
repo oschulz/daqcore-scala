@@ -22,9 +22,7 @@ libraryDependencies += "org.scala-lang" % "jline" % "2.10.0" % "runtime"
 
 resolvers += "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/"
 
-resolvers += "TU-Do Physik E4 Releases" at "http://maven.e4.physik.uni-dortmund.de/maven2/releases/"
-
-resolvers += "TU-Do Physik E4 Snapshots" at "http://maven.e4.physik.uni-dortmund.de/maven2/snapshots/"
+resolvers += "DAQCorE Releases" at "http://daqcore.github.io/repo/releases/"
 
 
 libraryDependencies += "com.typesafe.akka" % "akka-actor_2.10" % "2.1.0"
