@@ -25,22 +25,18 @@ resolvers += "Typesafe Repository" at "http://repo.typesafe.com/typesafe/release
 resolvers += "DAQCorE Releases" at "http://daqcore.github.io/repo/releases/"
 
 
-libraryDependencies += "com.typesafe.akka" %% "akka-actor" % "2.1.0"
+libraryDependencies += "com.typesafe.akka" %% "akka-actor" % "2.1.1"
 
-libraryDependencies += "com.typesafe.akka" %% "akka-remote" % "2.1.0"
+libraryDependencies += "com.typesafe.akka" %% "akka-remote" % "2.1.1"
 
-libraryDependencies += "com.typesafe.akka" %% "akka-agent" % "2.1.0"
+libraryDependencies += "com.typesafe.akka" %% "akka-dataflow" % "2.1.1"
 
-libraryDependencies += "com.typesafe.akka" %% "akka-transactor" % "2.1.0"
-
-libraryDependencies += "com.typesafe.akka" %% "akka-dataflow" % "2.1.0"
-
-libraryDependencies += "com.typesafe.akka" %% "akka-slf4j" % "2.1.0"
+libraryDependencies += "com.typesafe.akka" %% "akka-slf4j" % "2.1.1"
 
 
 libraryDependencies += "org.scalatest" %% "scalatest" % "2.0.M5b" % "test"
 
-libraryDependencies += "play" %% "play" % "2.1-RC1"
+libraryDependencies += "play" %% "play" % "2.1.1"
 
 
 libraryDependencies +=  "ch.qos.logback" % "logback-core" % "1.0.0"
