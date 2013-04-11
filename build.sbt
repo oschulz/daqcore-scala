@@ -10,37 +10,37 @@ compileOrder := CompileOrder.JavaThenScala
 
 autoCompilerPlugins := true
 
-addCompilerPlugin("org.scala-lang.plugins" % "continuations" % "2.10.0")
+libraryDependencies <+= scalaVersion { sv => compilerPlugin("org.scala-lang.plugins" % "continuations" % sv) }
 
 Classpaths.compilerPluginConfig
 
 scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature", "-P:continuations:enable")
 
-libraryDependencies += "org.scala-lang" % "scala-swing" % "2.10.0"
+libraryDependencies <+= (scalaVersion) { sv => "org.scala-lang" % "scala-swing" % sv }
 
-libraryDependencies += "org.scala-lang" % "jline" % "2.10.0" % "runtime"
+libraryDependencies <+= (scalaVersion) { sv => "org.scala-lang" % "jline" % sv % "runtime" }
 
 resolvers += "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/"
 
 resolvers += "DAQCorE Releases" at "http://daqcore.github.io/repo/releases/"
 
 
-libraryDependencies += "com.typesafe.akka" % "akka-actor_2.10" % "2.1.0"
+libraryDependencies += "com.typesafe.akka" %% "akka-actor" % "2.1.0"
 
-libraryDependencies += "com.typesafe.akka" % "akka-remote_2.10" % "2.1.0"
+libraryDependencies += "com.typesafe.akka" %% "akka-remote" % "2.1.0"
 
-libraryDependencies += "com.typesafe.akka" % "akka-agent_2.10" % "2.1.0"
+libraryDependencies += "com.typesafe.akka" %% "akka-agent" % "2.1.0"
 
-libraryDependencies += "com.typesafe.akka" % "akka-transactor_2.10" % "2.1.0"
+libraryDependencies += "com.typesafe.akka" %% "akka-transactor" % "2.1.0"
 
-libraryDependencies += "com.typesafe.akka" % "akka-dataflow_2.10" % "2.1.0"
+libraryDependencies += "com.typesafe.akka" %% "akka-dataflow" % "2.1.0"
 
-libraryDependencies += "com.typesafe.akka" % "akka-slf4j_2.10" % "2.1.0"
+libraryDependencies += "com.typesafe.akka" %% "akka-slf4j" % "2.1.0"
 
 
-libraryDependencies += "org.scalatest" % "scalatest_2.10" % "2.0.M5b" % "test"
+libraryDependencies += "org.scalatest" %% "scalatest" % "2.0.M5b" % "test"
 
-libraryDependencies += "play" % "play_2.10" % "2.1-RC1"
+libraryDependencies += "play" %% "play" % "2.1-RC1"
 
 
 libraryDependencies +=  "ch.qos.logback" % "logback-core" % "1.0.0"
