@@ -4,7 +4,7 @@ organization := "de.tu-dortmund"
 
 version := "0.1.0"
 
-scalaVersion := "2.10.0"
+scalaVersion := "2.10.2"
 
 compileOrder := CompileOrder.JavaThenScala
 
@@ -25,35 +25,36 @@ resolvers += "Typesafe Repository" at "http://repo.typesafe.com/typesafe/release
 resolvers += "DAQCorE Releases" at "http://daqcore.github.io/repo/releases/"
 
 
-libraryDependencies += "com.typesafe.akka" %% "akka-actor" % "2.1.1"
+libraryDependencies += "com.typesafe.akka" %% "akka-actor" % "2.1.4"
 
-libraryDependencies += "com.typesafe.akka" %% "akka-remote" % "2.1.1"
+libraryDependencies += "com.typesafe.akka" %% "akka-remote" % "2.1.4"
 
-libraryDependencies += "com.typesafe.akka" %% "akka-dataflow" % "2.1.1"
+libraryDependencies += "com.typesafe.akka" %% "akka-dataflow" % "2.1.4"
 
-libraryDependencies += "com.typesafe.akka" %% "akka-slf4j" % "2.1.1"
+libraryDependencies += "com.typesafe.akka" %% "akka-slf4j" % "2.1.4"
 
 
-libraryDependencies += "org.scalatest" %% "scalatest" % "2.0.M5b" % "test"
+libraryDependencies += "org.scalatest" %% "scalatest" % "1.9.1" % "test"
 
 libraryDependencies += "play" %% "play" % "2.1.1"
 
 
-libraryDependencies +=  "ch.qos.logback" % "logback-core" % "1.0.0"
+libraryDependencies +=  "ch.qos.logback" % "logback-core" % "1.0.13"
 
-libraryDependencies +=  "ch.qos.logback" % "logback-classic" % "1.0.0" % "runtime" intransitive()
+libraryDependencies +=  "ch.qos.logback" % "logback-classic" % "1.0.13" % "runtime" intransitive()
 
-libraryDependencies +=  "org.slf4j" % "log4j-over-slf4j" % "1.6.4" % "runtime" intransitive()
+libraryDependencies +=  "org.slf4j" % "log4j-over-slf4j" % "1.7.5" % "runtime" intransitive()
+
 
 libraryDependencies += "jfree" % "jfreechart" % "1.0.13"
 
 
-libraryDependencies += "com.thoughtworks.xstream" % "xstream" % "1.4.2"
+libraryDependencies += "com.thoughtworks.xstream" % "xstream" % "1.4.4"
 
-libraryDependencies += "org.codehaus.jettison" % "jettison" % "1.0.1"
+libraryDependencies += "org.codehaus.jettison" % "jettison" % "1.3.3"
 
 
-libraryDependencies += "com.nativelibs4java" % "bridj" % "0.6.1"
+libraryDependencies += "com.nativelibs4java" % "bridj" % "0.6.2"
 
 libraryDependencies += "colt" % "colt" % "1.2.0"
 
