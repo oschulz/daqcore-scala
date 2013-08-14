@@ -39,7 +39,7 @@ die() {
 }
 
 # todo - make this dynamic
-declare -r sbt_release_version=0.12.3
+declare -r sbt_release_version=0.12.4
 unset sbt_rc_version
 # declare -r sbt_rc_version=
 declare -r sbt_snapshot_version=0.13.0-SNAPSHOT
