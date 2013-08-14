@@ -56,7 +56,6 @@ trait ModbusASCIIServer extends ModbusServer
 
 object ModbusServer {
   def apply(uri: URI, name: String)(implicit rf: ActorRefFactory): ModbusServer = uri match {
-    case AkkaActorPath(path) => typedActor[ModbusServer](actorFor(path))
     case HostURL("modbus-ascii", host, port) => typedActorOf[ModbusASCIIServer](new ASCIIImpl(HostURL("tcp", host, port).toString), name)
     case HostURL("modbus-tcp", host, port) => typedActorOf[ModbusASCIIServer](new TCPImpl(HostURL("tcp", host, port).toString), name)
     case uri => throw new IllegalArgumentException("URI \"%s\" not supported".format(uri))

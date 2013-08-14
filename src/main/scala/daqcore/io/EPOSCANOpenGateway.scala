@@ -38,7 +38,6 @@ trait EPOSCANOpenGateway extends CANOpenServer {
 
 object EPOSCANOpenGateway {
   def apply(uri: URI, name: String)(implicit rf: ActorRefFactory): EPOSCANOpenGateway = uri match {
-    case AkkaActorPath(path) => typedActor[EPOSCANOpenGateway](actorFor(path))
     case HostURL("epos-canopen", host, port) => typedActorOf[EPOSCANOpenGateway](new GatewayImpl(HostURL("tcp", host, port).toString), name)
     case uri => throw new IllegalArgumentException("URI \"%s\" not supported".format(uri))
   }
