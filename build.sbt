@@ -36,7 +36,7 @@ libraryDependencies += "com.typesafe.akka" %% "akka-slf4j" % "2.1.4"
 
 libraryDependencies += "org.scalatest" %% "scalatest" % "1.9.1" % "test"
 
-libraryDependencies += "play" %% "play" % "2.1.1"
+libraryDependencies += "play" %% "play" % "2.1.3"
 
 
 libraryDependencies +=  "ch.qos.logback" % "logback-core" % "1.0.13"
