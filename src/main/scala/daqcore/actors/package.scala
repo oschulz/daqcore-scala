@@ -20,7 +20,7 @@ package daqcore
 import scala.language.implicitConversions
 
 import scala.reflect.{ClassTag, classTag}
-import scala.concurrent.Future
+import scala.concurrent.{Future, ExecutionContext}
 import scala.concurrent.duration._
 import akka.actor._
 
@@ -49,10 +49,17 @@ package object actors {
 
   def actorRef(obj: AnyRef)(implicit rf: ActorRefFactory) = TypedActor(currentActorSystem(rf)).getActorRefFor(obj)
 
-  def actorFor(path: Iterable[String])(implicit rf: ActorRefFactory): ActorRef = currentActorSystem(rf).actorFor(path)
-  def actorFor(path: String)(implicit rf: ActorRefFactory): ActorRef = currentActorSystem(rf).actorFor(path)
-  def actorFor(path: ActorPath)(implicit rf: ActorRefFactory): ActorRef = currentActorSystem(rf).actorFor(path)
+  def findActor(sel: ActorSelection)(implicit rf: ActorRefFactory, exec: ExecutionContext, timeout: Timeout): Future[Option[ActorRef]] = {
+    import akka.pattern.{ ask, pipe }
+    (sel ? Identify(0)) map { case id: ActorIdentity => id.ref }
+  }
+  
+  def findActor(path: ActorPath)(implicit rf: ActorRefFactory, exec: ExecutionContext, timeout: Timeout): Future[Option[ActorRef]] =
+    findActor(rf.actorSelection(path))
 
+  def findActor(path: String)(implicit rf: ActorRefFactory, exec: ExecutionContext, timeout: Timeout): Future[Option[ActorRef]] =
+    findActor(rf.actorSelection(path))
+  
   def actorOf(creator: => Actor, name: String = "")(implicit rf: ActorRefFactory): ActorRef = {
     if (name.isEmpty) rf.actorOf(Props(creator))
     else rf.actorOf(Props(creator), name)
