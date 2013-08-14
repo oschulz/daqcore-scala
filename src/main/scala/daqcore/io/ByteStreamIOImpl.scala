@@ -45,7 +45,7 @@ trait CloseableResourceImpl extends CloseableTAImpl {
 }
 
 
-trait ByteStreamOutputImpl extends ByteStreamOutput with ConditionallyOpenImpl
+trait ByteStreamOutputImpl extends ByteStreamOutput with CloseableTAImpl
   with SyncableImpl
 {
   val outputQueue = new ByteStringBuilder
@@ -68,7 +68,7 @@ trait ByteStreamOutputImpl extends ByteStreamOutput with ConditionallyOpenImpl
   }
 }
 
-trait ByteStreamInputImpl extends ByteStreamInput with ConditionallyOpenImpl {
+trait ByteStreamInputImpl extends ByteStreamInput with CloseableTAImpl {
   val inputQueue = DataDecoderQueue()
 
   def recv(): Future[ByteString] = recv(IO.takeAny)
