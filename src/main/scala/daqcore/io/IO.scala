@@ -26,8 +26,6 @@ import language.higherKinds
 import language.postfixOps
 
 import scala.collection.immutable
-import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.control.NonFatal
 import scala.collection.mutable
 import scala.annotation.tailrec
 import scala.collection.generic.CanBuildFrom
@@ -195,84 +193,9 @@ object IO {
    */
   final case class Failure(cause: Throwable) extends Iteratee[Nothing]
 
-  //FIXME general description of what an IterateeRef is and how it is used, potentially with link to docs
-  object IterateeRef {
-
-    /**
-     * Creates an [[IterateeRefSync]] containing an initial
-     * [[Iteratee]].
-     */
-    def sync[A](initial: Iteratee[A]): IterateeRefSync[A] = new IterateeRefSync(initial)
-
-    /**
-     * Creates an empty [[IterateeRefSync]].
-     */
-    def sync(): IterateeRefSync[Unit] = new IterateeRefSync(Iteratee.unit)
-
-    /**
-     * Creates an [[IterateeRefAsync]] containing an initial
-     * [[Iteratee]].
-     */
-    def async[A](initial: Iteratee[A])(implicit executor: ExecutionContext): IterateeRefAsync[A] = new IterateeRefAsync(initial)
-
-    /**
-     * Creates an empty [[IterateeRefAsync]].
-     */
-    def async()(implicit executor: ExecutionContext): IterateeRefAsync[Unit] = new IterateeRefAsync(Iteratee.unit)
-
-    /**
-     * A mutable Map to contain multiple IterateeRefs.
-     *
-     * This Map differs from the mutable Map within Scala's standard library
-     * by automatically including any keys used to lookup an IterateeRef. The
-     * 'refFactory' is used to provide the default value for new keys.
-     */
-    class Map[K, V] private (refFactory: ⇒ IterateeRef[V], underlying: mutable.Map[K, IterateeRef[V]] = mutable.Map.empty[K, IterateeRef[V]]) extends mutable.Map[K, IterateeRef[V]] {
-      override def get(key: K) = Some(underlying.getOrElseUpdate(key, refFactory))
-      override def iterator = underlying.iterator
-      override def +=(kv: (K, IterateeRef[V])) = { underlying += kv; this }
-      override def -=(key: K) = { underlying -= key; this }
-      override def empty = new Map[K, V](refFactory)
-    }
-
-    //FIXME general description of what an Map is and how it is used, potentially with link to docs
-    object Map {
-      /**
-       * Uses a factory to create the initial IterateeRef for each new key.
-       */
-      def apply[K, V](refFactory: ⇒ IterateeRef[V]): IterateeRef.Map[K, V] = new Map(refFactory)
-
-      /**
-       * Creates an empty [[IterateeRefSync]] for each new key.
-       */
-      def sync[K](): IterateeRef.Map[K, Unit] = new Map(IterateeRef.sync())
-
-      /**
-       * Creates an empty [[IterateeRefAsync]] for each new key.
-       */
-      def async[K]()(implicit executor: ExecutionContext): IterateeRef.Map[K, Unit] = new Map(IterateeRef.async())
-    }
-  }
-
-  /**
-   * A mutable reference to an Iteratee designed for use within an Actor.
-   *
-   * See [[IterateeRefSync]] and [[IterateeRefAsync]]
-   * for details.
-   */
-  trait IterateeRef[A] {
-    //FIXME Add docs
-    def flatMap(f: A ⇒ Iteratee[A]): Unit
-    //FIXME Add docs
-    def map(f: A ⇒ A): Unit
-    //FIXME Add docs
-    def apply(input: Input): Unit
-  }
 
   /**
    * A mutable reference to an [[Iteratee]]. Not thread safe.
-   *
-   * Designed for use within an [[akka.actor.Actor]].
    *
    * Includes mutable implementations of flatMap, map, and apply which
    * update the internal reference and return Unit.
@@ -280,14 +203,14 @@ object IO {
    * [[Input]] remaining after processing the Iteratee will
    * be stored and processed later when 'flatMap' is used next.
    */
-  final class IterateeRefSync[A](initial: Iteratee[A]) extends IterateeRef[A] {
+  case class IterateeRef[A](initial: Iteratee[A]) {
     private var _value: (Iteratee[A], Input) = (initial, Chunk.empty)
-    override def flatMap(f: A ⇒ Iteratee[A]): Unit = _value = _value match {
+    def flatMap(f: A ⇒ Iteratee[A]): Unit = _value = _value match {
       case (iter, chunk @ Chunk(bytes)) if bytes.nonEmpty ⇒ (iter flatMap f)(chunk)
       case (iter, input)                                  ⇒ (iter flatMap f, input)
     }
-    override def map(f: A ⇒ A): Unit = _value = (_value._1 map f, _value._2)
-    override def apply(input: Input): Unit = _value = _value._1(_value._2 ++ input)
+    def map(f: A ⇒ A): Unit = _value = (_value._1 map f, _value._2)
+    def apply(input: Input): Unit = _value = _value._1(_value._2 ++ input)
 
     /**
      * Returns the current value of this IterateeRefSync
@@ -295,34 +218,6 @@ object IO {
     def value: (Iteratee[A], Input) = _value
   }
 
-  /**
-   * A mutable reference to an [[Iteratee]]. Not thread safe.
-   *
-   * Designed for use within an [[akka.actor.Actor]], although all actions
-   * perfomed on the Iteratee are processed within a [[scala.concurrent.Future]]
-   * so it is not safe to refer to the Actor's state from within this Iteratee.
-   * Messages should instead be sent to the Actor in order to modify state.
-   *
-   * Includes mutable implementations of flatMap, map, and apply which
-   * update the internal reference and return Unit.
-   *
-   * [[Input]] remaining after processing the Iteratee will
-   * be stored and processed later when 'flatMap' is used next.
-   */
-  final class IterateeRefAsync[A](initial: Iteratee[A])(implicit executor: ExecutionContext) extends IterateeRef[A] {
-    private var _value: Future[(Iteratee[A], Input)] = Future((initial, Chunk.empty))
-    override def flatMap(f: A ⇒ Iteratee[A]): Unit = _value = _value map {
-      case (iter, chunk @ Chunk(bytes)) if bytes.nonEmpty ⇒ (iter flatMap f)(chunk)
-      case (iter, input)                                  ⇒ (iter flatMap f, input)
-    }
-    override def map(f: A ⇒ A): Unit = _value = _value map (v ⇒ (v._1 map f, v._2))
-    override def apply(input: Input): Unit = _value = _value map (v ⇒ v._1(v._2 ++ input))
-
-    /**
-     * Returns a Future which will hold the future value of this IterateeRefAsync
-     */
-    def future: Future[(Iteratee[A], Input)] = _value
-  }
 
   /**
    * An Iteratee that returns the ByteString prefix up until the supplied delimiter.

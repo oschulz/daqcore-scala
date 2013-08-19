@@ -22,8 +22,8 @@ import daqcore.util._
 
 
 class DataDecoderQueue {
-  type DecoderAction = daqcore.io.IO.Iteratee[Unit]
-  type DecoderActionRef = daqcore.io.IO.IterateeRefSync[Unit]
+  type DecoderAction = IO.Iteratee[Unit]
+  type DecoderActionRef = IO.IterateeRef[Unit]
 
   protected val dataQueue = collection.mutable.Queue[ByteString]()
   protected val decoderQueue = collection.mutable.Queue[DecoderActionRef]()
@@ -59,7 +59,7 @@ class DataDecoderQueue {
   }
   
   def pushDecoder(decoder: DecoderAction): Unit = {
-    decoderQueue.enqueue(IO.IterateeRef sync decoder)
+    decoderQueue.enqueue(IO.IterateeRef[Unit](decoder))
     processQueues()
   }
   
