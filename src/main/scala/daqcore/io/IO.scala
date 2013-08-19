@@ -25,8 +25,6 @@ package daqcore.io
 import language.higherKinds
 import language.postfixOps
 
-import scala.collection.immutable
-import scala.collection.mutable
 import scala.annotation.tailrec
 import scala.collection.generic.CanBuildFrom
 
@@ -123,30 +121,6 @@ object IO {
    * An [[Iteratee]] that represents an erronous end state.
    */
   final case class Failure(cause: Throwable) extends Iteratee[Nothing]
-
-
-  /**
-   * A mutable reference to an [[Iteratee]]. Not thread safe.
-   *
-   * Includes mutable implementations of flatMap, map, and apply which
-   * update the internal reference and return Unit.
-   *
-   * [[ByteString]] remaining after processing the Iteratee will
-   * be stored and processed later when 'flatMap' is used next.
-   */
-  case class IterateeRef[A](initial: Iteratee[A]) {
-    private var _value: (Iteratee[A], ByteString) = (initial, ByteString.empty)
-    def flatMap(f: A ⇒ Iteratee[A]): Unit = _value = _value match {
-      case (iter, bytes) if bytes.nonEmpty ⇒ (iter flatMap f)(bytes)
-    }
-    def map(f: A ⇒ A): Unit = _value = (_value._1 map f, _value._2)
-    def apply(input: ByteString): Unit = _value = _value._1(_value._2 ++ input)
-
-    /**
-     * Returns the current value of this IterateeRefSync
-     */
-    def value: (Iteratee[A], ByteString) = _value
-  }
 
 
   /**

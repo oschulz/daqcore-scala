@@ -23,25 +23,21 @@ import daqcore.util._
 
 class DataDecoderQueue {
   type DecoderAction = IO.Iteratee[Unit]
-  type DecoderActionRef = IO.IterateeRef[Unit]
 
   protected val dataQueue = collection.mutable.Queue[ByteString]()
-  protected val decoderQueue = collection.mutable.Queue[DecoderActionRef]()
+  protected val decoderQueue = collection.mutable.Queue[DecoderAction]()
   
   protected def processQueues(): Unit = {
     while (!dataQueue.isEmpty && !decoderQueue.isEmpty) {
       val data = dataQueue.dequeue
-      val dec = decoderQueue.front
-      dec(data)
-      dec.value match {
-        case (IO.Done(_), bytes) => { // decoding finished
-          decoderQueue.dequeue
-          // remaining data, push to front of dataQueue
-          if (! bytes.isEmpty) bytes +=: dataQueue
-        }
-        case (cont: IO.Next[_], rest) => {} // decoder needs more data
-        case (IO.Failure(cause), rest) => throw cause
+      val dec = decoderQueue.dequeue
+      val (next, rest) = dec(data)
+      next match {
+        case IO.Done(_) => // Nothing to do
+        case cont: IO.Next[_] => cont +=: decoderQueue
+        case IO.Failure(cause) => throw cause
       }
+      if (!rest.isEmpty) rest +=: dataQueue
     }
   }
   
@@ -51,7 +47,7 @@ class DataDecoderQueue {
   }
   
   def pushDecoder(decoder: DecoderAction): Unit = {
-    decoderQueue.enqueue(IO.IterateeRef(decoder))
+    decoderQueue.enqueue(decoder)
     processQueues()
   }
   
