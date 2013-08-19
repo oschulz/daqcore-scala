@@ -32,22 +32,14 @@ class DataDecoderQueue {
     while (!dataQueue.isEmpty && !decoderQueue.isEmpty) {
       val data = dataQueue.dequeue
       val dec = decoderQueue.front
-      dec(IO Chunk data)
+      dec(data)
       dec.value match {
-        case (IO.Done(_), rest) => { // decoding finished
+        case (IO.Done(_), bytes) => { // decoding finished
           decoderQueue.dequeue
-          rest match {
-            case IO.Chunk(bytes) =>
-              // remaining data, push to front of dataQueue
-              if (! bytes.isEmpty) bytes +=: dataQueue
-            case IO.EOF =>
-            case IO.Error(cause) => throw cause
-          }
+          // remaining data, push to front of dataQueue
+          if (! bytes.isEmpty) bytes +=: dataQueue
         }
-        case (cont: IO.Next[_], rest) => rest match { // decoder needs more data
-          case IO.Error(cause) => throw cause
-          case _ =>
-        }
+        case (cont: IO.Next[_], rest) => {} // decoder needs more data
         case (IO.Failure(cause), rest) => throw cause
       }
     }
@@ -59,7 +51,7 @@ class DataDecoderQueue {
   }
   
   def pushDecoder(decoder: DecoderAction): Unit = {
-    decoderQueue.enqueue(IO.IterateeRef[Unit](decoder))
+    decoderQueue.enqueue(IO.IterateeRef(decoder))
     processQueues()
   }
   

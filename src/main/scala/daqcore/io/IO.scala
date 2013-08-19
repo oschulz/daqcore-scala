@@ -43,60 +43,6 @@ import java.io.EOFException
  */
 object IO {
 
-  final class DivergentIterateeException extends IllegalStateException("Iteratees should not return a continuation when receiving EOF")
-
-  /**
-   * Represents part of a stream of bytes that can be processed by an
-   * [[Iteratee]].
-   */
-  sealed trait Input {
-    /**
-     * Append another Input to this one.
-     *
-     * If 'that' is an [[EOF]] then it will replace any
-     * remaining bytes in this Input. If 'this' is an [[EOF]]
-     * then it will be replaced by 'that'.
-     */
-    def ++(that: Input): Input
-  }
-
-  object Chunk {
-    /**
-     * Represents the empty Chunk
-     */
-    val empty: Chunk = new Chunk(ByteString.empty)
-  }
-
-  /**
-   * Part of an [[Input]] stream that contains a chunk of bytes.
-   */
-  case class Chunk(bytes: ByteString) extends Input {
-    final override def ++(that: Input): Input = that match {
-      case c @ Chunk(more) ⇒
-        if (more.isEmpty) this
-        else if (bytes.isEmpty) c
-        else Chunk(bytes ++ more)
-      case other ⇒ other
-    }
-  }
-
-  /**
-   * Part of an [[Input]] stream that represents the end of the
-   * stream.
-   *
-   * This will cause the [[Iteratee]] that processes it
-   * to terminate early.
-   */
-  case object EOF extends Input { final override def ++(that: Input): Input = that }
-
-  /**
-   * Part of an [[Input]] stream that represents an error in the stream.
-   *
-   * This will cause the [[Iteratee]] that processes it
-   * to terminate early.
-   */
-  case class Error(cause: Throwable) extends Input { final override def ++(that: Input): Input = that }
-
   object Iteratee {
     /**
      * Wrap the provided value within a [[Done]]
@@ -118,7 +64,7 @@ object IO {
 
   /**
    * A basic Iteratee implementation of Oleg's Iteratee (http://okmij.org/ftp/Streams.html).
-   * To keep this implementation simple it has no support for Enumerator or Input types
+   * To keep this implementation simple it has no support for Enumerator or ByteString types
    * other then ByteString.
    *
    * Other Iteratee implementations can be used in place of this one if any
@@ -127,35 +73,20 @@ object IO {
   sealed abstract class Iteratee[+A] {
 
     /**
-     * Processes the given [[Input]], returning the resulting
-     * Iteratee and the remaining Input.
+     * Processes the given [[ByteString]], returning the resulting
+     * Iteratee and the remaining ByteString.
      */
-    final def apply(input: Input): (Iteratee[A], Input) = this match {
+    final def apply(input: ByteString): (Iteratee[A], ByteString) = this match {
       case Next(f) ⇒ f(input)
       case iter    ⇒ (iter, input)
     }
 
     /**
-     * Passes an [[EOF]] to this Iteratee and returns the
-     * result if available.
-     *
-     * If this Iteratee is in a failure state then the Exception will be thrown.
-     *
-     * If this Iteratee is not well behaved (does not return a result on EOF)
-     * then a "Divergent Iteratee" Exception will be thrown.
-     */
-    final def get: A = this(EOF)._1 match {
-      case Done(value) ⇒ value
-      case Next(_)     ⇒ throw new DivergentIterateeException
-      case Failure(t)  ⇒ throw t
-    }
-
-    /**
      * Applies a function to the result of this Iteratee, resulting in a new
-     * Iteratee. Any unused [[Input]] that is given to this
+     * Iteratee. Any unused [[ByteString]] that is given to this
      * Iteratee will be passed to that resulting Iteratee. This is the
      * primary method of composing Iteratees together in order to process
-     * an Input stream.
+     * an ByteString stream.
      */
     final def flatMap[B](f: A ⇒ Iteratee[B]): Iteratee[B] = this match {
       case Done(value)       ⇒ f(value)
@@ -186,7 +117,7 @@ object IO {
    * An [[Iteratee]] that still requires more input to calculate
    * it's result.
    */
-  final case class Next[+A](f: Input ⇒ (Iteratee[A], Input)) extends Iteratee[A]
+  final case class Next[+A](f: ByteString ⇒ (Iteratee[A], ByteString)) extends Iteratee[A]
 
   /**
    * An [[Iteratee]] that represents an erronous end state.
@@ -200,22 +131,21 @@ object IO {
    * Includes mutable implementations of flatMap, map, and apply which
    * update the internal reference and return Unit.
    *
-   * [[Input]] remaining after processing the Iteratee will
+   * [[ByteString]] remaining after processing the Iteratee will
    * be stored and processed later when 'flatMap' is used next.
    */
   case class IterateeRef[A](initial: Iteratee[A]) {
-    private var _value: (Iteratee[A], Input) = (initial, Chunk.empty)
+    private var _value: (Iteratee[A], ByteString) = (initial, ByteString.empty)
     def flatMap(f: A ⇒ Iteratee[A]): Unit = _value = _value match {
-      case (iter, chunk @ Chunk(bytes)) if bytes.nonEmpty ⇒ (iter flatMap f)(chunk)
-      case (iter, input)                                  ⇒ (iter flatMap f, input)
+      case (iter, bytes) if bytes.nonEmpty ⇒ (iter flatMap f)(bytes)
     }
     def map(f: A ⇒ A): Unit = _value = (_value._1 map f, _value._2)
-    def apply(input: Input): Unit = _value = _value._1(_value._2 ++ input)
+    def apply(input: ByteString): Unit = _value = _value._1(_value._2 ++ input)
 
     /**
      * Returns the current value of this IterateeRefSync
      */
-    def value: (Iteratee[A], Input) = _value
+    def value: (Iteratee[A], ByteString) = _value
   }
 
 
@@ -225,18 +155,15 @@ object IO {
    * setting 'inclusive' to be 'true'.
    */
   def takeUntil(delimiter: ByteString, inclusive: Boolean = false): Iteratee[ByteString] = {
-    def step(taken: ByteString)(input: Input): (Iteratee[ByteString], Input) = input match {
-      case Chunk(more) ⇒
-        val bytes = taken ++ more
-        val startIdx = bytes.indexOfSlice(delimiter, math.max(taken.length - delimiter.length, 0))
-        if (startIdx >= 0) {
-          val endIdx = startIdx + delimiter.length
-          (Done(bytes take (if (inclusive) endIdx else startIdx)), Chunk(bytes drop endIdx))
-        } else {
-          (Next(step(bytes)), Chunk.empty)
-        }
-      case EOF              ⇒ (Failure(new EOFException("Unexpected EOF")), EOF)
-      case e @ Error(cause) ⇒ (Failure(cause), e)
+    def step(taken: ByteString)(input: ByteString): (Iteratee[ByteString], ByteString) = {
+      val bytes = taken ++ input
+      val startIdx = bytes.indexOfSlice(delimiter, math.max(taken.length - delimiter.length, 0))
+      if (startIdx >= 0) {
+        val endIdx = startIdx + delimiter.length
+        (Done(bytes take (if (inclusive) endIdx else startIdx)), bytes drop endIdx)
+      } else {
+        (Next(step(bytes)), ByteString.empty)
+      }
     }
 
     Next(step(ByteString.empty))
@@ -246,15 +173,12 @@ object IO {
    * An Iteratee that will collect bytes as long as a predicate is true.
    */
   def takeWhile(p: (Byte) ⇒ Boolean): Iteratee[ByteString] = {
-    def step(taken: ByteString)(input: Input): (Iteratee[ByteString], Input) = input match {
-      case Chunk(more) ⇒
-        val (found, rest) = more span p
-        if (rest.isEmpty)
-          (Next(step(taken ++ found)), Chunk.empty)
-        else
-          (Done(taken ++ found), Chunk(rest))
-      case EOF              ⇒ (Failure(new EOFException("Unexpected EOF")), EOF)
-      case e @ Error(cause) ⇒ (Failure(cause), e)
+    def step(taken: ByteString)(input: ByteString): (Iteratee[ByteString], ByteString) = {
+      val (found, rest) = input span p
+      if (rest.isEmpty)
+        (Next(step(taken ++ found)), ByteString.empty)
+      else
+        (Done(taken ++ found), rest)
     }
 
     Next(step(ByteString.empty))
@@ -264,15 +188,12 @@ object IO {
    * An Iteratee that returns a ByteString of the requested length.
    */
   def take(length: Int): Iteratee[ByteString] = {
-    def step(taken: ByteString)(input: Input): (Iteratee[ByteString], Input) = input match {
-      case Chunk(more) ⇒
-        val bytes = taken ++ more
-        if (bytes.length >= length)
-          (Done(bytes.take(length)), Chunk(bytes.drop(length)))
-        else
-          (Next(step(bytes)), Chunk.empty)
-      case EOF              ⇒ (Failure(new EOFException("Unexpected EOF")), EOF)
-      case e @ Error(cause) ⇒ (Failure(cause), e)
+    def step(taken: ByteString)(input: ByteString): (Iteratee[ByteString], ByteString) = {
+      val bytes = taken ++ input
+      if (bytes.length >= length)
+        (Done(bytes.take(length)), bytes.drop(length))
+      else
+        (Next(step(bytes)), ByteString.empty)
     }
 
     Next(step(ByteString.empty))
@@ -282,14 +203,11 @@ object IO {
    * An Iteratee that ignores the specified number of bytes.
    */
   def drop(length: Int): Iteratee[Unit] = {
-    def step(left: Int)(input: Input): (Iteratee[Unit], Input) = input match {
-      case Chunk(more) ⇒
-        if (left > more.length)
-          (Next(step(left - more.length)), Chunk.empty)
-        else
-          (Done(()), Chunk(more drop left))
-      case EOF              ⇒ (Failure(new EOFException("Unexpected EOF")), EOF)
-      case e @ Error(cause) ⇒ (Failure(cause), e)
+    def step(left: Int)(input: ByteString): (Iteratee[Unit], ByteString) = {
+      if (left > input.length)
+        (Next(step(left - input.length)), ByteString.empty)
+      else
+        (Done(()), input drop left)
     }
 
     Next(step(length))
@@ -299,12 +217,9 @@ object IO {
    * An Iteratee that returns the remaining ByteString until an EOF is given.
    */
   val takeAll: Iteratee[ByteString] = {
-    def step(taken: ByteString)(input: Input): (Iteratee[ByteString], Input) = input match {
-      case Chunk(more) ⇒
-        val bytes = taken ++ more
-        (Next(step(bytes)), Chunk.empty)
-      case EOF              ⇒ (Done(taken), EOF)
-      case e @ Error(cause) ⇒ (Failure(cause), e)
+    def step(taken: ByteString)(input: ByteString): (Iteratee[ByteString], ByteString) = {
+      val bytes = taken ++ input
+      (Next(step(bytes)), ByteString.empty)
     }
 
     Next(step(ByteString.empty))
@@ -314,10 +229,8 @@ object IO {
    * An Iteratee that returns any input it receives
    */
   val takeAny: Iteratee[ByteString] = Next {
-    case Chunk(bytes) if bytes.nonEmpty ⇒ (Done(bytes), Chunk.empty)
-    case Chunk(bytes)                   ⇒ (takeAny, Chunk.empty)
-    case EOF                            ⇒ (Done(ByteString.empty), EOF)
-    case e @ Error(cause)               ⇒ (Failure(cause), e)
+    case bytes if bytes.nonEmpty ⇒ (Done(bytes), ByteString.empty)
+    case bytes                   ⇒ (takeAny, ByteString.empty)
   }
 
   /**
@@ -333,18 +246,15 @@ object IO {
 
   /**
    * An Iteratee that returns a [[akka.util.ByteString]] of the request length,
-   * but does not consume the Input.
+   * but does not consume the ByteString.
    */
   def peek(length: Int): Iteratee[ByteString] = {
-    def step(taken: ByteString)(input: Input): (Iteratee[ByteString], Input) = input match {
-      case Chunk(more) ⇒
-        val bytes = taken ++ more
-        if (bytes.length >= length)
-          (Done(bytes.take(length)), Chunk(bytes))
-        else
-          (Next(step(bytes)), Chunk.empty)
-      case EOF              ⇒ (Done(taken), EOF)
-      case e @ Error(cause) ⇒ (Failure(cause), e)
+    def step(taken: ByteString)(input: ByteString): (Iteratee[ByteString], ByteString) = {
+      val bytes = taken ++ input
+      if (bytes.length >= length)
+        (Done(bytes.take(length)), bytes)
+      else
+        (Next(step(bytes)), ByteString.empty)
     }
 
     Next(step(ByteString.empty))
@@ -372,8 +282,8 @@ object IO {
   // private api
 
   private object Chain {
-    def apply[A](f: Input ⇒ (Iteratee[A], Input)) = new Chain[A](f, Nil, Nil)
-    def apply[A, B](f: Input ⇒ (Iteratee[A], Input), k: A ⇒ Iteratee[B]) = new Chain[B](f, List(k.asInstanceOf[Any ⇒ Iteratee[Any]]), Nil)
+    def apply[A](f: ByteString ⇒ (Iteratee[A], ByteString)) = new Chain[A](f, Nil, Nil)
+    def apply[A, B](f: ByteString ⇒ (Iteratee[A], ByteString), k: A ⇒ Iteratee[B]) = new Chain[B](f, List(k.asInstanceOf[Any ⇒ Iteratee[Any]]), Nil)
   }
 
   /**
@@ -382,13 +292,13 @@ object IO {
    *
    * For internal use within Iteratee.
    */
-  private final case class Chain[A] private (cur: Input ⇒ (Iteratee[Any], Input), queueOut: List[Any ⇒ Iteratee[Any]], queueIn: List[Any ⇒ Iteratee[Any]]) extends (Input ⇒ (Iteratee[A], Input)) {
+  private final case class Chain[A] private (cur: ByteString ⇒ (Iteratee[Any], ByteString), queueOut: List[Any ⇒ Iteratee[Any]], queueIn: List[Any ⇒ Iteratee[Any]]) extends (ByteString ⇒ (Iteratee[A], ByteString)) {
 
     def :+[B](f: A ⇒ Iteratee[B]) = new Chain[B](cur, queueOut, f.asInstanceOf[Any ⇒ Iteratee[Any]] :: queueIn)
 
-    def apply(input: Input): (Iteratee[A], Input) = {
+    def apply(input: ByteString): (Iteratee[A], ByteString) = {
       @tailrec
-      def run(result: (Iteratee[Any], Input), queueOut: List[Any ⇒ Iteratee[Any]], queueIn: List[Any ⇒ Iteratee[Any]]): (Iteratee[Any], Input) = {
+      def run(result: (Iteratee[Any], ByteString), queueOut: List[Any ⇒ Iteratee[Any]], queueIn: List[Any ⇒ Iteratee[Any]]): (Iteratee[Any], ByteString) = {
         if (queueOut.isEmpty) {
           if (queueIn.isEmpty) result
           else run(result, queueIn.reverse, Nil)
@@ -402,7 +312,7 @@ object IO {
           case _               ⇒ result
         }
       }
-      run(cur(input), queueOut, queueIn).asInstanceOf[(Iteratee[A], Input)]
+      run(cur(input), queueOut, queueIn).asInstanceOf[(Iteratee[A], ByteString)]
     }
   }
 

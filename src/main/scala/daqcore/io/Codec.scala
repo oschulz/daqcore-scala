@@ -38,8 +38,8 @@ trait Codec[A, B] {
   def unapplySeq(bytes: ByteString) = try {
     val buffer = collection.mutable.ListBuffer[B]()
     val initial = for { elem <- dec } yield { buffer += elem; {} }
-    var state: (IO.Iteratee[Unit], IO.Input) = (initial, IO Chunk bytes)
-    while ( state match { case (_, IO.Chunk(b)) if b.isEmpty => false; case _ => true } ) {
+    var state: (IO.Iteratee[Unit], ByteString) = (initial, bytes)
+    while ( state match { case (_, b) if b.isEmpty => false; case _ => true } ) {
       state = state._1(state._2)
       state match {
         case (_: IO.Done[_], rest) => state = (initial, rest)
