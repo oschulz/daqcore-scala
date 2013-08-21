@@ -31,12 +31,12 @@ trait LakeShore218 extends Device {
 }
 
 object LakeShore218 extends DeviceCompanion[LakeShore218] {
-  def impl = { case uri => new Lakeshore218(uri.toString) }
+  def impl = { case uri => new LakeShore218Impl(uri.toString) }
 }
 
 
 
-class Lakeshore218(ioURI: String) extends LakeShore218
+class LakeShore218Impl(ioURI: String) extends LakeShore218
   with CloseableTAImpl with SyncableImpl
 {
   import daqcore.defaults.defaultTimeout //!! get actor default timeout somehow?
