@@ -28,7 +28,6 @@ package object io {
   val URI = GenericURI
   
   type Encoder[A] = (ByteStringBuilder, A) => Unit
-  type Decoder[A] = IO.Iteratee[A]
   
   type FrameEncoder = Decoder[ByteString]
   type FrameDecoder = Decoder[ByteString]

@@ -42,22 +42,22 @@ object SCPIStreamFramer extends Codec[ByteString, ByteString] {
   val enc = encFct(_, _)
   
 
-  def decodeBlockData = IO take 1 flatMap {
+  def decodeBlockData = Decoder take 1 flatMap {
     lenA =>
     val lengthSize = lenA.decodeString(charEncoding).toInt
-    if (lengthSize == 0) IO.Failure(new UnsupportedOperationException("Indefinite-Length Block Data not supported"))
+    if (lengthSize == 0) Decoder.Failure(new UnsupportedOperationException("Indefinite-Length Block Data not supported"))
     else for {
-      lenB <- IO take lengthSize
+      lenB <- Decoder take lengthSize
       length = lenB.decodeString(charEncoding).toInt
-      data <- IO take length
+      data <- Decoder take length
     } yield {
-      if (data.length != length) IO.Failure(new RuntimeException("EOI while expecting more block data"))
+      if (data.length != length) Decoder.Failure(new RuntimeException("EOI while expecting more block data"))
       (lenA, lenB, data)
     }
   }
 
   
-  def decNext(prev: ByteString): IO.Iteratee[ByteString] = IO take 1 flatMap {
+  def decNext(prev: ByteString): Decoder[ByteString] = Decoder take 1 flatMap {
     current =>
 
     def notSpecial(byte: Byte) = (byte != DQUOTE.head) && (byte != SQUOTE.head) &&
@@ -68,16 +68,16 @@ object SCPIStreamFramer extends Codec[ByteString, ByteString] {
     def takeBlockData = decodeBlockData map { case (lenA, lenB, data) => lenA ++ lenB ++ data }
     
     current match {
-      case DQUOTE => IO takeUntil(DQUOTE, true) flatMap continue
-      case SQUOTE => IO takeUntil(SQUOTE, true) flatMap continue
+      case DQUOTE => Decoder takeUntil(DQUOTE, true) flatMap continue
+      case SQUOTE => Decoder takeUntil(SQUOTE, true) flatMap continue
       case CR =>
-        IO take 1 flatMap {
-          case NL => IO Done prev ++ current ++ NL
-          case _ => IO.Failure(new RuntimeException("Expected NL after CR"))
+        Decoder take 1 flatMap {
+          case NL => Decoder.Done(prev ++ current ++ NL)
+          case _ => Decoder.Failure(new RuntimeException("Expected NL after CR"))
         }
-      case NL => IO Done prev ++ current
+      case NL => Decoder.Done(prev ++ current)
       case HASH => takeBlockData flatMap continue
-      case _ => IO takeWhile notSpecial flatMap continue
+      case _ => Decoder takeWhile notSpecial flatMap continue
     }
   }
   

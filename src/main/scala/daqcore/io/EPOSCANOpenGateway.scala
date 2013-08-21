@@ -99,15 +99,15 @@ object EPOSCANOpenGateway {
 
 
     val decOpCode = for {
-      opCodeRaw <- IO take 1
+      opCodeRaw <- Decoder take 1
       opCode = opCodeRaw.head
     } yield opCode
 
     val decDataAndCRC = for {
-      lenMinus1Raw <- (IO take 1)
+      lenMinus1Raw <- (Decoder take 1)
       dataLen = ((lenMinus1Raw.head.toInt) & 0xff) + 1
-      data <- IO take dataLen * 2
-      crcBytes <- IO take 2
+      data <- Decoder take dataLen * 2
+      crcBytes <- Decoder take 2
       crc = byteOrder.getShort(crcBytes.iterator)
     } yield (data, crc)
 

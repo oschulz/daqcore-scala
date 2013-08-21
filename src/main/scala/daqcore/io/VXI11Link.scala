@@ -23,7 +23,7 @@ import java.io.IOException
 import java.net.InetAddress
 import java.util.concurrent.TimeoutException
 
-import akka.actor.{IO => AkkaIO, _}
+import akka.actor._
 import scala.concurrent.{Future, Promise}
 
 import org.acplt.oncrpc.OncRpcProtocols

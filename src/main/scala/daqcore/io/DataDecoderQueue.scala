@@ -22,7 +22,7 @@ import daqcore.util._
 
 
 class DataDecoderQueue {
-  type DecoderAction = IO.Iteratee[Unit]
+  type DecoderAction = Decoder[Unit]
 
   protected val dataQueue = collection.mutable.Queue[ByteString]()
   protected val decoderQueue = collection.mutable.Queue[DecoderAction]()
@@ -33,9 +33,9 @@ class DataDecoderQueue {
       val dec = decoderQueue.dequeue
       val (next, rest) = dec(data)
       next match {
-        case IO.Done(_) => // Nothing to do
-        case cont: IO.Next[_] => cont +=: decoderQueue
-        case IO.Failure(cause) => throw cause
+        case Decoder.Done(_) => // Nothing to do
+        case cont: Decoder.Next[_] => cont +=: decoderQueue
+        case Decoder.Failure(cause) => throw cause
       }
       if (!rest.isEmpty) rest +=: dataQueue
     }

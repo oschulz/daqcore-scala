@@ -93,11 +93,11 @@ object PfeifferTPG261Impl {
 	out ++= CRLF
   }
   
-  val decCmdAck: Decoder[Boolean] = IO take 3 map {
+  val decCmdAck: Decoder[Boolean] = Decoder take 3 map {
     case ACKMsg => true
     case NACKMsg => false
     case _ => throw new RuntimeException ("Unexpected reply to command")
   }
 
-  val decEnqResp: Decoder[String] = IO takeUntil CRLF map { _.decodeString(charset) }
+  val decEnqResp: Decoder[String] = Decoder takeUntil CRLF map { _.decodeString(charset) }
 }

@@ -19,7 +19,7 @@ package daqcore.io
 
 import java.net.{SocketAddress, InetSocketAddress}
 
-import akka.actor.{IO => AkkaIO, _}
+import akka.actor._
 import scala.util.{Try, Success, Failure}
 import scala.concurrent.{Future, Promise}
 
@@ -71,8 +71,8 @@ trait ByteStreamOutputImpl extends ByteStreamOutput with CloseableTAImpl
 trait ByteStreamInputImpl extends ByteStreamInput with CloseableTAImpl {
   val inputQueue = DataDecoderQueue()
 
-  def recv(): Future[ByteString] = recv(IO.takeAny)
-  def recv(receiver: ActorRef, repeat: Boolean): Unit = recv(receiver, IO.takeAny, repeat)
+  def recv(): Future[ByteString] = recv(Decoder.takeAny)
+  def recv(receiver: ActorRef, repeat: Boolean): Unit = recv(receiver, Decoder.takeAny, repeat)
   
   def recv[A](decoder: Decoder[A]): Future[A] = {
     val result = Promise[A]()
@@ -82,7 +82,7 @@ trait ByteStreamInputImpl extends ByteStreamInput with CloseableTAImpl {
 
   def recv(receiver: ActorRef, decoder: Decoder[_], repeat: Boolean): Unit = inputQueue pushDecoder {
     val action = decoder map { receiver ! _ }
-    if (repeat) IO.repeat { action }
+    if (repeat) Decoder.repeat { action }
     else action
   }
 }
