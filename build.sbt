@@ -49,7 +49,7 @@ libraryDependencies +=  "org.slf4j" % "log4j-over-slf4j" % "1.7.5" % "runtime" i
 libraryDependencies += "jfree" % "jfreechart" % "1.0.13"
 
 
-libraryDependencies += "com.thoughtworks.xstream" % "xstream" % "1.4.4"
+libraryDependencies += "com.thoughtworks.xstream" % "xstream" % "1.4.5"
 
 libraryDependencies += "org.codehaus.jettison" % "jettison" % "1.3.3"
 
