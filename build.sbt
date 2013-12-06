@@ -4,7 +4,7 @@ organization := "de.tu-dortmund"
 
 version := "0.1.0"
 
-scalaVersion := "2.10.2"
+scalaVersion := "2.10.3"
 
 compileOrder := CompileOrder.JavaThenScala
 
@@ -25,13 +25,13 @@ resolvers += "Typesafe Repository" at "http://repo.typesafe.com/typesafe/release
 resolvers += "DAQCorE Releases" at "http://daqcore.github.io/repo/releases/"
 
 
-libraryDependencies += "com.typesafe.akka" %% "akka-actor" % "2.2.0"
+libraryDependencies += "com.typesafe.akka" %% "akka-actor" % "2.2.3"
 
-libraryDependencies += "com.typesafe.akka" %% "akka-remote" % "2.2.0"
+libraryDependencies += "com.typesafe.akka" %% "akka-remote" % "2.2.3"
 
-libraryDependencies += "com.typesafe.akka" %% "akka-dataflow" % "2.2.0"
+libraryDependencies += "com.typesafe.akka" %% "akka-dataflow" % "2.2.3"
 
-libraryDependencies += "com.typesafe.akka" %% "akka-slf4j" % "2.2.0"
+libraryDependencies += "com.typesafe.akka" %% "akka-slf4j" % "2.2.3"
 
 
 libraryDependencies += "org.scalatest" %% "scalatest" % "1.9.1" % "test"
