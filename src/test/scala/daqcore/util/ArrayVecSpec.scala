@@ -18,10 +18,10 @@
 package daqcore.util
 
 import org.scalatest.WordSpec
-import org.scalatest.matchers.MustMatchers
+import org.scalatest.Matchers
 
 
-class ArrayVecSpec extends WordSpec with MustMatchers {
+class ArrayVecSpec extends WordSpec with Matchers {
   "A ArrayVec" when {
     "created from an Seq" should {
       val parent = IndexedSeq(1,2,3,4)

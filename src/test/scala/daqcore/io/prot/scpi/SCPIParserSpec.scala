@@ -20,13 +20,13 @@ package daqcore.io.prot.scpi
 import scala.language.postfixOps
 
 import org.scalatest.WordSpec
-import org.scalatest.matchers.MustMatchers
+import org.scalatest.Matchers
 
 import daqcore.util._
 import daqcore.io.prot.scpi.mnemonics._
 
 
-class SCPIParserSpec extends WordSpec with MustMatchers {
+class SCPIParserSpec extends WordSpec with Matchers {
   "An SCPIParser" should {
     val parser = SCPIParser()
 

@@ -18,13 +18,13 @@
 package daqcore.io.prot.keithley
 
 import org.scalatest.WordSpec
-import org.scalatest.matchers.MustMatchers
+import org.scalatest.Matchers
 
 import daqcore.util._
 import daqcore.data.units._
 
 
-class KeithleyParserSpec extends WordSpec with MustMatchers {
+class KeithleyParserSpec extends WordSpec with Matchers {
   "A KeithleyParser" should {
     val parser = KeithleyParser()
 
