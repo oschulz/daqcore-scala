@@ -42,9 +42,14 @@ trait CN7500 extends Device {
   def getTempPV(): Future[Double]
   def getTempSP(): Future[Double]
   def setTempSP(value: Double): Future[Double]
+
+  def getRunning(): Future[Boolean]
+  def setRunning(value: Boolean): Future[Boolean]
   
   def getAutoTuning(): Future[Boolean]
   def setAutoTuning(value: Boolean): Future[Boolean]
+
+  def getOutputLevel(ch: Ch = Ch(1 to 2)): Future[ChV[Double]]
 }
 
 object CN7500 {
@@ -96,9 +101,15 @@ class CN7500Impl(busURI: String, slave: Int) extends CN7500
   def getTempPV() = readRegister(0x1000) map reg2temp
   def getTempSP() = readRegister(0x1001) map reg2temp
   def setTempSP(value: Double) = writeRegister(0x1001, temp2reg(value)) map reg2temp
+
+  def getRunning() = readBit(0x814)
+  def setRunning(value: Boolean) = writeBit(0x814, value)
   
   def getAutoTuning() = readBit(0x813)
   def setAutoTuning(value: Boolean) = writeBit(0x813, value)
+
+  def getOutputLevel(ch: Ch) =
+    readRegisters(0x1012,2) map { vals => ChV(vals){ case (i,v) if (ch contains i+1) => (i+1, reg2temp(v))} }
 
   override def receive = extend(super.receive) {
     case CheckConnection => checkConnection()
