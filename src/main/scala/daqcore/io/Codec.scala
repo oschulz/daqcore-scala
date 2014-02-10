@@ -51,6 +51,14 @@ trait Codec[A, B] {
   } catch {
     case e: Throwable => None
   }
+
+  def transform[C, D](f: C => A)(g: B => D) = {
+    val origCodec = this
+    new Codec[C, D] {
+      val enc: Encoder[C] = (out: ByteStringBuilder, in: C) => origCodec.enc(out, f(in))
+      def dec: Decoder[D] = for { out <- origCodec.dec } yield g(out)
+    }
+  }
 }
 
 object Codec {
