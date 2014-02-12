@@ -18,7 +18,7 @@
 package daqcore.io
 
 
-import akka.actor.{IO => AkkaIO, _}
+import akka.actor._
 
 import daqcore.util._
 import daqcore.actors._, daqcore.actors.TypedActorTraits._
@@ -77,7 +77,7 @@ object VICPLink extends IOResourceCompanion[VICPLink] {
     val enc = encFct(_, _)
     
     val dec = for {
-      rawHeader <- IO take 8
+      rawHeader <- Decoder take 8
       input = rawHeader.iterator
       opByte = input.getByte
       eoi = (opByte & (1 << 0)) > 0
@@ -87,7 +87,7 @@ object VICPLink extends IOResourceCompanion[VICPLink] {
       seqno = input.getByte
       spare = input.getByte // spare, ignored
       dataLen = input.getInt
-      data <- IO take dataLen
+      data <- Decoder take dataLen
     } yield {
       if (version != 1) throw new RuntimeException("Cannot handle unknown VICP version " + version)
       if (!hasData && !data.isEmpty) throw new RuntimeException("Strange VICP package with false data flag but containing data")

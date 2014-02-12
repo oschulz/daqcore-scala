@@ -196,8 +196,6 @@ object IseqXHQImpl {
   }
   
   object codec extends Codec[String, (String, String)] {
-    import daqcore.io.IO
-
     val lineCodec = StringLineCodec(LineCodec.CRLF, "ASCII")
 
     val enc = lineCodec.enc
@@ -207,7 +205,7 @@ object IseqXHQImpl {
       b <- lineCodec.dec
     } yield (a.trim, b.trim)
 
-    val decSync = IO.takeUntil(ByteString("????\r\n"), true) map { _ => true}
+    val decSync = Decoder.takeUntil(ByteString("????\r\n"), true) map { _ => true}
   }
 }
 

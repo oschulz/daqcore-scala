@@ -38,13 +38,13 @@ trait Codec[A, B] {
   def unapplySeq(bytes: ByteString) = try {
     val buffer = collection.mutable.ListBuffer[B]()
     val initial = for { elem <- dec } yield { buffer += elem; {} }
-    var state: (IO.Iteratee[Unit], IO.Input) = (initial, IO Chunk bytes)
-    while ( state match { case (_, IO.Chunk(b)) if b.isEmpty => false; case _ => true } ) {
+    var state: (Decoder[Unit], ByteString) = (initial, bytes)
+    while ( state match { case (_, b) if b.isEmpty => false; case _ => true } ) {
       state = state._1(state._2)
       state match {
-        case (_: IO.Done[_], rest) => state = (initial, rest)
-        case (cont: IO.Next[_], _) => throw new IllegalArgumentException("Unexpected EOI")
-        case (IO.Failure(cause), _) => throw cause
+        case (_: Decoder.Done[_], rest) => state = (initial, rest)
+        case (cont: Decoder.Next[_], _) => throw new IllegalArgumentException("Unexpected EOI")
+        case (Decoder.Failure(cause), _) => throw cause
       }
     }
     Some(buffer.result)
@@ -91,7 +91,7 @@ case class StringLineCodec(separator: ByteString = LineCodec.LF, charset: String
 	if (! bs.endsWith(separator)) out ++= separator
   }
   
-  val dec: Decoder[String] = IO takeUntil separator map { _.decodeString(charset) }
+  val dec: Decoder[String] = Decoder takeUntil separator map { _.decodeString(charset) }
 }
 
 
@@ -101,5 +101,5 @@ case class RawLineCodec(separator: ByteString = LineCodec.LF) extends FrameCodec
 	if (! bs.endsWith(separator)) out ++= separator
   }
   
-  val dec: Decoder[ByteString] = IO takeUntil separator
+  val dec: Decoder[ByteString] = Decoder takeUntil separator
 }

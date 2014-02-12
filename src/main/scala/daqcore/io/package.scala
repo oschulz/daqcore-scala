@@ -24,13 +24,10 @@ import daqcore.util.{ByteString, ByteStringBuilder}
 
 
 package object io {
-  val IO = akka.actor.IO
-
   type URI = java.net.URI
   val URI = GenericURI
   
   type Encoder[A] = (ByteStringBuilder, A) => Unit
-  type Decoder[A] = IO.Iteratee[A]
   
   type FrameEncoder = Decoder[ByteString]
   type FrameDecoder = Decoder[ByteString]

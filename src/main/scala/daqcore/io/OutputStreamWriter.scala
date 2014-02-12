@@ -19,7 +19,7 @@ package daqcore.io
 
 import java.io.{OutputStream, File, FileOutputStream}
 
-import akka.actor.{IO => AkkaIO, IOManager => AkkaIOManager, _}
+import akka.actor._
 import scala.concurrent.{Future, Promise}
 
 import daqcore.util._

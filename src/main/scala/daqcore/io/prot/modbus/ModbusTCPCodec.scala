@@ -41,12 +41,12 @@ object ModbusTCPCodec extends ModbusTransportCodec {
   val enc = encFct(_, _)
   
   val dec = for {
-    header <- IO.take(6)
+    header <- Decoder.take(6)
     headerIterator = header.iterator
     transactionId = headerIterator.getShort.toInt & 0xffff
     protocolId = headerIterator.getShort.toInt & 0xffff
     contentLen = headerIterator.getShort.toInt & 0xffff
-    content <- IO.take(contentLen)
+    content <- Decoder.take(contentLen)
   } yield {
 	  if (transactionId != 0) throw new RuntimeException("Unexpected Modbus TCP transaction ID")
 	  if (protocolId != 0) throw new RuntimeException("Unexpected Modbus TCP protocol ID")

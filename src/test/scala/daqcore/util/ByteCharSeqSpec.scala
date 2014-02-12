@@ -18,10 +18,10 @@
 package daqcore.util
 
 import org.scalatest.WordSpec
-import org.scalatest.matchers.MustMatchers
+import org.scalatest.Matchers
 
 
-class ByteCharSeqSpec extends WordSpec with MustMatchers {
+class ByteCharSeqSpec extends WordSpec with Matchers {
   "A ByteCharSeq" should {
     "equal a string it was created from" in {
       val s = "Hello, World!"

@@ -45,8 +45,8 @@ object ModbusASCIICodec extends ModbusTransportCodec {
   val enc = encFct(_, _)
   
   val dec = for {
-    _ <- IO.takeUntil(frameStart, true)
-    asciiBody <- IO.takeUntil(frameEnd, false)
+    _ <- Decoder.takeUntil(frameStart, true)
+    asciiBody <- Decoder.takeUntil(frameEnd, false)
   } yield {
     val body = {
       val asciiIn = new ASCIIInputStream(asciiBody.iterator.asInputStream)

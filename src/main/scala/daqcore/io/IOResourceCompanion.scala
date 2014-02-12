@@ -18,7 +18,7 @@
 package daqcore.io
 
 import scala.reflect.{ClassTag, classTag}
-import akka.actor.{IO => AkkaIO, _}
+import akka.actor._
 
 import daqcore.actors._
 

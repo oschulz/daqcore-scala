@@ -21,11 +21,11 @@ import java.net.{SocketAddress, InetSocketAddress}
 
 import scala.concurrent.{Future, Promise}
 import scala.concurrent.duration._
-import akka.actor.{IO => AkkaIO, IOManager => AkkaIOManager, _}
-import akka.actor.IOManager
+import scala.util.{Try, Success, Failure}
+import akka.actor._
+import akka.pattern.{ ask, pipe }
 
 import daqcore.util._
-import akka.actor.{IO => AkkaIO}
 import daqcore.actors._, daqcore.actors.TypedActorTraits._
 
 
@@ -39,44 +39,93 @@ object InetConnection extends IOResourceCompanion[InetConnection] {
       () => new ClientConnectionImpl(new InetSocketAddress(host, port))
   }
 
-  def apply(address: SocketAddress)(implicit rf: ActorRefFactory): InetConnection =
+  def apply(address: InetSocketAddress)(implicit rf: ActorRefFactory): InetConnection =
     typedActorOf[InetConnection](new ClientConnectionImpl(address))
-  
+
   def apply(host: String, port: Int)(implicit rf: ActorRefFactory): InetConnection =
     apply(new InetSocketAddress(host, port))
 
 
   abstract class ConnectionImpl extends InetConnection with ByteStreamIOImpl {
-    protected val socket: IO.SocketHandle
-    atCleanup { socket.close() }
-    
+    import akka.io.{ IO, Tcp }
+
+    def connection: Future[ActorRef]
+    // This actor, since it has been registered with the connection, will be
+    // monitored by it. Therefore, no Tcp.Closed has to be sent explicitely
+    // when this actor stops.
+
+    def connectionOpt = connection.value match {
+      case Some(Success(v)) => Some(v)
+      case Some(Failure(exception)) => throw exception
+      case None => None
+    }
+
+    protected def connectionRef = connectionOpt.getOrElse(throw new RuntimeException("TCP Connection not open (yet)"))
+
+    override def isOpen(): Future[Boolean] = connection map { _ => true }
+
     def flush(): Unit = {
       val bytes = outputQueue.result
       if (! bytes.isEmpty) {
-        socket.write(bytes)
+        connectionRef ! Tcp.Write(bytes)
         outputQueue.clear
       }
     }
-    
+
     override def receive = extend(super.receive) {
-      case AkkaIO.Connected(_, address) => {
-        setIsOpen(true)
-        log.trace("Established connection to " + address)
-      }
-      case AkkaIO.Read(socket, bytes) => {
+      case Tcp.Received(bytes) => {
         log.trace("Received: " + loggable(bytes))
         inputQueue pushData bytes
       }
-      case AkkaIO.Closed(socket: IO.SocketHandle, cause) => {
-        log.trace("Connection closed because: " + cause)
+      case closedMsg: Tcp.ConnectionClosed => {
+        closedMsg match {
+          case Tcp.Aborted => log.warn("Connection aborted")
+          case Tcp.Closed => log.debug("Connection closed normally")
+          case Tcp.ConfirmedClosed => log.trace("Connection confirmed closed")
+          case Tcp.ErrorClosed(cause) => log.error("Connection closed due to error: " + cause)
+          case Tcp.PeerClosed => log.debug("Connection closed by peer")
+        }
+
+        log.trace("Connection closed")
         close()
       }
+      case Tcp.CommandFailed(cmd) => throw new RuntimeException("TCP Command failed: " + cmd)
     }
   }
 
 
-  class ClientConnectionImpl(address: SocketAddress) extends ConnectionImpl with TypedActorImpl {
-    val socket: IO.SocketHandle = IOManager(actorSystem).connect(address)(selfRef)
+  class ClientConnectionImpl(address: InetSocketAddress) extends ConnectionImpl with TypedActorImpl {
+    trait Connector {
+      def connect(address: InetSocketAddress): Future[ActorRef]
+    }
+
+    class ConnectorImpl(handler: ActorRef, logging: Logging) extends Connector with TypedActorBasics with TypedActorReceive {
+      import akka.io.{IO, Tcp}
+
+      val connPromise = Promise[ActorRef]()
+
+      def connect(address: InetSocketAddress): Future[ActorRef] = {
+        IO(Tcp)(context.system) ! Tcp.Connect(address)
+        connPromise.future
+      }
+
+      override def receive = extend(super.receive) {
+        case Tcp.Connected(remote, local) ⇒
+          logging.log.debug("Established connection from " + local + " to " + remote)
+          val connection = TypedActor.context.sender
+          connPromise success connection
+          connection ! Tcp.Register(handler)
+          selfStop()
+
+        case Tcp.CommandFailed(_: Tcp.Connect) => throw new RuntimeException("Failed to connect")
+      }
+    }
+
+    import daqcore.defaults.defaultTimeout
+    val connector = typedActorOf[Connector](new ConnectorImpl(selfRef, this), "connector")
+    val connection = connector.connect(address);
+
+    connection.get // Wait for connection
   }
 }
 
@@ -89,13 +138,13 @@ trait InetServer extends CloseableTA {
 object InetServer {
   import InetConnection.{ConnectionImpl}
 
-  
-  def apply(address: SocketAddress)(body: InetConnection => Unit)(implicit rf: ActorRefFactory): InetServer =
+
+  def apply(address: InetSocketAddress)(body: InetConnection => Unit)(implicit rf: ActorRefFactory): InetServer =
     typedActorOf[InetServer](new ServerImpl(address, body))
 
-  def apply(address: SocketAddress, name: String)(body: InetConnection => Unit)(implicit rf: ActorRefFactory): InetServer =
+  def apply(address: InetSocketAddress, name: String)(body: InetConnection => Unit)(implicit rf: ActorRefFactory): InetServer =
     typedActorOf[InetServer](new ServerImpl(address, body), name)
-    
+
   def apply(port: Int)(body: InetConnection => Unit)(implicit rf: ActorRefFactory): InetServer =
     apply(new InetSocketAddress(port))(body)
 
@@ -103,34 +152,31 @@ object InetServer {
     apply(new InetSocketAddress(port), name)(body)
 
 
-  class ServerConnectionImpl(serverHandle: IO.ServerHandle) extends ConnectionImpl with TypedActorImpl {
-    val socket: IO.SocketHandle = serverHandle.accept()(selfRef)
+  class ServerConnectionImpl(acceptedConn: ActorRef) extends ConnectionImpl with TypedActorImpl {
+    val connectionPromise = Promise[ActorRef]()
+    val connection = connectionPromise.future
+    connectionPromise success acceptedConn
   }
 
 
-  class ServerImpl(val address: SocketAddress, body: InetConnection => Unit) extends InetServer with TypedActorImpl with CloseableTAImpl with Supervisor {
-    val serverHandle = IOManager(actorSystem).listen(address)(selfRef)
-    atCleanup { serverHandle.close() }
+  class ServerImpl(val address: InetSocketAddress, body: InetConnection => Unit) extends InetServer with TypedActorImpl with CloseableTAImpl with Supervisor {
+    import akka.io.{IO, Tcp}
+
+    IO(Tcp)(context.system) ! Tcp.Bind(selfRef, address)
 
     def supervisorStrategy = OneForOneStrategy() { case _ ⇒ SupervisorStrategy.Stop }
 
     override def receive = extend(super.receive) {
-      case AkkaIO.Listening(server, address) => {
-        log.trace("Server is listening on " + address)
+      case Tcp.Bound(localAddress) => log.debug("TCP Server is listening on " + localAddress)
+
+      case Tcp.Connected(remote, local) => {
+        log.debug("Accepted connection from " + remote + " to " + local)
+        val connection = TypedActor.context.sender
+        val handler = typedActorOf[InetConnection](new ServerConnectionImpl(connection))
+        connection ! Tcp.Register(actorRef(handler))
       }
-       
-      case (AkkaIO.NewClient(server), _) => {
-        log.trace("New connection to server")
-        val connection = typedActorOf[InetConnection](new ServerConnectionImpl(serverHandle))
-        connection.isOpen.getOpt(100.milliseconds) match {
-          case Some(true) => connection.isOpen onSuccess { case true => body(connection) }
-          case _ => log.trace("Could not open connection - client no longer interested?")
-        }
-      }
-       
-      case (AkkaIO.Closed(server: IO.ServerHandle, cause), _) => {
-        log.trace("Server socket has closed because: " + cause)
-      }
+
+      case Tcp.CommandFailed(cmd: Tcp.Bind) => throw new RuntimeException("TCP Command failed " + cmd)
     }
   }
 }

@@ -18,13 +18,13 @@
 package daqcore.io.prot.scpi
 
 import org.scalatest.WordSpec
-import org.scalatest.matchers.MustMatchers
+import org.scalatest.Matchers
 
 import daqcore.io._, daqcore.util._
 import daqcore.io.prot.scpi._, daqcore.io.prot.scpi.mnemonics._
 
 
-class SCPIStreamFramerSpec extends WordSpec with MustMatchers {
+class SCPIStreamFramerSpec extends WordSpec with Matchers {
   "An SCPIStreamFramer" should {
     "work correctly" in {
 

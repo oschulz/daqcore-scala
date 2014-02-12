@@ -110,7 +110,7 @@ object PropVal {
     case JsString(x) => StringPropVal(x)
     case JsArray(x) => SeqPropVal((x map {v => PropVal.fromJsValue(v)}): _*)
     case x: JsObject => Props.fromJsObject(x)
-    case JsUndefined(error) => throw new RuntimeException("Encountered JsUndefined, " + error)
+    case u: JsUndefined => throw new RuntimeException("Encountered JsUndefined, " + u.error)
   }
 
   def fromJSON(json: String): PropVal = fromJsValue(Json.parse(json))
