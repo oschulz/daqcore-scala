@@ -34,7 +34,7 @@ case class Request(val commands: Command*) extends Message {
     ByteCharSeq('X')
   }
 
-  override def toString = getBytes.toString
+  override def toString = getBytes.decodeString("ASCII")
 }
 
 
@@ -49,7 +49,7 @@ class Command(val code: Char, val params:ByteCharSeq*) extends Message {
   def getByteCharSeq = ByteCharSeq(code) ++
     params.reduceLeft {_ ++ ByteCharSeq(',') ++ _ }
 
-  override def toString = getBytes.toString
+  override def toString = getBytes.decodeString("ASCII")
 }
 
 
