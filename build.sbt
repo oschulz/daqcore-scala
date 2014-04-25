@@ -1,6 +1,6 @@
 name := "daqcore-scala"
 
-organization := "de.tu-dortmund"
+organization := "daqcore"
 
 version := "0.1.0"
 
