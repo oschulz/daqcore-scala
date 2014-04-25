@@ -4,6 +4,8 @@ organization := "daqcore"
 
 version := "0.1.0"
 
+packageArchetype.java_application
+
 scalaVersion := "2.10.3"
 
 compileOrder := CompileOrder.JavaThenScala
@@ -18,7 +20,13 @@ scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature", "-P:continuation
 
 libraryDependencies <+= (scalaVersion) { sv => "org.scala-lang" % "scala-swing" % sv }
 
+libraryDependencies <+= (scalaVersion) { sv => "org.scala-lang" % "scala-compiler" % sv % "runtime" }
+
+libraryDependencies <+= (scalaVersion) { sv => "org.scala-lang" % "scala-reflect" % sv % "runtime" }
+
 libraryDependencies <+= (scalaVersion) { sv => "org.scala-lang" % "jline" % sv % "runtime" }
+
+libraryDependencies <+= (scalaVersion) { sv => "org.scala-lang.plugins" % "continuations" % sv % "runtime" }
 
 resolvers += "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/"
 

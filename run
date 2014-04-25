@@ -1,0 +1,5 @@
+#!/bin/bash
+
+DAQCORE_SCALA="target/universal/stage/bin/daqcore-scala"
+
+./sbt stage && "${DAQCORE_SCALA}" "$@"

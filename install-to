@@ -1,0 +1,16 @@
+#!/bin/bash
+
+INST_PREFIX="$1"
+
+if [ -z "${INST_PREFIX}" ] ; then
+	echo "Syntax: `basename $0` INST_PREFIX"
+	exit 1
+fi
+
+STAGE_BIN="target/universal/stage/bin"
+STAGE_LIB="target/universal/stage/lib"
+
+./sbt stage &&
+	rsync -rlptvP "${STAGE_BIN}" "${STAGE_LIB}" "${INST_PREFIX}/" &&
+	echo "Installation successfull" ||
+	(echo "ERROR: Installation failed" 1>&2)
