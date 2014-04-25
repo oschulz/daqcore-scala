@@ -30,8 +30,7 @@ abstract class Message extends HasByteRep {
 
 case class Request(val commands: Command*) extends Message {
   def getByteCharSeq = {
-    commands.map(_.getByteCharSeq).reduceLeft { _ ++ _ } ++
-    ByteCharSeq('X')
+    commands.map(_.getByteCharSeq).reduceLeft { _ ++ _ }
   }
 
   override def toString = getBytes.decodeString("ASCII")
