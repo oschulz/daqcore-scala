@@ -208,5 +208,5 @@ object SCPIParser {
     tlParser.get
   }
 
-  def apply() = parser
+  def apply() = new SCPIParser
 }

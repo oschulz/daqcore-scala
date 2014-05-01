@@ -74,5 +74,5 @@ object KeithleyParser {
     tlParser.get
   }
 
-  def apply() = parser
+  def apply() = new KeithleyParser
 }
