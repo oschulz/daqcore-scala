@@ -1,4 +1,4 @@
-// Copyright (C) 2010 Oliver Schulz <oliver.schulz@tu-dortmund.de>
+// Copyright (C) 2012 Oliver Schulz <oliver.schulz@tu-dortmund.de>
 
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -15,22 +15,25 @@
 // Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 
-package daqcore.io.prot
+package daqcore.io.prot.keithley
 
-import scala.language.implicitConversions
-
-import daqcore.data.units._
+import daqcore.io._
 import daqcore.util._
 
 
-package object keithley {
+object KeithleyStreamFramer extends Codec[ByteString, ByteString] {
+  val CR = LineCodec.CR
+  val LF = LineCodec.LF
+  val CRLF = LineCodec.CRLF
 
-  implicit def int2ByteCharSeq(i: Int) = IntVal(i)
-  implicit def double2ByteCharSeq(x: Double) = FPVal(x)
-  implicit def string2ByteCharSeq(s: String) = Chars(s)
+  private def encFct(out: ByteStringBuilder, msg: ByteString): Unit = {
+    if (msg endsWith CRLF) out ++= msg
+    else if (msg endsWith LF) { out ++= msg.dropRight(1) ++= CRLF }
+    else { out ++= msg ++= CRLF }
+  }
 
-  type ValueDef = (String, WithUnit)
-  
-  /** Default message terminator for stream-based connections */
-  val StreamMsgTerm = ByteCharSeq.crlf
+  val enc = encFct(_, _)
+
+  val dec: Decoder[ByteString] = Decoder takeUntil LF map
+  	{ msg => if (msg endsWith CR) msg.dropRight(1) else msg }
 }

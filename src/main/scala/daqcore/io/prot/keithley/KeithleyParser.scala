@@ -28,9 +28,14 @@ import daqcore.data.units._
 
 class KeithleyParser extends ByteCharSeqParsers {
   import KeithleyParser._
-  
+
   def fpNumber: Parser[Double] = fpNumberExp ^^
     { bs => val FPVal(x) = bs; x}
+
+  def commandCode: Parser[Char] = commandCodeExp ^^ { bs => bs(0) }
+  def letters: Parser[String] = lettersExp ^^ { bs => bs.toString }
+  def capLetters: Parser[String] = capLettersExp ^^ { bs => bs.toString }
+  def deviceModel: Parser[String] = digitsExpr ^^ { bs => bs.toString }
 
   def dcv: Parser[(WithUnit,MeasFunc)] =
     lit("DCV") ~> fpNumber ^^ { v => (WithUnit(v, Volt), DC) }
@@ -46,27 +51,61 @@ class KeithleyParser extends ByteCharSeqParsers {
 
   def ohm: Parser[(WithUnit,MeasFunc)] =
     lit("OHM") ~> fpNumber ^^ { v => (WithUnit(v, Ohm), VAL) }
-  
+
   def funcWithValue = dcv | acv | dci | aci | ohm
-  
+
   def normal: Parser[Result] =
-    lit("N") ~> funcWithValue ^^ { fv => Normal(fv._1, fv._2)}
+    lit("N") ~> funcWithValue ^^ { fv => Result(fv._1, fv._2, Result.Normal)}
+
+  def relative: Parser[Result] =
+    lit("Z") ~> funcWithValue ^^ { fv => Result(fv._1, fv._2, Result.Relative)}
 
   def overflow: Parser[Result] =
-    lit("O") ~> funcWithValue ^^ { fv => Overflow(fv._1, fv._2)}
-  
-  def result: Parser[Result] = normal | overflow
+    lit("O") ~> funcWithValue ^^ { fv => Result(fv._1, fv._2, Result.Overflow)}
+
+  def result: Parser[Result] = normal | relative | overflow
+
+  def results: Parser[Results] = repsep(result, ",") ^^ { r => Results(r: _*) }
+
+  def valueDef: Parser[ValueDef] =
+    capLetters ~ lit("=") ~ fpNumber ~ letters ^^ { case label ~ eq ~ v ~ unitStr =>
+        unitStr match {
+          case "V" => (label, WithUnit(v, Volt))
+          case "A" => (label, WithUnit(v, Ampere))
+          case "S" => (label, WithUnit(v, Second))
+          case "OHM" => (label, WithUnit(v, Ohm))
+          case _ => throw new RuntimeException ("Unsupported unit \"%s\"".format(unitStr))
+        }
+    }
+
+  def command: Parser[Command] =
+    commandCode ~ repsep(fpNumberExp, ",") ^^ { case cc ~ vals => Command(cc, vals: _*) }
+
+  def request: Parser[Request] = command.* ^^ { case cmds => Request(cmds: _*) }
 
 
-  def parseResult(in: java.lang.CharSequence): Result =
-    parseAll(result, in).get
+  def parseResult(in: ByteString): Result =
+    parseAll(result, ByteCharSeqReader(in)).get
+
+  def parseResults(in: ByteString): Results =
+    parseAll(results, ByteCharSeqReader(in)).get
+
+  def parseValueDef(in: ByteString): ValueDef =
+    parseAll(valueDef, ByteCharSeqReader(in)).get
+
+  def parseRequest(in: ByteString): Request =
+    parseAll(request, ByteCharSeqReader(in)).get
 }
 
 
 object KeithleyParser {
+  val commandCodeExp = """[A-Za-z]""".r
+  val lettersExp = """[A-Za-z]+""".r
+  val capLettersExp = """[A-Z]+""".r
   val measFuncExp = """[A-Z][A-Z][A-Z]""".r
+  val digitsExpr = """[0-9]""".r
   val fpNumberExp = """[-+]?(\d+(\.\d*)?|\d*\.\d+)([eE][+-]?\d+)?""".r
-  
+
   protected val tlParser = new ThreadLocal[KeithleyParser]
 
   def parser = {

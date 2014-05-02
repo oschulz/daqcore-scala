@@ -27,12 +27,16 @@ case object DC extends MeasFunc
 case object AC extends MeasFunc
 
 
-// Measure Result: Function (e.g. DC, AC, PEAK, ...) of a quantity (e.g. Voltage)
+// Measurement Result: Function (e.g. DC, AC, PEAK, ...) of a quantity (e.g. Voltage)
 
-sealed abstract class Result {
-  def v: WithUnit
-  def f: MeasFunc
+case class Result (value: WithUnit, func: MeasFunc, tp: Result.Type)
+
+object Result {
+	abstract class Type
+	case object Normal extends Type
+	case object Relative extends Type
+	case object Overflow extends Type
 }
 
-case class Normal(v: WithUnit, f: MeasFunc) extends Result
-case class Overflow(v: WithUnit, f: MeasFunc) extends Result
+
+case class Results(results: Result*)

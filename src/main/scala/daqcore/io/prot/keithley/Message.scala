@@ -30,7 +30,8 @@ abstract class Message extends HasByteRep {
 
 case class Request(val commands: Command*) extends Message {
   def getByteCharSeq = {
-    commands.map(_.getByteCharSeq).reduceLeft { _ ++ _ }
+    if (! commands.isEmpty) commands.map(_.getByteCharSeq).reduceLeft { _ ++ _ }
+    else ByteCharSeq();
   }
 
   override def toString = getBytes.decodeString("ASCII")
@@ -42,20 +43,19 @@ case class Output(data: ByteCharSeq) extends Message {
 }
 
 
-class Command(val code: Char, val params:ByteCharSeq*) extends Message {
+
+case class Command(code: Char, params:ByteCharSeq*) extends Message {
   require( (code >= 'A') && (code <= 'Z') )
 
-  def getByteCharSeq = ByteCharSeq(code) ++
-    params.reduceLeft {_ ++ ByteCharSeq(',') ++ _ }
+  def getByteCharSeq =
+    if (params.isEmpty) ByteCharSeq(code)
+    else ByteCharSeq(code) ++ params.reduceLeft {_ ++ ByteCharSeq(',') ++ _ }
 
   override def toString = getBytes.decodeString("ASCII")
 }
 
 
 object Command {
-  def apply(code: Char, params:ByteCharSeq*) = new Command(code, params: _*)
-  def unapply(cmd: Command) = Some((cmd.code, cmd.params))
-
   def A(params:ByteCharSeq*) = Command('A', params: _*)
   def B(params:ByteCharSeq*) = Command('B', params: _*)
   def C(params:ByteCharSeq*) = Command('C', params: _*)
@@ -79,7 +79,7 @@ object Command {
   def U(params:ByteCharSeq*) = Command('U', params: _*)
   def V(params:ByteCharSeq*) = Command('V', params: _*)
   def W(params:ByteCharSeq*) = Command('W', params: _*)
-  def X(params:ByteCharSeq*) = Command('X', params: _*)
+  def X = Command('X')
   def Y(params:ByteCharSeq*) = Command('Y', params: _*)
   def Z(params:ByteCharSeq*) = Command('Z', params: _*)
 }
