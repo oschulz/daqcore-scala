@@ -95,6 +95,9 @@ if [[ -z "$TOOL_CLASSPATH" ]]; then
     done
 fi
 
+# For config files searched by CLASSPATH, add etc dir to CLASSPATH:
+TOOL_CLASSPATH="${TOOL_CLASSPATH}${SEP}${SCALA_HOME}/etc"
+
 if [[ -n "$cygwin" ]]; then
     if [[ "$OS" = "Windows_NT" ]] && cygpath -m .>/dev/null 2>/dev/null ; then
         format=mixed
