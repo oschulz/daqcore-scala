@@ -6,45 +6,47 @@ version := "0.1.0"
 
 packageArchetype.java_application
 
-scalaVersion := "2.10.3"
+scalaVersion := "2.11.2"
 
 compileOrder := CompileOrder.JavaThenScala
 
 autoCompilerPlugins := true
 
-libraryDependencies <+= scalaVersion { sv => compilerPlugin("org.scala-lang.plugins" % "continuations" % sv) }
-
 Classpaths.compilerPluginConfig
 
-scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature", "-P:continuations:enable")
-
-libraryDependencies <+= (scalaVersion) { sv => "org.scala-lang" % "scala-swing" % sv }
+scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature")
 
 libraryDependencies <+= (scalaVersion) { sv => "org.scala-lang" % "scala-compiler" % sv % "runtime" }
 
 libraryDependencies <+= (scalaVersion) { sv => "org.scala-lang" % "scala-reflect" % sv % "runtime" }
 
-libraryDependencies <+= (scalaVersion) { sv => "org.scala-lang" % "jline" % sv % "runtime" }
+libraryDependencies += "org.scala-lang.modules" %% "scala-swing" % "1.0.1"
 
-libraryDependencies <+= (scalaVersion) { sv => "org.scala-lang.plugins" % "continuations" % sv % "runtime" }
+libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.2"
+
+libraryDependencies += "org.scala-lang.modules" %% "scala-async" % "0.9.2"
+
+libraryDependencies += "org.scala-lang.modules" %% "scala-async" % "0.9.2"
+
+libraryDependencies += "jline" % "jline" % "2.12" % "runtime"
 
 resolvers += "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/"
 
 resolvers += "DAQCorE Releases" at "http://daqcore.github.io/repo/releases/"
 
 
-libraryDependencies += "com.typesafe.akka" %% "akka-actor" % "2.2.3"
+libraryDependencies += "com.typesafe.akka" %% "akka-actor" % "2.3.6"
 
-libraryDependencies += "com.typesafe.akka" %% "akka-remote" % "2.2.3"
+libraryDependencies += "com.typesafe.akka" %% "akka-remote" % "2.3.6"
 
-libraryDependencies += "com.typesafe.akka" %% "akka-dataflow" % "2.2.3"
+libraryDependencies += "com.typesafe.akka" %% "akka-dataflow" % "2.3.6"
 
-libraryDependencies += "com.typesafe.akka" %% "akka-slf4j" % "2.2.3"
+libraryDependencies += "com.typesafe.akka" %% "akka-slf4j" % "2.3.6"
 
 
-libraryDependencies += "org.scalatest" %% "scalatest" % "2.0" % "test"
+libraryDependencies += "org.scalatest" %% "scalatest" % "2.2.1" % "test"
 
-libraryDependencies += "com.typesafe.play" %% "play" % "2.2.1"
+libraryDependencies += "com.typesafe.play" %% "play" % "2.3.4"
 
 
 libraryDependencies +=  "ch.qos.logback" % "logback-core" % "1.0.13"
