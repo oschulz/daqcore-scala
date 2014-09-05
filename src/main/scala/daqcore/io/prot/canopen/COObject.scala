@@ -35,7 +35,7 @@ trait COVar[A, +B <: COAccessType[A]] extends ObjDirEntry {
   def objectType = 0x07
   def defaultValue: Option[A]
   def pdoMapping: Boolean
-  def access: B
+  def access: B with COAccessType[A]
 
   def dataType = access.dataType
   def isReadable = access.isReadable
@@ -60,7 +60,7 @@ case class COVarObject[A, +B <: COAccessType[A]]
 abstract class COComplexObject[+S <: COSize] extends COObject {
   parent =>
 
-  def sizeType: S
+  def sizeType: S with COSize
   def defaultSize: Option[Int]
 
   protected def checkSize(size: Int) {
