@@ -75,9 +75,6 @@ def fast[A: ClassTag](seq: Seq[A]) = FastSeqOps[A](seq)
 implicit def string2PropPath(s: String) = PropPath(s)
 
 
-def fctResponder[A](x: () => A) = new Responder[A] { def respond(k: A => Unit) = k(x()) }
-
-
 def classTagFrom(a: Any): ClassTag[_] = a match {
   case a:Boolean => classTag[Boolean]
   case a:Byte => classTag[Byte]
