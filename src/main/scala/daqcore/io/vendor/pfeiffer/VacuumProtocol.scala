@@ -100,7 +100,7 @@ object VacuumProtocol {
       val exponent = if (x != 0) math.log10(x).floor.toInt else 0
       val mantissa = x / math.pow(10, exponent)
       u_integer_n(4).enc(out, (mantissa * 1e3).round.toInt)
-      u_integer_n(2).enc(out, (exponent + 20).round.toInt)
+      u_integer_n(2).enc(out, (exponent + 20))
     }
 
     def dec: Decoder[Double] = for {
