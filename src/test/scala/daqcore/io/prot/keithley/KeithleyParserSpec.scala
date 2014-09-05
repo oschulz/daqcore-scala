@@ -29,17 +29,17 @@ class KeithleyParserSpec extends WordSpec with Matchers {
     val parser = KeithleyParser()
 
     "parse results correctly" in {
-      assert( parser.parseResult(ByteCharSeq("NDCV+002.2131E+0")) ===
-        Normal(2.2131~Volt,DC) )
+      assert( parser.parseResult(ByteString("NDCV+002.2131E+0")) ===
+        Result(2.2131~Volt,DC,Result.Normal) )
 
-      assert( parser.parseResult(ByteCharSeq("ODCV+002.2131E+0")) ===
-        Overflow(2.2131~Volt,DC) )
+      assert( parser.parseResult(ByteString("ODCV+002.2131E+0")) ===
+        Result(2.2131~Volt,DC,Result.Overflow) )
 
-      assert( parser.parseResult(ByteCharSeq("NOHM+002.2131E+0")) ===
-        Normal(2.2131~Ohm,VAL) )
+      assert( parser.parseResult(ByteString("NOHM+002.2131E+0")) ===
+        Result(2.2131~Ohm,VAL,Result.Normal) )
 
-      assert( parser.parseResult(ByteCharSeq("NACI+002.2131E+0")) ===
-        Normal(2.2131~Ampere,AC) )
+      assert( parser.parseResult(ByteString("NACI+002.2131E+0")) ===
+        Result(2.2131~Ampere,AC,Result.Normal) )
     }
   }
 }
