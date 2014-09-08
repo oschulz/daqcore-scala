@@ -108,7 +108,11 @@ object PropVal {
     case JsBoolean(x) => BoolPropVal(x)
     case JsNumber(x) => NumPropVal(x.doubleValue)
     case JsString(x) => StringPropVal(x)
-    case JsArray(x) => SeqPropVal((x map {v => PropVal.fromJsValue(v)}): _*)
+    case JsArray(x) => {
+      import scala.collection.breakOut
+      val elems: Vector[PropVal] = x.map{v => PropVal.fromJsValue(v)}(breakOut)
+      SeqPropVal(elems: _*)
+    }
     case x: JsObject => Props.fromJsObject(x)
     case u: JsUndefined => throw new RuntimeException("Encountered JsUndefined, " + u.error)
   }
