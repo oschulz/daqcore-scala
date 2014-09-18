@@ -18,17 +18,50 @@
 package daqcore.actors
 
 import scala.reflect.{ClassTag, classTag}
-import scala.concurrent.Future
+import scala.concurrent.{Future, Promise}
+import scala.util.{Try, Success, Failure}
 
-import akka.actor.{ActorRef, ActorSystem}
+import java.util.concurrent.TimeoutException
+
+import akka.actor.{Actor, ActorRef, ActorContext, ActorRefFactory, ActorSystem}
+
+import daqcore.util.Timeout
 
 
-class ActorRefOps(aref: ActorRef) {
+class ActorRefOps(val aref: ActorRef) extends AnyVal {
+  import ActorRefOps.AskSenderActor
+
   def stop()(implicit sys: ActorSystem) = sys.stop(aref)
 
   def typed[T <: AnyRef](implicit ct: ClassTag[T], sys: ActorSystem) = typedActor(aref)
+
+  def askSender(msg: Any)(implicit rf: ActorRefFactory, timeout: Timeout): Future[(_, ActorRef)] = {
+    implicit val (scheduler, execContext) = rf match  {
+      case s: ActorSystem => (s.scheduler, s.dispatcher)
+      case c: ActorContext => (c.system.scheduler, c.dispatcher)
+      case _ => throw new IllegalArgumentException(s"Unsupported type of ActorRefFactory for askSender: [$rf.getClass]")
+    }
+
+    val result = Promise[(_, ActorRef)]()
+
+    val asker = actorOf(new AskSenderActor(result))
+
+    val timer = scheduler.scheduleOnce(timeout.duration) {
+      result tryComplete Failure(new TimeoutException(s"askSender timed out on [$aref] after [${timeout.duration.toMillis} ms]"))
+    }
+
+    result.future.onComplete{ _ => try rf.stop(asker) finally timer.cancel() }
+
+    aref.tell(msg, asker)
+    result.future
+  }
 }
 
 
 object ActorRefOps {
+  protected class AskSenderActor(result: Promise[(_, ActorRef)]) extends Actor {
+    def receive = {
+      case reply => result tryComplete Success( (reply, sender()) )
+    }
+  }
 }
