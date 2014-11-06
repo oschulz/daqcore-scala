@@ -65,7 +65,7 @@ abstract class IseqXHQImpl(io: ByteStreamIO) extends IseqNHQ
     for (b <- bytes) {
       io.send(ByteString(b));
       io.getSync.get;
-      Thread.sleep(10)
+      Thread.sleep(100)
     }
   }
     
