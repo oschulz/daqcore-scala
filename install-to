@@ -11,6 +11,7 @@ STAGE_BIN="target/universal/stage/bin"
 STAGE_LIB="target/universal/stage/lib"
 
 ./sbt stage &&
+	find "${STAGE_BIN}" -executable -type f -exec chmod 755 "{}" \; &&
 	rsync -rlptvP "${STAGE_BIN}" "${STAGE_LIB}" "${INST_PREFIX}/" &&
 	echo "Installation successfull" ||
 	(echo "ERROR: Installation failed" 1>&2)
