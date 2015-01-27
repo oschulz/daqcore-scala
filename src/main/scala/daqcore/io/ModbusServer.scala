@@ -71,15 +71,21 @@ object ModbusServer {
     val io: ByteStreamIO
     val codec: ModbusMasterCodec
 
-    def query(req: ModbusReq): Future[ModbusResp]
+    protected def queryImpl(req: ModbusReq): Future[ModbusResp]
+
+    def query(req: ModbusReq): Future[ModbusResp] = {
+      import daqcore.defaults.defaultTimeout
+      log.trace(req.toString)
+      val resp = queryImpl(req)
+      resp onSuccess { case r => log.trace(resp.toString) }
+      resp
+    }
 
     def checkedQuery[R](req: ModbusReq)(f: PartialFunction[ModbusResp, R]): Future[R] = {
-      query(req) map (f orElse (
-        _ match {
-            case resp: ExceptionResp => throw new RuntimeException("Received modbus exception response: " + resp)
-            case resp => throw new RuntimeException("Unexpected modbus response: " + resp)
-        } 
-      ) )
+      query(req) map ( f orElse {
+        case resp: ExceptionResp => throw new RuntimeException("Received modbus exception response: " + resp)
+        case resp => throw new RuntimeException("Unexpected modbus response: " + resp)
+      } )
     }
 
 
@@ -150,7 +156,7 @@ object ModbusServer {
     val transport = ModbusASCIICodec
     val codec = ModbusMasterCodec(transport)
 
-    def query(req: ModbusReq): Future[ModbusResp] = {
+    def queryImpl(req: ModbusReq): Future[ModbusResp] = {
       io.send(req, codec.enc)
       val result = io.recv(codec.dec)
       // RS485 bus (or similar), have to wait for response
@@ -164,7 +170,7 @@ object ModbusServer {
     val transport = ModbusTCPCodec
     val codec = ModbusMasterCodec(transport)
 
-    def query(req: ModbusReq): Future[ModbusResp] = {
+    def queryImpl(req: ModbusReq): Future[ModbusResp] = {
       io.send(req, codec.enc)
       io.recv(codec.dec)
     }
