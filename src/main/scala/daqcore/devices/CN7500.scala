@@ -79,11 +79,15 @@ class CN7500Impl(busURI: String, slave: Int) extends CN7500
   def identity = successful("CN7500")
 
   protected def checkConnection() {
-    assert( bus.query(RawReq(slave, 0x67, ByteString(0x00, 0x12, 0x00, 0x03))).get ==
-      RawResp(slave, 0x67, ByteString(0x06, 0x00, 0x02, 0x00, 0x01, 0x00, 0x00)) )
+    log.debug("Checking connection")
+
+    val resp = bus.query(RawReq(slave, 0x67, ByteString(0x00, 0x12, 0x00, 0x03))).get
+    if (resp != RawResp(slave, 0x67, ByteString(0x06, 0x00, 0x02, 0x00, 0x01, 0x00, 0x00)))
+      throw new RuntimeException("Unexpected response on connection check: %s".format(resp))
+
+    log.debug("Connection Ok")
 
     scheduleOnce(30.seconds, selfRef, CheckConnection)
-    log.trace("Connection checked")
   }
 
   checkConnection()
