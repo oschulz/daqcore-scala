@@ -39,10 +39,10 @@ die() {
 }
 
 # todo - make this dynamic
-declare -r sbt_release_version=0.13.5
+declare -r sbt_release_version=0.13.8
 unset sbt_rc_version
 # declare -r sbt_rc_version=
-declare -r sbt_snapshot_version=0.13.5-SNAPSHOT
+declare -r sbt_snapshot_version=0.13.8-SNAPSHOT
 declare -r sbt_snapshot_baseurl="http://typesafe.artifactoryonline.com/typesafe/ivy-snapshots/org.scala-sbt/sbt-launch/"
 
 declare -r default_java_opts="-Dfile.encoding=UTF8"

@@ -6,7 +6,7 @@ version := "0.1.0"
 
 packageArchetype.java_application
 
-scalaVersion := "2.11.2"
+scalaVersion := "2.11.6"
 
 compileOrder := CompileOrder.JavaThenScala
 
@@ -35,13 +35,13 @@ resolvers += "Typesafe Repository" at "http://repo.typesafe.com/typesafe/release
 resolvers += "DAQCorE Releases" at "http://daqcore.github.io/repo/releases/"
 
 
-libraryDependencies += "com.typesafe.akka" %% "akka-actor" % "2.3.6"
+libraryDependencies += "com.typesafe.akka" %% "akka-actor" % "2.3.9"
 
-libraryDependencies += "com.typesafe.akka" %% "akka-remote" % "2.3.6"
+libraryDependencies += "com.typesafe.akka" %% "akka-remote" % "2.3.9"
 
-libraryDependencies += "com.typesafe.akka" %% "akka-dataflow" % "2.3.6"
+libraryDependencies += "com.typesafe.akka" %% "akka-dataflow" % "2.3.9"
 
-libraryDependencies += "com.typesafe.akka" %% "akka-slf4j" % "2.3.6"
+libraryDependencies += "com.typesafe.akka" %% "akka-slf4j" % "2.3.9"
 
 
 libraryDependencies += "org.scalatest" %% "scalatest" % "2.2.1" % "test"
