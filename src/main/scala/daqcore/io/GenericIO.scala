@@ -72,3 +72,21 @@ trait RawMsgIO extends ByteStreamIO with RawMsgInput with RawMsgOutput
 object RawMsgIO extends IOResourceCompanion[RawMsgIO] {
   def newInstance = VXI11Link.newInstance
 }
+
+
+trait ByteFrameInput extends GenericInput[ByteString] {
+  def recv[A](decoder: Decoder[A]): Future[A]
+
+  def recv(receiver: ActorRef, decoder: Decoder[_], repeat: Boolean): Unit
+}
+
+trait ByteFrameOutput extends GenericOutput[ByteString] {
+   def send[A](data: A, encoder: Encoder[A]) : Unit
+}
+
+trait ByteFrameIO extends GenericIO[ByteString] with ByteFrameInput with ByteFrameOutput
+
+object ByteFrameIO extends IOResourceCompanion[ByteFrameIO] {
+  def newInstance =
+    UDPClient.newInstance
+}
