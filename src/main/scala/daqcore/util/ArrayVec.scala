@@ -147,6 +147,7 @@ object ArrayVec {
     wrap(array)
   }
 
+  def newBuilder[@specialized A: ClassTag]: ArrayVecBuilder[A] = new ArrayVecBuilder[A](0)
 
   class ArrayVecCanBuildFrom[A, @specialized B: ClassTag] extends CanBuildFrom[ArrayVec[A], B, ArrayVec[B]] {
     val mfB = classTag[B]
