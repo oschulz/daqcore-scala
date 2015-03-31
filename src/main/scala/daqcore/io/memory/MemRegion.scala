@@ -29,7 +29,7 @@ class MemRegion(val from: MemRegion.MemAddress, val until: MemRegion.MemAddress,
   def length = until - from
   def size = length
 
-  trait MemRegister extends Register {
+  trait MemRegister[A] extends Register[A] {
     thisMemRegister =>
 
     def region = thisRegion
@@ -37,7 +37,7 @@ class MemRegion(val from: MemRegion.MemAddress, val until: MemRegion.MemAddress,
     def addr: MemAddress
 
     trait MemBitSelection extends RegBitSelection {
-      override def register: MemRegister = thisMemRegister
+      override def register: MemRegister[A] = thisMemRegister
     }
 
     trait MemSingleBit extends RegSingleBit with MemBitSelection
@@ -47,7 +47,7 @@ class MemRegion(val from: MemRegion.MemAddress, val until: MemRegion.MemAddress,
 
 
 
-  trait ReadableRegister extends MemRegister { thisRegister =>
+  trait ReadableRegister[A] extends MemRegister[A] { thisRegister =>
     trait ReadableBitSelection extends MemBitSelection {
         //!!!def get() = thisRegister.get(this)
     }
@@ -73,7 +73,7 @@ class MemRegion(val from: MemRegion.MemAddress, val until: MemRegion.MemAddress,
   }
 
 
-  trait WriteableRegister extends MemRegister { thisRegister =>
+  trait WriteableRegister[A] extends MemRegister[A] { thisRegister =>
     trait WriteableBitSelection extends MemBitSelection {
       //!!! def set(value: Word) = thisRegister.set(this, value)
     }
@@ -107,26 +107,26 @@ class MemRegion(val from: MemRegion.MemAddress, val until: MemRegion.MemAddress,
 
   }
   
-  abstract class RORegister extends ReadableRegister
+  abstract class RORegister[A] extends ReadableRegister[A]
 
-  abstract class WORegister extends WriteableRegister
+  abstract class WORegister[A] extends WriteableRegister[A]
 
  
-  abstract class RWRegister extends ReadableRegister with WriteableRegister {
+  abstract class RWRegister[A] extends ReadableRegister[A] with WriteableRegister[A] {
     case class RWBit(n: Int) extends MemSingleBit with ReadableBitSelection with WriteableBitSelection
     case class RWBitRange(bits: Range) extends MemBitRange with ReadableBitSelection with WriteableBitSelection
   }
 
 
-  abstract class JKRegister(val addr: MemAddress) extends ReadableRegister with WriteableRegister {
-    protected val jkSet = BitRange(0 to (nBits / 2 - 1))
-    protected val jkClear = BitRange((nBits / 2) to 31)
+  abstract class JKRegister[A](val addr: MemAddress) extends ReadableRegister[A] with WriteableRegister[A] {
+    //protected val jkSet = BitRange(0 to (nBits / 2 - 1))
+    //protected val jkClear = BitRange((nBits / 2) to 31)
 
     case class RWBit(n: Int) extends MemSingleBit with ReadableBitSelection with WriteableBitSelection {
-      require(n < jkSet.bits.end, "Only lower half of bits can be declared in a J/K register")
+      //require(n < jkSet.bits.end, "Only lower half of bits can be declared in a J/K register")
     }
     case class RWBitRange(bits: Range) extends MemBitRange with ReadableBitSelection with WriteableBitSelection {
-      require(bits.end < jkSet.bits.end, "Only lower half of bits can be declared in a J/K register")
+      //require(bits.end < jkSet.bits.end, "Only lower half of bits can be declared in a J/K register")
     }
     
     //!!!

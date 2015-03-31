@@ -17,36 +17,27 @@
 
 package daqcore.io.memory
 
+import scala.reflect.{ClassTag, classTag}
+
 import daqcore.util._
 
 
-trait Register { thisRegister =>
+trait Register[A] { thisRegister =>
   import Register._
 
-  trait RegBitSelection extends BitSelection {
-    def register = thisRegister
+  trait RegBitSelection extends BitSelection[A] {
+    def register: Register[A] = thisRegister
   }
 
-  trait RegSingleBit extends Bit with RegBitSelection
+  trait RegSingleBit extends Bit[A] with RegBitSelection
 
-  trait RegBitRange extends BitRange with RegBitSelection
+  trait RegBitRange extends BitRange[A] with RegBitSelection
 
 
   type Fields = Seq[(String, RegBitSelection)]
 
   abstract class Content {
     def fields: Fields
-
-    protected def getFieldValues(fields: Fields, value: Int): Seq[(String, Int)] =
-      fields map { _ match { case (name, bits) => name -> value.getBits(bits) } }
-
-    protected def getFieldValues(fields: Fields, value: Long): Seq[(String, Long)] =
-      fields map { _ match { case (name, bits) => name -> value.getBits(bits) } }
-
-    def apply(value: Byte): Seq[(String, Int)] = getFieldValues(fields, value.asUnsigned)
-    def apply(value: Short): Seq[(String, Int)] = getFieldValues(fields, value.asUnsigned)
-    def apply(value: Int): Seq[(String, Int)] = getFieldValues(fields, value)
-    def apply(value: Long): Seq[(String, Long)] = getFieldValues(fields, value)
   }
 
 
@@ -61,10 +52,7 @@ trait Register { thisRegister =>
   }
   def all = new AllContent
 
-
-  def nBits: Int
-
-  require ((nBits > 0) && (nBits <= 64) && (nBits % 8 == 0), "Illegal number of bits for register" )
+  //def nBits = 8 * sizeOf[A]
 }
 
 
@@ -72,7 +60,7 @@ object Register {
 }
 
 
-class SimpleRegister(val nBits: Int) extends Register {
+class SimpleRegister[A] extends Register[A] {
   thisRegister =>
 
   case class RegBit(n: Int = 0) extends RegSingleBit

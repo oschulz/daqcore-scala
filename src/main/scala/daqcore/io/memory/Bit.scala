@@ -21,7 +21,7 @@ import daqcore.util._
 
 
 
-trait BitSelection extends Ordered[BitSelection] {
+trait BitSelection[A] extends Ordered[BitSelection[A]] {
   import BitSelection._
 
   def valueMask: Int
@@ -29,38 +29,10 @@ trait BitSelection extends Ordered[BitSelection] {
 
   def firstBit: Int
 
-  def compare(that: BitSelection) = this.firstBit compare that.firstBit
+  def compare(that: BitSelection[A]) = this.firstBit compare that.firstBit
   
   def mask = valueMask << firstBit
   def maskLong = valueMaskLong << firstBit
-
-
-  def getBits(from: Byte): Byte = getBits(from.asUnsigned).toUnsignedByte
-
-  def getBits(from: Short): Short = getBits(from.asUnsigned).toUnsignedShort
-
-  def getBits(from: Int): Int = (from & mask) >>> firstBit
-
-  def getBits(from: Long): Long = (from & maskLong) >>> firstBit
-
-
-  def setBits(of: Byte, to: Byte): Byte = setBits(of.asUnsigned, to.asUnsigned).toUnsignedByte
-  def setBits(of: Byte, to: Int): Byte = setBits(of.asUnsigned, to).toUnsignedByte
-
-  def setBits(of: Short, to: Short): Short = setBits(of.asUnsigned, to.asUnsigned).toUnsignedShort
-  def setBits(of: Short, to: Int): Short = setBits(of.asUnsigned, to).toUnsignedShort
-
-  def setBits(of: Int, to: Int): Int = {
-    require ((to & ~valueMask) == 0, "Value does not fit into selected bits")
-    (of & ~mask) | (to << firstBit)
-  }
-
-  def setBits(of: Long, to: Long): Long = {
-    require ((to & ~valueMaskLong) == 0, "Value does not fit into selected bits")
-    (of & ~maskLong) | (to << firstBit)
-  }
-  def setBits(of: Long, to: Int): Long = setBits(of, to.asUnsigned)
-
 
   def asString: String
 }
@@ -72,13 +44,13 @@ object BitSelection {
   val nIntBits = (8 * sizeOf[Int])
   val nLongBits = (8 * sizeOf[Long])
 
-  def apply() = SimpleBit()
-  def apply(n: Int) = SimpleBit(n)
+  def apply[A](n: Int) = SimpleBit.of[A](n)
+  def apply[A](bits: Range) = SimpleBitRange.of[A](bits)
 }
 
 
 
-trait Bit extends BitSelection {
+trait Bit[A] extends BitSelection[A] {
   import BitSelection._
 
   def n:Int
@@ -90,49 +62,26 @@ trait Bit extends BitSelection {
   
   def firstBit = n
 
-
-  def getBit(from: Byte): Boolean = getBit(from.asUnsigned)
-
-  def getBit(from: Short): Boolean = getBit(from.asUnsigned)
-
-  def getBit(from: Int): Boolean = (from & (1 << n)) != 0
-
-  def getBit(from: Long): Boolean = (from & (1L << n)) != 0
-
-
-  def setBit(of: Byte, to:Boolean): Byte = setBit(of.asUnsigned, to).toUnsignedByte
-
-  def setBit(of: Short, to:Boolean): Short = setBit(of.asUnsigned, to).toUnsignedShort
-
-  def setBit(of: Int, to:Boolean): Int = if (to) of | mask else of & ~mask
-
-  def setBit(of: Long, to:Boolean): Long = if (to) of | maskLong else of & ~maskLong
-
-
-  def apply(value: Byte): Boolean = getBit(value)
-
-  def apply(value: Short): Boolean = getBit(value)
-
-  def apply(value: Int): Boolean = getBit(value)
-
-  def apply(value: Long): Boolean = getBit(value)
-
-
   def asString = n.toString
 }
 
 
 object Bit {
-  def apply() = SimpleBit()
-  def apply(n: Int) = SimpleBit(n)
+  def of[A](n: Int) = SimpleBit.of[A](n)
 }
 
 
-case class SimpleBit(n: Int = 0) extends Bit
+
+case class SimpleBit[A](n: Int = 0) extends Bit[A]
+
+
+object SimpleBit {
+  def of[A](n: Int) = new SimpleBit[A](n)
+}
 
 
 
-trait BitRange extends BitSelection {
+trait BitRange[A] extends BitSelection[A] {
   import BitSelection._
 
   def bits: Range
@@ -151,22 +100,18 @@ trait BitRange extends BitSelection {
   def asString = if (size > 1) "%s..%s".format(from, to) else from.toString
 
   override def toString = s"${getClass.getSimpleName}(${asString})"
-
-
-  def apply(value: Byte): Byte = getBits(value)
-
-  def apply(value: Short): Short = getBits(value)
-
-  def apply(value: Int): Int = getBits(value)
-
-  def apply(value: Long): Long = getBits(value)
 }
 
 
 object BitRange {
-  def apply() = SimpleBitRange(0 to 0)
-  def apply(bits: Range) = SimpleBitRange(bits)
+  def of[A](bits: Range) = SimpleBitRange.of[A](bits)
 }
 
 
-case class SimpleBitRange(bits: Range) extends BitRange
+
+case class SimpleBitRange[A](bits: Range) extends BitRange[A]
+
+
+object SimpleBitRange {
+  def of[A](bits: Range) = new SimpleBitRange[A](bits)
+}
