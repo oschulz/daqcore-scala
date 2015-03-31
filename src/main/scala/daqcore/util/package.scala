@@ -36,6 +36,11 @@ object ByteStringBuilder { def apply() = ByteString.newBuilder }
 type Timeout = akka.util.Timeout
 val  Timeout = akka.util.Timeout
 
+implicit def byteOps[A](x: Byte)  = new ByteOps(x)
+implicit def shortOps[A](x: Short)  = new ShortOps(x)
+implicit def intOps[A](x: Int)  = new IntOps(x)
+implicit def longOps[A](x: Long)  = new LongOps(x)
+
 implicit def iteratorOps[A](it: Iterator[A])  = new IteratorOps(it)
 implicit def iterableOps[A](coll: Iterable[A]) = new IterableOps(coll)
 implicit def traversableOnceOps[A](coll: TraversableOnce[A]) = new TraversableOnceOps(coll)
