@@ -22,7 +22,7 @@ import scala.reflect.{ClassTag, classTag}
 import scala.collection.{TraversableLike, IndexedSeqLike}
 import scala.collection.GenTraversableOnce
 import scala.collection.generic.CanBuildFrom
-import scala.collection.mutable.{Builder,ArrayBuffer,ArrayBuilder}
+import scala.collection.mutable.{Builder}
 
 
 sealed class ArrayVec[@specialized A: ClassTag](private val array: Array[A]) extends
@@ -94,8 +94,7 @@ sealed class ArrayVec[@specialized A: ClassTag](private val array: Array[A]) ext
   final override def foldRight[@specialized B] (z: B)(op: (A, B) => B): B =
     iterator.foldRight(z)(op)
   
-  final override protected def newBuilder: Builder[A, ArrayVec[A]] =
-    (new ArrayBuffer[A]) mapResult { a => val array = a.toArray; new ArrayVec[A](array) }
+  final override protected def newBuilder: Builder[A, ArrayVec[A]] = ArrayVec.newBuilder[A]
   
   final override def map [B, That] (op: (A) => B)(implicit bf: CanBuildFrom[ArrayVec[A], B, That]) : That = {
     def defaultMapImpl = super.map(op)(bf)
