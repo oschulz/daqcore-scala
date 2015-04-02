@@ -158,6 +158,21 @@ object ArrayVec {
 
   implicit def canBuildFrom[A: ClassTag, B: ClassTag]: ArrayVecCanBuildFrom[A, B] =
     new ArrayVecCanBuildFrom[A, B]
+
+  implicit class SeqOfArrayVecOps[@specialized A: ClassTag](val xs: Seq[ArrayVec[A]]) {
+    def flattenToArrayVec: ArrayVec[A] = {
+      if (xs.isEmpty) ArrayVec.empty[A]
+      else {
+        val builder = ArrayVec.newBuilder[A]
+        var resultSize = 0
+        xs foreach { resultSize += _.size }
+        builder.sizeHint(resultSize)
+        xs foreach { builder ++= _ }
+        builder.result
+      }
+    }
+  }
+
 }
 
 
