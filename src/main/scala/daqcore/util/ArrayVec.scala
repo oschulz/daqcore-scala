@@ -179,13 +179,41 @@ class ArrayVecBuilder[@specialized A: ClassTag](initialCapacity: Int) extends Bu
     array = newArray
   }
 
+  protected def ensureFreeCapacity(n: Int) {
+    if (len + n > capacity) capacity = scala.math.max(64 max 2 * capacity, len + n)
+  }
+
   def +=(elem: A) = {
-    if (len == capacity) capacity = (64 max 2 * capacity)
+    ensureFreeCapacity(1)
     array(len) = elem
     len += 1
     this
   }
-  
+
+  def ++=(xs: ArrayVec[A]): this.type = this ++= xs.iterator
+
+  def ++=(it: ArrayIterator[A]): this.type = {
+    val n = it.size
+    ensureFreeCapacity(n)
+    it.copyToArray(array, len, n)
+    len += n
+    this
+  }
+
+  override def ++=(xs: TraversableOnce[A]) = xs match {
+    case arrayVec: ArrayVec[A] =>
+      this ++= arrayVec
+    case arrayIterator: ArrayIterator[A] =>
+      this ++= arrayIterator
+    case traversable: Traversable[A] =>
+      if (traversable.hasDefiniteSize) ensureFreeCapacity(traversable.size)
+      traversable foreach { this += _ }
+      this
+    case _ =>
+      xs foreach { this += _ }
+      this
+  }
+
   def clear() = { len = 0; capacity = 0 }
 
   def result(): ArrayVec[A] = {

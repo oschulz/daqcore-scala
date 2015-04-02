@@ -31,6 +31,23 @@ class ArrayVecSpec extends WordSpec with Matchers {
       }
     }
 
+    "built from a mix of traversable types" should {
+      val a = List(1, 2, 3, 4)
+      val b = ArrayVec(11, 12, 13, 14, 15, 16, 17)
+      val c = List(21, 22, 23)
+
+      val builder = ArrayVec.newBuilder[Int]
+      builder ++= a
+      builder ++= b
+      builder ++= c.iterator
+      val builderResult = builder.result
+      val concatenation = ArrayVec((a ++ b ++ c): _*)
+
+      "equal their direct concatenation" in {
+        assert(builderResult === concatenation)
+      }
+    }
+
     "sliced" should {
       val seq = ArrayVec(1,2,3,4)
       val sub1 = seq.slice(0,2)
