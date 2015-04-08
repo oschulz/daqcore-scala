@@ -18,17 +18,20 @@
 package daqcore.util
 
 
-class ByteOps(val x: Byte) extends AnyVal {
+object UnsignedOps
+
+
+class UnsignedByteOps(val x: Byte) extends AnyVal {
 	def asUnsigned: Int = x.toInt & 0xff
 }
 
 
-class ShortOps(val x: Short) extends AnyVal {
+class UnsignedShortOps(val x: Short) extends AnyVal {
 	def asUnsigned: Int = x.toInt & 0xffff
 }
 
 
-class IntOps(val x: Int) extends AnyVal {
+class UnsignedIntOps(val x: Int) extends AnyVal {
 	def asUnsigned: Long = x.toLong & 0xffffffffL
 
 	def toUnsignedByte: Byte = {
@@ -45,7 +48,7 @@ class IntOps(val x: Int) extends AnyVal {
 }
 
 
-class LongOps(val x: Long) extends AnyVal {
+class UnsignedLongOps(val x: Long) extends AnyVal {
 	def toUnsignedInt: Int = {
 		if (x < 0) throw new IllegalArgumentException("Can't store negative value as unsigned")
 		if (x > 0xffffffffL) throw new IllegalArgumentException("Value too large for unsigned Int")
