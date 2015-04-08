@@ -41,6 +41,8 @@ implicit def unsignedShortOps[A](x: Short)  = new UnsignedShortOps(x)
 implicit def unsignedIntOps[A](x: Int)  = new UnsignedIntOps(x)
 implicit def unsignedLongOps[A](x: Long)  = new UnsignedLongOps(x)
 
+implicit def integerNumTypeOps[@specialized(Byte, Short, Int, Long) T](x: T) = new IntegerNumType.IntegerNumTypeOps(x)
+
 implicit def iteratorOps[A](it: Iterator[A])  = new IteratorOps(it)
 implicit def iterableOps[A](coll: Iterable[A]) = new IterableOps(coll)
 implicit def traversableOnceOps[A](coll: TraversableOnce[A]) = new TraversableOnceOps(coll)
