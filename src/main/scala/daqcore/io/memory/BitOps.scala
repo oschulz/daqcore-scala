@@ -69,11 +69,11 @@ class LongBitSelectionOps(val bitSel: BitSelection[Long]) extends AnyVal {
 
 
 object BitOps {
-  def getBit[A](bit: Bit[A], from: Int): Boolean = (from & (1 << bit.n)) != 0
-  def setBit[A](bit: Bit[A], of: Int, to:Boolean): Int = if (to) of | bit.mask else of & ~bit.mask
+  private[memory] def getBit[A](bit: Bit[A], from: Int): Boolean = (from & (1 << bit.n)) != 0
+  private[memory] def setBit[A](bit: Bit[A], of: Int, to:Boolean): Int = if (to) of | bit.mask else of & ~bit.mask
 
-  def getBit[A](bit: Bit[A], from: Long): Boolean = (from & (1L << bit.n)) != 0
-  def setBit[A](bit: Bit[A], of: Long, to:Boolean): Long = if (to) of | bit.maskLong else of & ~bit.maskLong
+  private[memory] def getBit[A](bit: Bit[A], from: Long): Boolean = (from & (1L << bit.n)) != 0
+  private[memory] def setBit[A](bit: Bit[A], of: Long, to:Boolean): Long = if (to) of | bit.maskLong else of & ~bit.maskLong
 }
 
 
