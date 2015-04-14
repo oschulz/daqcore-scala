@@ -233,7 +233,7 @@ object IntegerNumType {
     def shiftLeft(x: Short, n: Int) = (x << n).toShort
     def signedShiftRight(x: Short, n: Int) = (x >> n).toShort
     def unsignedShiftRight(x: Short, n: Int) = (x.asUnsigned >>> n).toShort
-}
+  }
 
 
   implicit object IntNumType extends IntegerNumType[Int] {
