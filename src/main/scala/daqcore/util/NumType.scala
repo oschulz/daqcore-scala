@@ -62,6 +62,9 @@ trait IntegerNumType[@specialized(Byte, Short, Int, Long) T] extends NumType[T] 
   def signedShiftRight(x: T, n: Int): T
   def unsignedShiftRight(x: T, n: Int): T
 
+  def numberOfLeadingZeros(x: T): Int
+  def numberOfTrailingZeros(x: T): Int
+
   final def validBitNo(bit: Int): Boolean = (bit >= 0) && (bit < nBits)
   final def bitMask(bit: Int): T = shiftLeft(one, bit)
   final def nBitsMask(nBits: Int): T = if (nBits >= this.nBits) minus(zero, one) else minus(shiftLeft(one, nBits), one)
@@ -81,30 +84,25 @@ trait IntegerNumType[@specialized(Byte, Short, Int, Long) T] extends NumType[T] 
     else false
   }
 
+  final def setBit(bit: Int, of: T, to: Boolean): T = if (to) setBit(bit, of) else clearBit(bit, of)
+
   final def setBit(bit: Int, of: T): T = {
     if (validBitNo(bit)) bitwiseOr(of, bitMask(bit))
     else of
   }
-
-  final def setBit(bit: Int, of: T, to: Boolean): T = if (to) setBit(bit, of) else clearBit(bit, of)
 
   final def clearBit(bit: Int, of: T): T = {
     if (validBitNo(bit)) bitwiseAnd(of, invBitMask(bit))
     else of
   }
 
-  final def getBits(firstBit: Int, nBits: Int, from: T): T = {
+  final def getBitRange(firstBit: Int, nBits: Int, from: T): T = {
     if (validBitNo(firstBit)) unsignedShiftRight(bitwiseAnd(from, bitMask(firstBit, nBits)), firstBit)
     else zero
   }
 
-  final def getBits(bits: Range, from: T): T = {
-    require(bits.step == 1, "Range with step size 1 required")
-    getBits(bits.start, bits.size, from)
-  }
 
-
-  final def setBits(firstBit: Int, nBits: Int, of: T, to: T): T = {
+  final def setBitRange(firstBit: Int, nBits: Int, of: T, to: T): T = {
     if (validBitNo(firstBit)) {
       val maskedOf = bitwiseAnd(of, invBitMask(firstBit, nBits))
       val shiftedTo = bitwiseAnd(shiftLeft(to, firstBit), bitMask(firstBit, nBits))
@@ -114,9 +112,14 @@ trait IntegerNumType[@specialized(Byte, Short, Int, Long) T] extends NumType[T] 
     }
   }
 
+  final def getBits(bits: Range, from: T): T = {
+    require(bits.step == 1, "Range with step size 1 required")
+    getBitRange(bits.start, bits.size, from)
+  }
+
   final def setBits(bits: Range, of: T, to: T): T = {
     require(bits.step == 1, "Range with step size 1 required")
-    setBits(bits.start, bits.size, of, to)
+    setBitRange(bits.start, bits.size, of, to)
   }
 }
 
@@ -138,6 +141,9 @@ object IntegerNumType {
     def >>(n: Int)(implicit numType: IntegerNumType[T]) = numType.signedShiftRight(x, n)
     def >>>(n: Int)(implicit numType: IntegerNumType[T]) = numType.unsignedShiftRight(x, n)
 
+    def numberOfLeadingZeros(implicit numType: IntegerNumType[T]) = numType.numberOfLeadingZeros(x)  
+    def numberOfTrailingZeros(implicit numType: IntegerNumType[T]) = numType.numberOfTrailingZeros(x)  
+
     def toByte(x: T)(implicit numType: IntegerNumType[T]) = numType.toByte(x)
     def toShort(x: T)(implicit numType: IntegerNumType[T]) = numType.toShort(x)
     def toInt(x: T)(implicit numType: IntegerNumType[T]) = numType.toInt(x)
@@ -147,15 +153,15 @@ object IntegerNumType {
 
     def getBit(bit: Int)(implicit numType: IntegerNumType[T]) = numType.getBit(bit, x)
 
-    def setBit(bit: Int)(implicit numType: IntegerNumType[T]) = numType.setBit(bit, x)
     def setBit(bit: Int, to: Boolean)(implicit numType: IntegerNumType[T])  = numType.setBit(bit, x, to)
 
+    def setBit(bit: Int)(implicit numType: IntegerNumType[T]) = numType.setBit(bit, x)
     def clearBit(bit: Int)(implicit numType: IntegerNumType[T]) = numType.clearBit(bit, x)
 
-    def getBits(firstBit: Int, nBits: Int)(implicit numType: IntegerNumType[T]) = numType.getBits(firstBit, nBits, x)
-    def getBits(bits: Range)(implicit numType: IntegerNumType[T]) = numType.getBits(bits, x)
+    def getBitRange(firstBit: Int, nBits: Int)(implicit numType: IntegerNumType[T]) = numType.getBitRange(firstBit, nBits, x)
+    def setBitRange(firstBit: Int, nBits: Int, to: T)(implicit numType: IntegerNumType[T]) = numType.setBitRange(firstBit, nBits, x, to)
 
-    def setBits(firstBit: Int, nBits: Int, to: T)(implicit numType: IntegerNumType[T]) = numType.setBits(firstBit, nBits, x, to)
+    def getBits(bits: Range)(implicit numType: IntegerNumType[T]) = numType.getBits(bits, x)
     def setBits(bits: Range, to: T)(implicit numType: IntegerNumType[T]) = numType.setBits(bits, x, to)
   }
 
@@ -195,6 +201,16 @@ object IntegerNumType {
     def shiftLeft(x: Byte, n: Int) = (x << n).toByte
     def signedShiftRight(x: Byte, n: Int) = (x >> n).toByte
     def unsignedShiftRight(x: Byte, n: Int) = (x.asUnsigned >>> n).toByte
+
+    def numberOfLeadingZeros(x: Byte) = {
+      if (x != zero) IntNumType.numberOfLeadingZeros(x.asUnsigned)
+      else nBits
+    }
+
+    def numberOfTrailingZeros(x: Byte) = {
+      if (x != zero) IntNumType.numberOfTrailingZeros(x.asUnsigned)
+      else nBits
+    }
   }
 
 
@@ -233,6 +249,16 @@ object IntegerNumType {
     def shiftLeft(x: Short, n: Int) = (x << n).toShort
     def signedShiftRight(x: Short, n: Int) = (x >> n).toShort
     def unsignedShiftRight(x: Short, n: Int) = (x.asUnsigned >>> n).toShort
+
+    def numberOfLeadingZeros(x: Short) = {
+      if (x != zero) IntNumType.numberOfLeadingZeros(x.asUnsigned)
+      else nBits
+    }
+
+    def numberOfTrailingZeros(x: Short) = {
+      if (x != zero) IntNumType.numberOfTrailingZeros(x.asUnsigned)
+      else nBits
+    }
   }
 
 
@@ -271,6 +297,10 @@ object IntegerNumType {
     def shiftLeft(x: Int, n: Int) = x << n
     def signedShiftRight(x: Int, n: Int) = x >> n
     def unsignedShiftRight(x: Int, n: Int) = x >>> n
+
+    def numberOfLeadingZeros(x: Int) = Integer.numberOfLeadingZeros(x)
+
+    def numberOfTrailingZeros(x: Int) = Integer.numberOfTrailingZeros(x)
   }
 
 
@@ -309,6 +339,10 @@ object IntegerNumType {
     def shiftLeft(x: Long, n: Int) = x << n
     def signedShiftRight(x: Long, n: Int) = x >> n
     def unsignedShiftRight(x: Long, n: Int) = x >>> n
+
+    def numberOfLeadingZeros(x: Long) = java.lang.Long.numberOfLeadingZeros(x)
+
+    def numberOfTrailingZeros(x: Long) = java.lang.Long.numberOfTrailingZeros(x)
   }
 
 }
