@@ -62,6 +62,7 @@ trait IntegerNumType[@specialized(Byte, Short, Int, Long) T] extends NumType[T] 
   def signedShiftRight(x: T, n: Int): T
   def unsignedShiftRight(x: T, n: Int): T
 
+  final def validBitNo(bit: Int): Boolean = (bit >= 0) && (bit < nBits)
   final def bitMask(bit: Int): T = shiftLeft(one, bit)
   final def nBitsMask(nBits: Int): T = if (nBits >= this.nBits) minus(zero, one) else minus(shiftLeft(one, nBits), one)
   final def bitMask(firstBit: Int, nBits: Int): T = shiftLeft(nBitsMask(nBits), firstBit)
@@ -75,15 +76,26 @@ trait IntegerNumType[@specialized(Byte, Short, Int, Long) T] extends NumType[T] 
   final def invNBitsMask(nBits: Int): T = invertBits(nBitsMask(nBits))
   final def invBitMask(firstBit: Int, nBits: Int): T = invertBits(bitMask(firstBit, nBits))
 
-  final def getBit(bit: Int, from: T): Boolean = bitwiseAnd(from, bitMask(bit)) != zero
+  final def getBit(bit: Int, from: T): Boolean = {
+    if (validBitNo(bit)) bitwiseAnd(from, bitMask(bit)) != zero
+    else false
+  }
 
-  final def setBit(bit: Int, of: T): T = bitwiseOr(of, bitMask(bit))
+  final def setBit(bit: Int, of: T): T = {
+    if (validBitNo(bit)) bitwiseOr(of, bitMask(bit))
+    else of
+  }
+
   final def setBit(bit: Int, of: T, to: Boolean): T = if (to) setBit(bit, of) else clearBit(bit, of)
 
-  final def clearBit(bit: Int, of: T): T = bitwiseAnd(of, invBitMask(bit))
+  final def clearBit(bit: Int, of: T): T = {
+    if (validBitNo(bit)) bitwiseAnd(of, invBitMask(bit))
+    else of
+  }
 
   final def getBits(firstBit: Int, nBits: Int, from: T): T = {
-    unsignedShiftRight(bitwiseAnd(from, bitMask(firstBit, nBits)), firstBit)
+    if (validBitNo(firstBit)) unsignedShiftRight(bitwiseAnd(from, bitMask(firstBit, nBits)), firstBit)
+    else zero
   }
 
   final def getBits(bits: Range, from: T): T = {
@@ -93,9 +105,13 @@ trait IntegerNumType[@specialized(Byte, Short, Int, Long) T] extends NumType[T] 
 
 
   final def setBits(firstBit: Int, nBits: Int, of: T, to: T): T = {
-    val maskedOf = bitwiseAnd(of, invBitMask(firstBit, nBits))
-    val shiftedTo = bitwiseAnd(shiftLeft(to, firstBit), bitMask(firstBit, nBits))
-    bitwiseOr(maskedOf, shiftedTo)
+    if (validBitNo(firstBit)) {
+      val maskedOf = bitwiseAnd(of, invBitMask(firstBit, nBits))
+      val shiftedTo = bitwiseAnd(shiftLeft(to, firstBit), bitMask(firstBit, nBits))
+      bitwiseOr(maskedOf, shiftedTo)
+    } else {
+      of
+    }
   }
 
   final def setBits(bits: Range, of: T, to: T): T = {
