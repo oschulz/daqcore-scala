@@ -23,7 +23,7 @@ import daqcore.util._
 
 object RegisterOps {
   private[memory] def getFieldValues[T](fields: Register[T]#Fields, value: T)(implicit numType: IntegerNumType[T]): Seq[(String, T)] =
-    fields map { _ match { case (name, bits) => name -> BitSelectionOps.getBits(bits, value) } }
+    fields map { _ match { case (name, bits) => name -> bits.getBits(value) } }
 }
 
 

@@ -34,6 +34,16 @@ trait BitSelection[T] extends Ordered[BitSelection[T]] {
   def compare(that: BitSelection[T]) = this.firstBit compare that.firstBit
   
   def asString: String
+
+  final def getBits[T](from: T)(implicit numType: IntegerNumType[T]): T = {
+    require (isContigous, "BitSelection must be contiguous for getBits")
+    numType.getBitRange(firstBit, size, from)
+  }
+
+  final def setBits[T](of: T, to: T)(implicit numType: IntegerNumType[T]): T = {
+    require (isContigous, "BitSelection must be contiguous for setBits")
+    numType.setBitRange(firstBit, size, of, to)
+  }
 }
 
 
@@ -64,6 +74,16 @@ trait Bit[T] extends BitSelection[T] {
   def firstBit = n
 
   def asString = n.toString
+
+  final def getBit(from: T)(implicit numType: IntegerNumType[T]): Boolean = numType.getBit(n, from)
+
+  final def setBit(of: T, to: Boolean)(implicit numType: IntegerNumType[T]): T = numType.setBit(n, of, to)
+
+  final def setBit(of: T)(implicit numType: IntegerNumType[T]): T = numType.setBit(n, of)
+
+  final def clearBit(of: T)(implicit numType: IntegerNumType[T]): T = numType.clearBit(n, of)
+
+  final def apply(value: T)(implicit numType: IntegerNumType[T]): Boolean = getBit(value)
 }
 
 
@@ -100,6 +120,8 @@ trait BitRange[T] extends BitSelection[T] {
   def asString = if (size > 1) "%s..%s".format(from, to) else from.toString
 
   override def toString = s"${getClass.getSimpleName}(${asString})"
+
+  final def apply(value: T)(implicit numType: IntegerNumType[T]): T = getBits(value)
 }
 
 

@@ -27,21 +27,6 @@ implicit def shortBitAccessOps(x: Short)  = new ShortBitAccessOps(x)
 implicit def intBitAccessOps(x: Int)  = new IntBitAccessOps(x)
 implicit def longBitAccessOps(x: Long)  = new LongBitAccessOps(x)
 
-implicit def byteBitSelectionOps(bitSelection: BitSelection[Byte])  = new ByteBitSelectionOps(bitSelection)
-implicit def shortBitSelectionOps(bitSelection: BitSelection[Short])  = new ShortBitSelectionOps(bitSelection)
-implicit def intBitSelectionOps(bitSelection: BitSelection[Int])  = new IntBitSelectionOps(bitSelection)
-implicit def longBitSelectionOps(bitSelection: BitSelection[Long])  = new LongBitSelectionOps(bitSelection)
-
-implicit def byteBitOps(bit: Bit[Byte])  = new ByteBitOps(bit)
-implicit def shortBitOps(bit: Bit[Short])  = new ShortBitOps(bit)
-implicit def intBitOps(bit: Bit[Int])  = new IntBitOps(bit)
-implicit def longBitOps(bit: Bit[Long])  = new LongBitOps(bit)
-
-implicit def byteBitRangeOps(bitRange: BitRange[Byte])  = new ByteBitRangeOps(bitRange)
-implicit def shortBitRangeOps(bitRange: BitRange[Short])  = new ShortBitRangeOps(bitRange)
-implicit def intBitRangeOps(bitRange: BitRange[Int])  = new IntBitRangeOps(bitRange)
-implicit def longBitRangeOps(bitRange: BitRange[Long])  = new LongBitRangeOps(bitRange)
-
 implicit def byteRegisterFieldsOps(fields: Register[Byte]#Fields)  = new ByteRegisterFieldsOps(fields)
 implicit def shortRegisterFieldsOps(fields: Register[Short]#Fields)  = new ShortRegisterFieldsOps(fields)
 implicit def intRegisterFieldsOps(fields: Register[Int]#Fields)  = new IntRegisterFieldsOps(fields)
