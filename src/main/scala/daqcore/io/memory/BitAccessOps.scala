@@ -17,73 +17,92 @@
 
 package daqcore.io.memory
 
+import daqcore.util._
 
-object BitAccessOps{
+
+object BitAccessOps {
+  private[memory] def getBits[T](bits: Range, from: T)(implicit numType: IntegerNumType[T]): T = numType.getBits(bits, from)
+  private[memory] def setBits[T](bits: Range, of: T, to: T)(implicit numType: IntegerNumType[T]): T = numType.setBits(bits, of, to)
+
+  private[memory] def getBit[T](n: Int, from: T)(implicit numType: IntegerNumType[T]): Boolean = numType.getBit(n, from)
+  private[memory] def setBit[T](n: Int, of: T, to: Boolean)(implicit numType: IntegerNumType[T]): T = numType.setBit(n, of, to)
+  private[memory] def setBit[T](n: Int, of: T)(implicit numType: IntegerNumType[T]): T = numType.setBit(n, of)
+  private[memory] def clearBit[T](n: Int, of: T)(implicit numType: IntegerNumType[T]): T = numType.clearBit(n, of)
 }
 
 
 
 class ByteBitAccessOps(val x: Byte) extends AnyVal {
-	def getBits(bitSel: BitSelection[Byte]): Byte = bitSel.getBits(x)
-	def setBits(bitSel: BitSelection[Byte], value: Byte): Byte = bitSel.setBits(x, value)
-	def setBits(bitSel: BitSelection[Byte], value: Int): Byte = bitSel.setBits(x, value)
+  def getBits(bitSel: BitSelection[Byte]): Byte = bitSel.getBits(x)
+  def setBits(bitSel: BitSelection[Byte], value: Byte): Byte = bitSel.setBits(x, value)
 
-	def getBits(bits: Range): Byte = BitRange.of[Byte](bits).getBits(x)
-	def setBits(bits: Range, value: Byte): Byte = BitRange.of[Byte](bits).setBits(x, value)
-	def setBits(bits: Range, value: Int): Byte = BitRange.of[Byte](bits).setBits(x, value)
+  def getBits(bits: Range): Byte = BitAccessOps.getBits(bits, x)
+  def setBits(bits: Range, value: Byte): Byte = BitAccessOps.setBits(bits, x, value)
 
-	def getBit(bit: Bit[Byte]): Boolean = bit.getBit(x)
-	def setBit(bit: Bit[Byte], value: Boolean): Byte = bit.setBit(x, value)
+  def getBit(bit: Bit[Byte]): Boolean = bit.getBit(x)
+  def setBit(bit: Bit[Byte], value: Boolean): Byte = bit.setBit(x, value)
+  def setBit(bit: Bit[Byte]): Byte = bit.setBit(x)
+  def clearBit(bit: Bit[Byte]): Byte = bit.clearBit(x)
 
-	def getBit(n: Int): Boolean = getBit(Bit.of[Byte](n))
-	def setBit(n: Int, value: Boolean): Byte = setBit(Bit.of[Byte](n), value)
+  def getBit(n: Int): Boolean = BitAccessOps.getBit(n, x)
+  def setBit(n: Int, value: Boolean): Byte = BitAccessOps.setBit(n, x, value)
+  def setBit(n: Int): Byte = BitAccessOps.setBit(n, x)
+  def clearBit(n: Int): Byte = BitAccessOps.clearBit(n, x)
 }
 
 
 class ShortBitAccessOps(val x: Short) extends AnyVal {
-	def getBits(bitSel: BitSelection[Short]): Short = bitSel.getBits(x)
-	def setBits(bitSel: BitSelection[Short], value: Short): Short = bitSel.setBits(x, value)
-	def setBits(bitSel: BitSelection[Short], value: Int): Short = bitSel.setBits(x, value)
+  def getBits(bitSel: BitSelection[Short]): Short = bitSel.getBits(x)
+  def setBits(bitSel: BitSelection[Short], value: Short): Short = bitSel.setBits(x, value)
 
-	def getBits(bits: Range): Short = BitRange.of[Short](bits).getBits(x)
-	def setBits(bits: Range, value: Short): Short = BitRange.of[Short](bits).setBits(x, value)
-	def setBits(bits: Range, value: Int): Short = BitRange.of[Short](bits).setBits(x, value)
+  def getBits(bits: Range): Short = BitAccessOps.getBits(bits, x)
+  def setBits(bits: Range, value: Short): Short = BitAccessOps.setBits(bits, x, value)
 
-	def getBit(bit: Bit[Short]): Boolean = bit.getBit(x)
-	def setBit(bit: Bit[Short], value: Boolean): Short = bit.setBit(x, value)
+  def getBit(bit: Bit[Short]): Boolean = bit.getBit(x)
+  def setBit(bit: Bit[Short], value: Boolean): Short = bit.setBit(x, value)
+  def setBit(bit: Bit[Short]): Short = bit.setBit(x)
+  def clearBit(bit: Bit[Short]): Short = bit.clearBit(x)
 
-	def getBit(n: Int): Boolean = getBit(Bit.of[Short](n))
-	def setBit(n: Int, value: Boolean): Short = setBit(Bit.of[Short](n), value)
+  def getBit(n: Int): Boolean = BitAccessOps.getBit(n, x)
+  def setBit(n: Int, value: Boolean): Short = BitAccessOps.setBit(n, x, value)
+  def setBit(n: Int): Short = BitAccessOps.setBit(n, x)
+  def clearBit(n: Int): Short = BitAccessOps.clearBit(n, x)
 }
 
 
 class IntBitAccessOps(val x: Int) extends AnyVal {
-	def getBits(bitSel: BitSelection[Int]): Int = bitSel.getBits(x)
-	def setBits(bitSel: BitSelection[Int], value: Int): Int = bitSel.setBits(x, value)
+  def getBits(bitSel: BitSelection[Int]): Int = bitSel.getBits(x)
+  def setBits(bitSel: BitSelection[Int], value: Int): Int = bitSel.setBits(x, value)
 
-	def getBits(bits: Range): Int = BitRange.of[Int](bits).getBits(x)
-	def setBits(bits: Range, value: Int): Int = BitRange.of[Int](bits).setBits(x, value)
+  def getBits(bits: Range): Int = BitAccessOps.getBits(bits, x)
+  def setBits(bits: Range, value: Int): Int = BitAccessOps.setBits(bits, x, value)
 
-	def getBit(bit: Bit[Int]): Boolean = bit.getBit(x)
-	def setBit(bit: Bit[Int], value: Boolean): Int = bit.setBit(x, value)
+  def getBit(bit: Bit[Int]): Boolean = bit.getBit(x)
+  def setBit(bit: Bit[Int], value: Boolean): Int = bit.setBit(x, value)
+  def setBit(bit: Bit[Int]): Int = bit.setBit(x)
+  def clearBit(bit: Bit[Int]): Int = bit.clearBit(x)
 
-	def getBit(n: Int): Boolean = getBit(Bit.of[Int](n))
-	def setBit(n: Int, value: Boolean): Int = setBit(Bit.of[Int](n), value)
+  def getBit(n: Int): Boolean = BitAccessOps.getBit(n, x)
+  def setBit(n: Int, value: Boolean): Int = BitAccessOps.setBit(n, x, value)
+  def setBit(n: Int): Int = BitAccessOps.setBit(n, x)
+  def clearBit(n: Int): Int = BitAccessOps.clearBit(n, x)
 }
 
 
 class LongBitAccessOps(val x: Long) extends AnyVal {
-	def getBits(bitSel: BitSelection[Long]): Long = bitSel.getBits(x)
-	def setBits(bitSel: BitSelection[Long], value: Long): Long = bitSel.setBits(x, value)
-	def setBits(bitSel: BitSelection[Long], value: Int): Long = bitSel.setBits(x, value)
+  def getBits(bitSel: BitSelection[Long]): Long = bitSel.getBits(x)
+  def setBits(bitSel: BitSelection[Long], value: Long): Long = bitSel.setBits(x, value)
 
-	def getBits(bits: Range): Long = BitRange.of[Long](bits).getBits(x)
-	def setBits(bits: Range, value: Long): Long = BitRange.of[Long](bits).setBits(x, value)
-	def setBits(bits: Range, value: Int): Long = BitRange.of[Long](bits).setBits(x, value)
+  def getBits(bits: Range): Long = BitAccessOps.getBits(bits, x)
+  def setBits(bits: Range, value: Long): Long = BitAccessOps.setBits(bits, x, value)
 
-	def getBit(bit: Bit[Long]): Boolean = bit.getBit(x)
-	def setBit(bit: Bit[Long], value: Boolean): Long = bit.setBit(x, value)
+  def getBit(bit: Bit[Long]): Boolean = bit.getBit(x)
+  def setBit(bit: Bit[Long], value: Boolean): Long = bit.setBit(x, value)
+  def setBit(bit: Bit[Long]): Long = bit.setBit(x)
+  def clearBit(bit: Bit[Long]): Long = bit.clearBit(x)
 
-	def getBit(n: Int): Boolean = getBit(Bit.of[Long](n))
-	def setBit(n: Int, value: Boolean): Long = setBit(Bit.of[Long](n), value)
+  def getBit(n: Int): Boolean = BitAccessOps.getBit(n, x)
+  def setBit(n: Int, value: Boolean): Long = BitAccessOps.setBit(n, x, value)
+  def setBit(n: Int): Long = BitAccessOps.setBit(n, x)
+  def clearBit(n: Int): Long = BitAccessOps.clearBit(n, x)
 }

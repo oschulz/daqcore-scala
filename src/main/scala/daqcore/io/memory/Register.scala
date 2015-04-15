@@ -22,16 +22,16 @@ import scala.reflect.{ClassTag, classTag}
 import daqcore.util._
 
 
-trait Register[A] { thisRegister =>
+trait Register[T] { thisRegister =>
   import Register._
 
-  trait RegBitSelection extends BitSelection[A] {
-    def register: Register[A] = thisRegister
+  trait RegBitSelection extends BitSelection[T] {
+    def register: Register[T] = thisRegister
   }
 
-  trait RegSingleBit extends Bit[A] with RegBitSelection
+  trait RegSingleBit extends Bit[T] with RegBitSelection
 
-  trait RegBitRange extends BitRange[A] with RegBitSelection
+  trait RegBitRange extends BitRange[T] with RegBitSelection
 
 
   type Fields = Seq[(String, RegBitSelection)]
@@ -52,7 +52,8 @@ trait Register[A] { thisRegister =>
   }
   def all = new AllContent
 
-  //def nBits = 8 * sizeOf[A]
+  final def nBytes(implicit numType: IntegerNumType[T]) = numType.nBytes
+  final def nBits(implicit numType: IntegerNumType[T]) = numType.nBits
 }
 
 
@@ -60,7 +61,7 @@ object Register {
 }
 
 
-class SimpleRegister[A] extends Register[A] {
+class SimpleRegister[T] extends Register[T] {
   thisRegister =>
 
   case class RegBit(n: Int = 0) extends RegSingleBit

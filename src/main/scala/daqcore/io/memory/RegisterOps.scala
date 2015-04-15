@@ -22,33 +22,26 @@ import daqcore.util._
 
 
 object RegisterOps {
-  private[memory] def getFieldValues[A](fields: Register[A]#Fields, value: Int): Seq[(String, Int)] =
-    fields map { _ match { case (name, bits) => name -> BitSelectionOps.getBits(bits, value) } }
-
-  private[memory] def getFieldValues[A](fields: Register[A]#Fields, value: Long): Seq[(String, Long)] =
+  private[memory] def getFieldValues[T](fields: Register[T]#Fields, value: T)(implicit numType: IntegerNumType[T]): Seq[(String, T)] =
     fields map { _ match { case (name, bits) => name -> BitSelectionOps.getBits(bits, value) } }
 }
 
 
 class ByteRegisterFieldsOps(val fields: Register[Byte]#Fields) extends AnyVal {
-  def apply(value: Byte): Seq[(String, Int)] =
-    RegisterOps.getFieldValues(fields, value.asUnsigned)
+  def apply(value: Byte): Seq[(String, Byte)] = RegisterOps.getFieldValues(fields, value)
 }
 
 
 class ShortRegisterFieldsOps(val fields: Register[Short]#Fields) extends AnyVal {
-  def apply(value: Short): Seq[(String, Int)] =
-    RegisterOps.getFieldValues(fields, value.asUnsigned)
+  def apply(value: Short): Seq[(String, Short)] = RegisterOps.getFieldValues(fields, value)
 }
 
 
 class IntRegisterFieldsOps(val fields: Register[Int]#Fields) extends AnyVal {
-  def apply(value: Int): Seq[(String, Int)] =
-    RegisterOps.getFieldValues(fields, value)
+  def apply(value: Int): Seq[(String, Int)] = RegisterOps.getFieldValues(fields, value)
 }
 
 
 class LongRegisterFieldsOps(val fields: Register[Long]#Fields) extends AnyVal {
-  def apply(value: Long): Seq[(String, Long)] =
-    RegisterOps.getFieldValues(fields, value)
+  def apply(value: Long): Seq[(String, Long)] = RegisterOps.getFieldValues(fields, value)
 }

@@ -21,19 +21,18 @@ import daqcore.util._
 
 
 
-trait BitSelection[A] extends Ordered[BitSelection[A]] {
+trait BitSelection[T] extends Ordered[BitSelection[T]] {
   import BitSelection._
-
-  def valueMask: Int
-  def valueMaskLong: Long
 
   def firstBit: Int
 
-  def compare(that: BitSelection[A]) = this.firstBit compare that.firstBit
-  
-  def mask = valueMask << firstBit
-  def maskLong = valueMaskLong << firstBit
+  def isContigous: Boolean
 
+  def size: Int
+  def length: Int
+
+  def compare(that: BitSelection[T]) = this.firstBit compare that.firstBit
+  
   def asString: String
 }
 
@@ -44,22 +43,24 @@ object BitSelection {
   val nIntBits = (8 * sizeOf[Int])
   val nLongBits = (8 * sizeOf[Long])
 
-  def apply[A](n: Int) = SimpleBit.of[A](n)
-  def apply[A](bits: Range) = SimpleBitRange.of[A](bits)
+  def apply[T](n: Int) = SimpleBit.of[T](n)
+  def apply[T](bits: Range) = SimpleBitRange.of[T](bits)
 }
 
 
 
-trait Bit[A] extends BitSelection[A] {
+trait Bit[T] extends BitSelection[T] {
   import BitSelection._
 
   def n:Int
 
   require (n >= 0, "Bit number must not be negative")
 
-  def valueMask = 1
-  def valueMaskLong = 1L
-  
+  def isContigous = true
+
+  def size = 1
+  def length = 1
+
   def firstBit = n
 
   def asString = n.toString
@@ -67,21 +68,21 @@ trait Bit[A] extends BitSelection[A] {
 
 
 object Bit {
-  def of[A](n: Int) = SimpleBit.of[A](n)
+  def of[T](n: Int) = SimpleBit.of[T](n)
 }
 
 
 
-case class SimpleBit[A](n: Int = 0) extends Bit[A]
+case class SimpleBit[T](n: Int = 0) extends Bit[T]
 
 
 object SimpleBit {
-  def of[A](n: Int) = new SimpleBit[A](n)
+  def of[T](n: Int) = new SimpleBit[T](n)
 }
 
 
 
-trait BitRange[A] extends BitSelection[A] {
+trait BitRange[T] extends BitSelection[T] {
   import BitSelection._
 
   def bits: Range
@@ -89,12 +90,11 @@ trait BitRange[A] extends BitSelection[A] {
   def from: Int = bits.head
   def to: Int = bits.end
 
+  def isContigous = (bits.step == 1)
+
   def size = bits.size
   def length = bits.length
 
-  def valueMask = (1 << size) - 1
-  def valueMaskLong = (1L << size) - 1L
-  
   def firstBit = from
 
   def asString = if (size > 1) "%s..%s".format(from, to) else from.toString
@@ -104,14 +104,14 @@ trait BitRange[A] extends BitSelection[A] {
 
 
 object BitRange {
-  def of[A](bits: Range) = SimpleBitRange.of[A](bits)
+  def of[T](bits: Range) = SimpleBitRange.of[T](bits)
 }
 
 
 
-case class SimpleBitRange[A](bits: Range) extends BitRange[A]
+case class SimpleBitRange[T](bits: Range) extends BitRange[T]
 
 
 object SimpleBitRange {
-  def of[A](bits: Range) = new SimpleBitRange[A](bits)
+  def of[T](bits: Range) = new SimpleBitRange[T](bits)
 }
