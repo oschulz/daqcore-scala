@@ -60,8 +60,7 @@ sealed trait PropVal {
   def toJsValue: JsValue
 
   def toSeq: Seq[PropVal] = value.asInstanceOf[Seq[PropVal]]
-  def toSettings: Props = value.asInstanceOf[Props]
-  def toMap: Map[String, PropVal] = toSettings.value
+  def toMap: Map[String, PropVal] = toProps.value
 
   def toByte: Byte = toDouble.toByte
   def toChar: Char = toDouble.toChar
@@ -194,7 +193,7 @@ case class Props(value: Map[String, PropVal]) extends ComplexPropVal {
               result + {val e = (k, (vOld merge vNew)); e}
             case (vOld, vNew) =>
               if (vOld.getClass == vNew.getClass) result + { val e = (k, vNew); e }
-              else throw new IllegalArgumentException("Can't merge setting of class %s with class %s".format(vOld.getClass.getName, vNew.getClass.getName))
+              else throw new IllegalArgumentException("Can't merge value of class %s with class %s".format(vOld.getClass.getName, vNew.getClass.getName))
           }
           case None => result + { val e = (k, vNew); e }
         }
@@ -211,8 +210,8 @@ object Props {
   val empty = Props(Map.empty[String, PropVal])
 
   def apply(values: (_, _)*): Props = {
-    values.foldLeft(Props.empty) { case (settings, (path, value)) =>
-      settings merge {
+    values.foldLeft(Props.empty) { case (props, (path, value)) =>
+      props merge {
         PropPath(path).parts.reverse.foldLeft(PropVal(value)) {
           case (v, k) => Props(Map(k -> v))
         }.asInstanceOf[Props]
