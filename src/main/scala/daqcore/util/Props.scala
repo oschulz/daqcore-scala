@@ -75,8 +75,9 @@ sealed trait PropVal {
   def apply(path: String): PropVal = apply(PropPath(path))
   def apply(key: Int): PropVal = apply(key.toString)
   
-  override def toString = toJsValue.toString
-  def toJSON = toString
+  def toJSON = toJsValue.toString
+
+  override def toString = toJSON
 }
 
 
@@ -145,6 +146,7 @@ case class StringPropVal(value: String) extends PropVal {
   def toBoolean = value.toBoolean
   def toNative: String = value
   def toJsValue: JsString = JsString(value)
+  override def toString = value
 }
 
 
