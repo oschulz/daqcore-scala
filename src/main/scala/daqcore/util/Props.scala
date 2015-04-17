@@ -18,6 +18,7 @@
 package daqcore.util
 
 import play.api.libs.json._
+import org.apache.commons.codec.binary.Base64
 
 
 case class PropPath(parts: collection.immutable.Queue[String]) {
@@ -69,6 +70,8 @@ sealed trait PropVal {
   def toLong: Long = toDouble.toLong
   def toFloat: Float = toDouble.toFloat
 
+  def toByteString: ByteString = throw new UnsupportedOperationException("PropVals of type " + this.getClass.getName + " cannot be converted to ByteString")
+
   def toProps = this.asInstanceOf[Props]
   
   def apply(path: PropPath): PropVal = throw new UnsupportedOperationException("PropVals of type " + this.getClass.getName + " have no properties")
@@ -93,6 +96,7 @@ object PropVal {
     case x: Float => NumPropVal(x)
     case x: Double => NumPropVal(x)
     case x: String => StringPropVal(x)
+    case x: ByteString => BytesPropVal(x)
     case x: Unit => throw new IllegalArgumentException(classOf[PropVal].getName + " cannot represent " + classOf[Unit].getName)
     case x: Map[_, _] => Props.fromNative(x)
     case x: Seq[_] => SeqPropVal.fromNative(x)
@@ -107,7 +111,10 @@ object PropVal {
     case JsNull => null
     case JsBoolean(x) => BoolPropVal(x)
     case JsNumber(x) => NumPropVal(x.doubleValue)
-    case JsString(x) => StringPropVal(x)
+    case JsString(x) => {
+      if (x startsWith stringDataTag) BytesPropVal(ByteString( Base64.decodeBase64(x substring stringDataTag.length) ))
+      else StringPropVal(x)
+    }
     case JsArray(x) => {
       import scala.collection.breakOut
       val elems: Vector[PropVal] = x.map{v => PropVal.fromJsValue(v)}(breakOut)
@@ -118,6 +125,8 @@ object PropVal {
   }
 
   def fromJSON(json: String): PropVal = fromJsValue(Json.parse(json))
+
+  protected val stringDataTag = "data:,"
 }
 
 
@@ -138,6 +147,16 @@ case class BoolPropVal(value: Boolean) extends PropVal {
   def toBoolean = value
   def toNative: Boolean = value
   def toJsValue: JsBoolean = JsBoolean(value)
+}
+
+
+case class BytesPropVal(value: ByteString) extends PropVal {
+  def toDouble = throw new UnsupportedOperationException(this.getClass.getName + " cannot be converted to Double")
+  def toBoolean = throw new UnsupportedOperationException(this.getClass.getName + " cannot be converted to Boolean")
+  override def toByteString = value
+  def toNative: ByteString = value
+  def toJsValue: JsString = JsString(toString)
+  override def toString = "data:," + new String(Base64.encodeBase64(value.toArray))
 }
 
 
