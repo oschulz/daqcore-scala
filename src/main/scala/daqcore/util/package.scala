@@ -36,6 +36,10 @@ object ByteStringBuilder { def apply() = ByteString.newBuilder }
 type Timeout = akka.util.Timeout
 val  Timeout = akka.util.Timeout
 
+implicit def tupleToPropKeyValTuple[K, V](x: (K, V)) (implicit pathConv: PropPath.From[K], valConv: PropVal.From[V]): (PropPath, PropVal) = pathConv.from(x._1) -> valConv.from(x._2)
+implicit def tupleToPropKeyValTuple[K](x: (K, PropVal)) (implicit pathConv: PropPath.From[K]): (PropPath, PropVal) = pathConv.from(x._1) -> x._2
+implicit def tupleToPropKeyValTuple[V](x: (PropPath, V)) (implicit valConv: PropVal.From[V]): (PropPath, PropVal) = x._1 -> valConv.from(x._2)
+
 implicit def unsignedByteOps[A](x: Byte)  = new UnsignedByteOps(x)
 implicit def unsignedShortOps[A](x: Short)  = new UnsignedShortOps(x)
 implicit def unsignedIntOps[A](x: Int)  = new UnsignedIntOps(x)
@@ -77,9 +81,6 @@ implicit def arrayVecToArrayVecDouble(v: ArrayVec[Double]) = new ArrayVecDouble(
 
 
 def fast[A: ClassTag](seq: Seq[A]) = FastSeqOps[A](seq)
-
-
-implicit def string2PropPath(s: String) = PropPath(s)
 
 
 def classTagFrom(a: Any): ClassTag[_] = a match {

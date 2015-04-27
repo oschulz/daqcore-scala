@@ -1,4 +1,4 @@
-// Copyright (C) 2011 Oliver Schulz <oliver.schulz@tu-dortmund.de>
+// Copyright (C) 2011-2015 Oliver Schulz <oliver.schulz@tu-dortmund.de>
 
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -17,66 +17,187 @@
 
 package daqcore.util
 
+import scala.language.implicitConversions
+
 import play.api.libs.json._
 import org.apache.commons.codec.binary.Base64
 
 
-case class PropPath(parts: collection.immutable.Queue[String]) {
+sealed abstract class PropKey {
+  def as[T](implicit conv: PropKey.To[T]) = conv.to(this)
+
+  def asLong: Long = throw new UnsupportedOperationException(this.getClass.getName + " cannot interpreted as a Long")
+  def asSymbol: Symbol = throw new UnsupportedOperationException("PropVals of type " + this.getClass.getName + " cannot be interpreted as a Symbol")
+
+  def asInt: Int = asLong.toInt
+  def asString: String = asSymbol.name
+
+  def toPropVal: PropVal
+  def toJsValue: JsValue
+}
+
+
+object PropKey {
+  def apply[T](x: T)(implicit conv: From[T]) = conv.from(x)
+
+  implicit def from[T](x: T)(implicit conv: From[T]): PropKey = PropKey(x)
+
+
+  trait From[T] {
+    def from(x: T): PropKey
+  }
+
+  trait To[T] {
+    def to(propKey: PropKey): T
+  }
+
+  trait Converter[T] extends From[T] with To[T]
+
+
+  implicit object PropKeyConverter extends Converter[PropKey] {
+    def from(x: PropKey) = x
+    def to(propKey: PropKey) = propKey
+  }
+
+  implicit object IntConverter extends Converter[Int] {
+    def from(x: Int) = IntegerPropKey(x)
+    def to(propKey: PropKey) = propKey.asInt
+  }
+
+  implicit object LongConverter extends Converter[Long] {
+    def from(x: Long) = IntegerPropKey(x)
+    def to(propKey: PropKey) = propKey.asLong
+  }
+
+  implicit object SymbolConverter extends Converter[Symbol] {
+    def from(x: Symbol) = SymbolPropKey(x)
+    def to(propKey: PropKey) = propKey.asSymbol
+  }
+
+  implicit object StringConverter extends Converter[String] {
+    def from(x: String) = {
+      try {
+        IntegerPropKey(x.toLong)
+      } catch {
+        case err: NumberFormatException => SymbolPropKey(Symbol(x))
+      }
+    }
+
+    def to(propKey: PropKey) = propKey.asString
+  }
+}
+
+
+final case class IntegerPropKey (value: Long) extends PropKey {
+  override def asLong = value
+  def toPropVal = IntegerPropVal(value)
+  def toJsValue = JsNumber(value)
+  override def toString = value.toString
+}
+
+
+final case class SymbolPropKey (value: Symbol) extends PropKey {
+  override def asSymbol = value
+  def toPropVal = SymbolPropVal(value)
+  def toJsValue = JsString(value.name)
+  override def toString = value.name
+}
+
+
+
+case class PropPath(parts: collection.immutable.Queue[PropKey]) {
   def isEmpty: Boolean = parts.isEmpty
-  def head: String = parts.head
+  def head: PropKey = parts.head
   def tail: PropPath = PropPath(parts.tail)
 
-  def %(k: Any): PropPath = k match {
-    case k: String =>
-      if (k contains '.') PropPath(parts ++ k.split("[.]").toSeq)
-      else PropPath(parts :+ k)
-    case k: Symbol => PropPath(parts enqueue k.name)
-    case k: Int => PropPath(parts enqueue k.toString)
-    case k: Seq[_] => PropPath(parts ++ (k map {_.toString}))
-    case k: Any => %(k.toString)
+  def %(k: PropKey): PropPath = PropPath(parts enqueue k)
+
+  def %(x: Int): PropPath = this % PropKey(x)
+
+  def %(x: Long): PropPath = this % PropKey(x)
+
+  def %(x: Symbol): PropPath = this % PropKey(x)
+
+  def %(x: String): PropPath = {
+    if (x contains '.') PropPath( parts ++ x.split("[.]").toSeq.map(s => PropKey(s)) )
+    else this % PropKey(x)   
   }
+
+  def %(that: PropPath): PropPath = PropPath(this.parts ++ that.parts)
 
   override def toString = parts.mkString(".")
 }
 
 
 object PropPath {
-  val empty: PropPath = PropPath(collection.immutable.Queue.empty[String])
+  def apply[T](x: T)(implicit conv: From[T]) = conv.from(x)
 
-  def apply(): PropPath = empty
+  implicit def from[T](x: T)(implicit conv: From[T]): PropPath = PropPath(x)
 
-  def apply(k: Any): PropPath = k match {
-    case k: PropPath => k
-    case _ => empty % k
+  val empty: PropPath = PropPath(collection.immutable.Queue.empty[PropKey])
+
+
+  trait From[T] {
+    def from(x: T): PropPath
+  }
+
+
+  implicit object FromPropPath extends From[PropPath] {
+    def from(x: PropPath) = x
+  }
+
+  implicit object FromPropKey extends From[PropKey] {
+    def from(x: PropKey) = empty % x
+  }
+
+  implicit object FromInt extends From[Int] {
+    def from(x: Int) = FromPropKey.from(PropKey(x))
+  }
+
+  implicit object FromLong extends From[Long] {
+    def from(x: Long) = FromPropKey.from(PropKey(x))
+  }
+
+  implicit object FromSymbol extends From[Symbol] {
+    def from(x: Symbol) = FromPropKey.from(PropKey(x))
+  }
+
+  implicit object FromString extends From[String] {
+    def from(x: String) = empty % x
   }
 }
 
 
 
-sealed trait PropVal {
+sealed abstract class PropVal {
   def value: Any
-  def toDouble: Double
-  def toBoolean: Boolean
-  def toNative: Any
+
+  def as[T](implicit conv: PropVal.To[T]) = conv.to(this)
+
+  def isNone: Boolean = false
+  def asNone: None.type = throw new UnsupportedOperationException(this.getClass.getName + " cannot interpreted as a None")
+
+  def asBoolean: Boolean = throw new UnsupportedOperationException(this.getClass.getName + " cannot interpreted as a Boolean")
+  def asLong: Long = throw new UnsupportedOperationException(this.getClass.getName + " cannot interpreted as a Long")
+  def asDouble: Double = throw new UnsupportedOperationException(this.getClass.getName + " cannot interpreted as a Double")
+  def asString: String = throw new UnsupportedOperationException("PropVals of type " + this.getClass.getName + " cannot be interpreted as a String")
+  def asSymbol: Symbol = throw new UnsupportedOperationException("PropVals of type " + this.getClass.getName + " cannot be interpreted as a Symbol")
+  def asByteString: ByteString = throw new UnsupportedOperationException("PropVals of type " + this.getClass.getName + " cannot interpreted as a ByteString")
+  def asSeq: Seq[PropVal] = throw new UnsupportedOperationException("PropVals of type " + this.getClass.getName + " cannot interpreted as a Seq")
+  def asMap: Map[PropKey, PropVal] = throw new UnsupportedOperationException("PropVals of type " + this.getClass.getName + " cannot interpreted as a Map")
+
   def toJsValue: JsValue
 
-  def toSeq: Seq[PropVal] = value.asInstanceOf[Seq[PropVal]]
-  def toMap: Map[String, PropVal] = toProps.value
+  def asByte: Byte = asLong.toByte
+  def asShort: Short = asLong.toShort
+  def asInt: Int = asLong.toInt
+  def asFloat: Float = asDouble.toFloat
 
-  def toByte: Byte = toDouble.toByte
-  def toChar: Char = toDouble.toChar
-  def toShort: Short = toDouble.toShort
-  def toInt: Int = toDouble.toInt
-  def toLong: Long = toDouble.toLong
-  def toFloat: Float = toDouble.toFloat
-
-  def toByteString: ByteString = throw new UnsupportedOperationException("PropVals of type " + this.getClass.getName + " cannot be converted to ByteString")
-
-  def toProps = this.asInstanceOf[Props]
   
   def apply(path: PropPath): PropVal = throw new UnsupportedOperationException("PropVals of type " + this.getClass.getName + " have no properties")
   def apply(path: String): PropVal = apply(PropPath(path))
   def apply(key: Int): PropVal = apply(key.toString)
+  def apply(key: Symbol): PropVal = apply(key.name)
   
   def toJSON = toJsValue.toString
 
@@ -85,110 +206,214 @@ sealed trait PropVal {
 
 
 object PropVal {
-  def apply(value: Any): PropVal = value match {
-    case x: PropVal => x
-    case x: Boolean => BoolPropVal(x)
-    case x: Byte => NumPropVal(x)
-    case x: Char => NumPropVal(x)
-    case x: Short => NumPropVal(x)
-    case x: Int => NumPropVal(x)
-    case x: Long => NumPropVal(x)
-    case x: Float => NumPropVal(x)
-    case x: Double => NumPropVal(x)
-    case x: String => StringPropVal(x)
-    case x: ByteString => BytesPropVal(x)
-    case x: Unit => throw new IllegalArgumentException(classOf[PropVal].getName + " cannot represent " + classOf[Unit].getName)
-    case x: Map[_, _] => Props.fromNative(x)
-    case x: Seq[_] => SeqPropVal.fromNative(x)
-    case x: AnyRef => throw new IllegalArgumentException(classOf[PropVal].getName + " cannot represent " + x.getClass.getName)
+  def apply[T](x: T)(implicit conv: From[T]) = conv.from(x)
+
+  implicit def from[T](x: T)(implicit conv: From[T]): PropVal = PropVal(x)
+
+
+  trait From[T] {
+    def from(x: T): PropVal
   }
 
-  def apply(value: Seq[PropVal]): PropVal = SeqPropVal(value: _*)
 
-  def apply(value: Map[String, PropVal]): PropVal = Props(value)
-  
-  def fromJsValue(value: JsValue): PropVal = value match {
-    case JsNull => null
-    case JsBoolean(x) => BoolPropVal(x)
-    case JsNumber(x) => NumPropVal(x.doubleValue)
-    case JsString(x) => {
-      if (x startsWith stringDataTag) BytesPropVal(ByteString( Base64.decodeBase64(x substring stringDataTag.length) ))
-      else StringPropVal(x)
-    }
-    case JsArray(x) => {
-      import scala.collection.breakOut
-      val elems: Vector[PropVal] = x.map{v => PropVal.fromJsValue(v)}(breakOut)
-      SeqPropVal(elems: _*)
-    }
-    case x: JsObject => Props.fromJsObject(x)
-    case u: JsUndefined => throw new RuntimeException("Encountered JsUndefined, " + u.error)
+  trait To[T] {
+    def to(propVal: PropVal): T
   }
+
+
+  trait Converter[T] extends From[T] with To[T]
+
+
+  implicit object PropValConverter extends Converter[PropVal] {
+    def from(x: PropVal) = x
+    def to(propVal: PropVal) = propVal
+  }
+
+  implicit object NoneConverter extends Converter[None.type] {
+    def from(x: None.type) = NonePropVal
+    def to(propVal: PropVal) = propVal.asNone
+  }
+
+  implicit object BooleanConverter extends Converter[Boolean] {
+    def from(x: Boolean) = BoolPropVal(x)
+    def to(propVal: PropVal) = propVal.asBoolean
+  }
+
+  implicit object ByteConverter extends Converter[Byte] {
+    def from(x: Byte) = IntegerPropVal(x)
+    def to(propVal: PropVal) = propVal.asByte
+  }
+
+  implicit object ShortConverter extends Converter[Short] {
+    def from(x: Short) = IntegerPropVal(x)
+    def to(propVal: PropVal) = propVal.asShort
+  }
+
+  implicit object IntConverter extends Converter[Int] {
+    def from(x: Int) = IntegerPropVal(x)
+    def to(propVal: PropVal) = propVal.asInt
+  }
+
+  implicit object LongConverter extends Converter[Long] {
+    def from(x: Long) = IntegerPropVal(x)
+    def to(propVal: PropVal) = propVal.asLong
+  }
+
+  implicit object FloatConverter extends Converter[Float] {
+    def from(x: Float) = RealPropVal(x)
+    def to(propVal: PropVal) = propVal.asFloat
+  }
+
+  implicit object DoubleConverter extends Converter[Double] {
+    def from(x: Double) = RealPropVal(x)
+    def to(propVal: PropVal) = propVal.asDouble
+  }
+
+  implicit object SymbolConverter extends Converter[Symbol] {
+    def from(x: Symbol) = SymbolPropVal(x)
+    def to(propVal: PropVal) = propVal.asSymbol
+  }
+
+  implicit object StringConverter extends Converter[String] {
+    def from(x: String) = StringPropVal(x)
+    def to(propVal: PropVal) = propVal.asString
+  }
+
+  implicit object ByteStringConverter extends Converter[ByteString] {
+    def from(x: ByteString) = BytesPropVal(x)
+    def to(propVal: PropVal) = propVal.asByteString
+  }
+
+  implicit object SeqConverter extends Converter[Seq[PropVal]] {
+    def from(x: Seq[PropVal]) = PropValSeq(x: _*)
+    def to(propVal: PropVal) = propVal.asSeq
+  }
+
+
+  implicit object JSValueConverter extends Converter[JsValue] {
+    protected val stringDataTag = "data:,"
+
+    def from(x: JsValue) = x match {
+      case JsNull => NonePropVal
+      case JsBoolean(x) => BoolPropVal(x)
+      case JsNumber(x) => if (x.isWhole) IntegerPropVal(x.longValue) else RealPropVal(x.doubleValue)
+      case JsString(x) => {
+        if (x startsWith stringDataTag) BytesPropVal(ByteString( Base64.decodeBase64(x substring stringDataTag.length) ))
+        else StringPropVal(x)
+      }
+      case JsArray(x) => {
+        import scala.collection.breakOut
+        val elems: Vector[PropVal] = x.map{v => PropVal.fromJsValue(v)}(breakOut)
+        PropValSeq(elems: _*)
+      }
+      case x: JsObject => Props.fromJsObject(x)
+      case u: JsUndefined => throw new RuntimeException("Encountered JsUndefined, " + u.error)
+    }
+
+    def to(propVal: PropVal) = propVal.toJsValue
+  }
+
+
+  implicit object PropValJSValueFormat extends Format[PropVal] {
+    def reads(json: JsValue): JsResult[PropVal] = {
+      try JsSuccess(JSValueConverter.from(json))
+      catch {
+        case error: Exception => JsError(error.getMessage)
+      }
+    }
+
+    def writes(o: PropVal): JsValue = o.toJsValue
+  }
+
+
+  def fromJsValue(value: JsValue): PropVal = JSValueConverter.from(value)
 
   def fromJSON(json: String): PropVal = fromJsValue(Json.parse(json))
-
-  protected val stringDataTag = "data:,"
 }
 
 
-
-case class NumPropVal(value: Double) extends PropVal {
-  def toDouble = value
-  def toBoolean = (value >= 0)
-  def toNative: Double = value
-  def toJsValue: JsNumber = {
-    val longVal = value.toLong
-    if (value != longVal) JsNumber(value) else JsNumber(longVal)
-  }
+case object NonePropVal extends PropVal {
+  def value: None.type = None
+  override def isNone = true
+  override def asNone = value
+  def toJsValue = JsNull
 }
 
 
-case class BoolPropVal(value: Boolean) extends PropVal {
-  def toDouble = if (value) 1.0 else 0.0
-  def toBoolean = value
-  def toNative: Boolean = value
+final case class BoolPropVal(value: Boolean) extends PropVal {
+  override def asBoolean = value
+  override def asLong = if (value) 1 else 0
+  override def asDouble = if (value) 1.0 else 0.0
   def toJsValue: JsBoolean = JsBoolean(value)
 }
 
 
-case class BytesPropVal(value: ByteString) extends PropVal {
-  def toDouble = throw new UnsupportedOperationException(this.getClass.getName + " cannot be converted to Double")
-  def toBoolean = throw new UnsupportedOperationException(this.getClass.getName + " cannot be converted to Boolean")
-  override def toByteString = value
-  def toNative: ByteString = value
+abstract class NumericPropVal extends PropVal
+
+
+object NumericPropVal {
+  def apply(x: Int): NumericPropVal = IntegerPropVal(x)
+  def apply(x: Long): NumericPropVal = IntegerPropVal(x)
+  def apply(x: Double): NumericPropVal = {
+    val lx = x.toLong
+    if (x != lx) RealPropVal(x) else IntegerPropVal(lx)
+  }
+}
+
+
+final case class IntegerPropVal(value: Long) extends NumericPropVal {
+  override def asBoolean = (value >= 0)
+  override def asLong = value
+  override def asDouble = value.toDouble
+  def toJsValue: JsNumber = JsNumber(value)
+  override def toString = value.toString
+}
+
+
+final case class RealPropVal(value: Double) extends NumericPropVal {
+  override def asBoolean = (value >= 0)
+  override def asLong = value.toLong
+  override def asDouble = value
+  def toJsValue: JsNumber = JsNumber(value)
+}
+
+
+final case class BytesPropVal(value: ByteString) extends PropVal {
+  override def asByteString = value
   def toJsValue: JsString = JsString(toString)
   override def toString = "data:," + new String(Base64.encodeBase64(value.toArray))
 }
 
 
-case class StringPropVal(value: String) extends PropVal {
-  def toDouble = value.toDouble
-  def toBoolean = value.toBoolean
-  def toNative: String = value
+final case class SymbolPropVal(value: Symbol) extends PropVal {
+  override def asSymbol = value
+  override def asString = value.name
+  def toJsValue: JsString = JsString(value.name)
+  override def toString = asString
+}
+
+
+final case class StringPropVal(value: String) extends PropVal {
+  override def asString = value
   def toJsValue: JsString = JsString(value)
   override def toString = value
 }
 
 
 
-trait ComplexPropVal extends PropVal {
-  def toDouble = throw new UnsupportedOperationException(this.getClass.getName + " cannot be converted to Double")
-  def toBoolean = throw new UnsupportedOperationException(this.getClass.getName + " cannot be converted to Boolean")
+abstract class ComplexPropVal extends PropVal {
 }
 
 
 
-case class SeqPropVal(value: PropVal*) extends ComplexPropVal {
-  def toNative: Seq[Any] = value map {_.toNative}
+final case class PropValSeq(value: PropVal*) extends ComplexPropVal {
+  override def asSeq = value
   def toJsValue = JsArray(value.toList map {_.toJsValue})
 }
 
-object SeqPropVal {
-  def fromNative(x: Seq[Any]): SeqPropVal = SeqPropVal((x map {v => PropVal(v)}) :_*)
-}
 
 
-
-case class Props(value: Map[String, PropVal]) extends ComplexPropVal {
+final case class Props(value: Map[PropKey, PropVal]) extends ComplexPropVal {
   override def apply(path: PropPath): PropVal = {
     if (path.isEmpty) throw new IllegalArgumentException("Cannot get value for empty PropPath")
     value.get(path.head) match {
@@ -203,7 +428,6 @@ case class Props(value: Map[String, PropVal]) extends ComplexPropVal {
     }
   }
 
-  override def apply(key: Int): PropVal = value(key.toString)
     
   def merge(that: Props): Props = {
     Props(
@@ -222,29 +446,26 @@ case class Props(value: Map[String, PropVal]) extends ComplexPropVal {
     )
   }
 
-  def toNative: Map[String, Any] = value map {case (k,v) => (k, v.toNative)}
-  def toJsValue = JsObject(value.toList map {case (k,v) => (k, v.toJsValue)})
+  override def asMap = value
+  def toJsValue = JsObject(value.toList map {case (k,v) => (k.toString, v.toJsValue)})
 }
 
 
 object Props {
-  val empty = Props(Map.empty[String, PropVal])
+  val empty = Props(Map.empty[PropKey, PropVal])
 
-  def apply(values: (_, _)*): Props = {
+  def apply(values: (PropPath, PropVal)*): Props = {
     values.foldLeft(Props.empty) { case (props, (path, value)) =>
       props merge {
-        PropPath(path).parts.reverse.foldLeft(PropVal(value)) {
+        path.parts.reverse.foldLeft(value) {
           case (v, k) => Props(Map(k -> v))
         }.asInstanceOf[Props]
       }
     }
   }
 
-  def fromNative(values: Map[_, _]) =
-    Props((values.toSeq map { case (k, v) => (k, PropVal(v)) }) : _*)
-  
   def fromJsObject(obj: JsObject) =
-    Props( (obj.fields.map{ case (k,v) => (k, PropVal.fromJsValue(v)) }): _* )
+    new Props( (obj.fields.map{ case (k,v) => (PropKey(k), PropVal.fromJsValue(v)) }.toMap))
   
   def fromJSON(json: String) = PropVal.fromJSON(json).asInstanceOf[Props]
 }
