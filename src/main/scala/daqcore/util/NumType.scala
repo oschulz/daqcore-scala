@@ -81,6 +81,10 @@ trait IntegerNumType[@specialized(Byte, Short, Int, Long) T] extends NumType[T] 
   final def invNBitsMask(nBits: Int): T = invertBits(nBitsMask(nBits))
   final def invBitMask(firstBit: Int, nBits: Int): T = invertBits(bitMask(firstBit, nBits))
 
+  final def bitwiseMerge(x: T, y: T, mask: T) = {
+    bitwiseOr( bitwiseAnd(x, invertBits(mask)), bitwiseAnd(y, mask) )
+  }
+
   final def getBit(bit: Int, from: T): Boolean = {
     if (validBitNo(bit)) bitwiseAnd(from, bitMask(bit)) != zero
     else false
@@ -145,6 +149,8 @@ object IntegerNumType {
 
     def numberOfLeadingZeros(implicit numType: IntegerNumType[T]) = numType.numberOfLeadingZeros(x)  
     def numberOfTrailingZeros(implicit numType: IntegerNumType[T]) = numType.numberOfTrailingZeros(x)  
+
+    def bitwiseMerge(y: T, mask: T)(implicit numType: IntegerNumType[T]) = numType.bitwiseMerge(x, y, mask)
 
     def toByte(x: T)(implicit numType: IntegerNumType[T]) = numType.toByte(x)
     def toShort(x: T)(implicit numType: IntegerNumType[T]) = numType.toShort(x)
