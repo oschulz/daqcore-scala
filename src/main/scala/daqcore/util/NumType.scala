@@ -49,6 +49,8 @@ trait NumType[@specialized(Byte, Short, Int, Long, Float, Double) T] {
 
 
 trait IntegerNumType[@specialized(Byte, Short, Int, Long) T] extends NumType[T] {
+  def unsignedMax: T
+
   def modulo(x: T, y: T): T
 
   def nBytes: Int
@@ -174,6 +176,7 @@ object IntegerNumType {
 
     def zero = 0.toByte
     def one = 1.toByte
+    def unsignedMax = -1.toByte
 
     def fromByte(x: Byte) = x
     def fromShort(x: Short) = x.toByte
@@ -222,6 +225,7 @@ object IntegerNumType {
 
     def zero = 0.toShort
     def one = 1.toShort
+    def unsignedMax = -1.toShort
 
     def fromByte(x: Byte) = x.toShort
     def fromShort(x: Short) = x
@@ -270,6 +274,7 @@ object IntegerNumType {
 
     def zero = 0
     def one = 1
+    def unsignedMax = -1
 
     def fromByte(x: Byte) = x.toInt
     def fromShort(x: Short) = x.toInt
@@ -312,6 +317,7 @@ object IntegerNumType {
 
     def zero = 0L
     def one = 1L
+    def unsignedMax = -1L
 
     def fromByte(x: Byte) = x.toLong
     def fromShort(x: Short) = x.toLong
