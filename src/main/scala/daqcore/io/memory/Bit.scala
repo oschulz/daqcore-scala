@@ -31,9 +31,11 @@ trait BitSelection[T] extends Ordered[BitSelection[T]] {
   def size: Int
   def length: Int
 
-  def compare(that: BitSelection[T]) = this.firstBit compare that.firstBit
-  
+  def bitMask(implicit numType: IntegerNumType[T]): T
+
   def asString: String
+
+  final def compare(that: BitSelection[T]) = this.firstBit compare that.firstBit
 
   final def getBits[T](from: T)(implicit numType: IntegerNumType[T]): T = {
     require (isContigous, "BitSelection must be contiguous for getBits")
@@ -66,12 +68,14 @@ trait Bit[T] extends BitSelection[T] {
 
   require (n >= 0, "Bit number must not be negative")
 
+  def firstBit = n
+
   def isContigous = true
 
   def size = 1
   def length = 1
 
-  def firstBit = n
+  def bitMask(implicit numType: IntegerNumType[T]) = numType.shiftLeft(numType.one, firstBit)
 
   def asString = n.toString
 
@@ -110,12 +114,17 @@ trait BitRange[T] extends BitSelection[T] {
   def from: Int = bits.head
   def to: Int = bits.end
 
+  def firstBit = from
+
   def isContigous = (bits.step == 1)
 
   def size = bits.size
   def length = bits.length
 
-  def firstBit = from
+  def bitMask(implicit numType: IntegerNumType[T]) = {
+    if (isContigous) numType.bitMask(firstBit, size)
+    else bits.foldLeft(numType.zero)((mask, bit) => numType.bitwiseOr(mask, numType.shiftLeft(numType.one, bit)))
+  }
 
   def asString = if (size > 1) "%s..%s".format(from, to) else from.toString
 
