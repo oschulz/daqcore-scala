@@ -104,8 +104,8 @@ class MemRegion(val from: MemRegion.MemAddress, val until: MemRegion.MemAddress,
 
 
   abstract class JKRegister[T](val addr: MemAddress) extends ReadableRegister[T] with WriteableRegister[T] {
-    protected def jkSet(implicit numType: IntegerNumType[T]) = BitRange.of[T](0 to (numType.nBits / 2 - 1))
-    protected def jkClear(implicit numType: IntegerNumType[T]) = BitRange.of[T]((numType.nBits / 2) to 31)
+    protected def jkSet(implicit numType: IntegerNumType[T]) = BitRange[T](0 to (numType.nBits / 2 - 1))
+    protected def jkClear(implicit numType: IntegerNumType[T]) = BitRange[T]((numType.nBits / 2) to 31)
 
     case class RWBit(n: Int)(implicit numType: IntegerNumType[T]) extends MemSingleBit with ReadableBitSelection with WriteableBitSelection {
       require(n < jkSet.bits.end, "Only lower half of bits can be declared in a J/K register")

@@ -55,8 +55,8 @@ object BitSelection {
   val nIntBits = (8 * sizeOf[Int])
   val nLongBits = (8 * sizeOf[Long])
 
-  def apply[T](n: Int) = SimpleBit.of[T](n)
-  def apply[T](bits: Range) = SimpleBitRange.of[T](bits)
+  def apply[T](n: Int) = SimpleBit[T](n)
+  def apply[T](bits: Range) = SimpleBitRange[T](bits)
 }
 
 
@@ -92,17 +92,12 @@ trait Bit[T] extends BitSelection[T] {
 
 
 object Bit {
-  def of[T](n: Int) = SimpleBit.of[T](n)
+  def apply[T](n: Int) = SimpleBit[T](n)
 }
 
 
 
 case class SimpleBit[T](n: Int = 0) extends Bit[T]
-
-
-object SimpleBit {
-  def of[T](n: Int) = new SimpleBit[T](n)
-}
 
 
 
@@ -135,14 +130,9 @@ trait BitRange[T] extends BitSelection[T] {
 
 
 object BitRange {
-  def of[T](bits: Range) = SimpleBitRange.of[T](bits)
+  def apply[T](bits: Range) = SimpleBitRange[T](bits)
 }
 
 
 
 case class SimpleBitRange[T](bits: Range) extends BitRange[T]
-
-
-object SimpleBitRange {
-  def of[T](bits: Range) = new SimpleBitRange[T](bits)
-}
