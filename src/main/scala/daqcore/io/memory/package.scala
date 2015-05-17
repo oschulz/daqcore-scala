@@ -32,4 +32,6 @@ implicit def shortRegisterFieldsOps(fields: Register[Short]#Fields)  = new Short
 implicit def intRegisterFieldsOps(fields: Register[Int]#Fields)  = new IntRegisterFieldsOps(fields)
 implicit def longRegisterFieldsOps(fields: Register[Long]#Fields)  = new LongRegisterFieldsOps(fields)
 
+implicit def opsWithBitMaskedInteger[@specialized(Byte, Short, Int, Long) T](x: T) = new BitMaskedInteger.OpsWith(x)
+
 }

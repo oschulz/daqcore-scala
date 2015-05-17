@@ -48,6 +48,8 @@ class ByteBitAccessOps(val x: Byte) extends AnyVal {
   def setBit(n: Int, value: Boolean): Byte = BitAccessOps.setBit(n, x, value)
   def setBit(n: Int): Byte = BitAccessOps.setBit(n, x)
   def clearBit(n: Int): Byte = BitAccessOps.clearBit(n, x)
+
+  def withBitMask(mask: Byte) = BitMaskedInteger[Byte](x, mask)
 }
 
 
@@ -67,6 +69,8 @@ class ShortBitAccessOps(val x: Short) extends AnyVal {
   def setBit(n: Int, value: Boolean): Short = BitAccessOps.setBit(n, x, value)
   def setBit(n: Int): Short = BitAccessOps.setBit(n, x)
   def clearBit(n: Int): Short = BitAccessOps.clearBit(n, x)
+
+  def withBitMask(mask: Short) = BitMaskedInteger[Short](x, mask)
 }
 
 
@@ -86,6 +90,8 @@ class IntBitAccessOps(val x: Int) extends AnyVal {
   def setBit(n: Int, value: Boolean): Int = BitAccessOps.setBit(n, x, value)
   def setBit(n: Int): Int = BitAccessOps.setBit(n, x)
   def clearBit(n: Int): Int = BitAccessOps.clearBit(n, x)
+
+  def withBitMask(mask: Int) = BitMaskedInteger[Int](x, mask)
 }
 
 
@@ -105,4 +111,6 @@ class LongBitAccessOps(val x: Long) extends AnyVal {
   def setBit(n: Int, value: Boolean): Long = BitAccessOps.setBit(n, x, value)
   def setBit(n: Int): Long = BitAccessOps.setBit(n, x)
   def clearBit(n: Int): Long = BitAccessOps.clearBit(n, x)
+
+  def withBitMask(mask: Long) = BitMaskedInteger[Long](x, mask)
 }
