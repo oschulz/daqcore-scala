@@ -67,6 +67,8 @@ trait IntegerNumType[@specialized(Byte, Short, Int, Long) T] extends NumType[T] 
   def numberOfLeadingZeros(x: T): Int
   def numberOfTrailingZeros(x: T): Int
 
+  def hex(x: T): String
+
   final def validBitNo(bit: Int): Boolean = (bit >= 0) && (bit < nBits)
   final def bitMask(bit: Int): T = shiftLeft(one, bit)
   final def nBitsMask(nBits: Int): T = if (nBits >= this.nBits) minus(zero, one) else minus(shiftLeft(one, nBits), one)
@@ -220,6 +222,8 @@ object IntegerNumType {
       if (x != zero) IntNumType.numberOfTrailingZeros(x.asUnsigned)
       else nBits
     }
+
+    def hex(x: Byte) = "%02x".format(x)
   }
 
 
@@ -269,6 +273,8 @@ object IntegerNumType {
       if (x != zero) IntNumType.numberOfTrailingZeros(x.asUnsigned)
       else nBits
     }
+
+    def hex(x: Short) = "%04x".format(x)
   }
 
 
@@ -312,6 +318,8 @@ object IntegerNumType {
     def numberOfLeadingZeros(x: Int) = Integer.numberOfLeadingZeros(x)
 
     def numberOfTrailingZeros(x: Int) = Integer.numberOfTrailingZeros(x)
+
+    def hex(x: Int) = "%08x".format(x)
   }
 
 
@@ -355,6 +363,8 @@ object IntegerNumType {
     def numberOfLeadingZeros(x: Long) = java.lang.Long.numberOfLeadingZeros(x)
 
     def numberOfTrailingZeros(x: Long) = java.lang.Long.numberOfTrailingZeros(x)
+
+    def hex(x: Long) = "%016x".format(x)
   }
 
 }
