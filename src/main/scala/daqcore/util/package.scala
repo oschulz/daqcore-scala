@@ -117,9 +117,7 @@ def sizeOf[A <: AnyVal : ClassTag]: Int = {
 }
 
 
-def hex(v: AnyVal) : String = {
-  def byteMF = classTag[Byte]
-
+def hex(v: Any) : String = {
   v match {
     case x: Byte     =>  "%02x".format(x)
     case x: Short    =>  "%04x".format(x)
