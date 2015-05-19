@@ -30,7 +30,7 @@ import daqcore.util._
 import TypedActorTraits._
 
 
-trait TypedActorBasics
+trait TypedActorBasics extends AbstractActorImpl
 {
   implicit def dispatcher = TypedActor.dispatcher
   implicit def context: ActorContext = TypedActor.context
