@@ -49,6 +49,7 @@ class MemRegion(val from: MemRegion.MemAddress, val until: MemRegion.MemAddress,
 
   trait ReadableRegister[T] extends MemRegister[T] { thisRegister =>
     trait ReadableBitSelection extends MemBitSelection
+    trait ReadableBit extends MemSingleBit with ReadableBitSelection
 
     case class ROBit(n: Int) extends MemSingleBit with ReadableBitSelection
     case class ROBitRange(bits: Range) extends MemBitRange with ReadableBitSelection
@@ -70,6 +71,7 @@ class MemRegion(val from: MemRegion.MemAddress, val until: MemRegion.MemAddress,
 
   trait WriteableRegister[T] extends MemRegister[T] { thisRegister =>
     trait WriteableBitSelection extends MemBitSelection
+    trait WriteableBit extends MemSingleBit with WriteableBitSelection
 
     case class WOBit(n: Int) extends MemSingleBit with WriteableBitSelection
     case class WOBitRange(bits: Range) extends MemBitRange with WriteableBitSelection
