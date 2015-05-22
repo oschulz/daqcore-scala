@@ -29,7 +29,7 @@ class MemRegion(val from: MemRegion.MemAddress, val until: MemRegion.MemAddress,
   def length = until - from
   def size = length
 
-  trait MemRegister[T] extends Register[T] {
+  trait MemRegister[@specialized(Byte, Short, Int, Long) T] extends Register[T] {
     thisMemRegister =>
 
     def region = thisRegion
@@ -47,7 +47,7 @@ class MemRegion(val from: MemRegion.MemAddress, val until: MemRegion.MemAddress,
 
 
 
-  trait ReadableRegister[T] extends MemRegister[T] { thisRegister =>
+  trait ReadableRegister[@specialized(Byte, Short, Int, Long) T] extends MemRegister[T] { thisRegister =>
     trait ReadableBitSelection extends MemBitSelection
     trait ReadableBit extends MemSingleBit with ReadableBitSelection
 
@@ -69,7 +69,7 @@ class MemRegion(val from: MemRegion.MemAddress, val until: MemRegion.MemAddress,
   }
 
 
-  trait WriteableRegister[T] extends MemRegister[T] { thisRegister =>
+  trait WriteableRegister[@specialized(Byte, Short, Int, Long) T] extends MemRegister[T] { thisRegister =>
     trait WriteableBitSelection extends MemBitSelection
     trait WriteableBit extends MemSingleBit with WriteableBitSelection
 
@@ -94,18 +94,18 @@ class MemRegion(val from: MemRegion.MemAddress, val until: MemRegion.MemAddress,
     def w = new WriteableContent
   }
   
-  abstract class RORegister[T] extends ReadableRegister[T]
+  abstract class RORegister[@specialized(Byte, Short, Int, Long) T] extends ReadableRegister[T]
 
-  abstract class WORegister[T] extends WriteableRegister[T]
+  abstract class WORegister[@specialized(Byte, Short, Int, Long) T] extends WriteableRegister[T]
 
  
-  abstract class RWRegister[T] extends ReadableRegister[T] with WriteableRegister[T] {
+  abstract class RWRegister[@specialized(Byte, Short, Int, Long) T] extends ReadableRegister[T] with WriteableRegister[T] {
     case class RWBit(n: Int) extends MemSingleBit with ReadableBitSelection with WriteableBitSelection
     case class RWBitRange(bits: Range) extends MemBitRange with ReadableBitSelection with WriteableBitSelection
   }
 
 
-  abstract class JKRegister[T](val addr: MemAddress) extends ReadableRegister[T] with WriteableRegister[T] {
+  abstract class JKRegister[@specialized(Byte, Short, Int, Long) T](val addr: MemAddress) extends ReadableRegister[T] with WriteableRegister[T] {
     protected def jkSet(implicit numType: IntegerNumType[T]) = BitRange[T](0 to (numType.nBits / 2 - 1))
     protected def jkClear(implicit numType: IntegerNumType[T]) = BitRange[T]((numType.nBits / 2) to 31)
 

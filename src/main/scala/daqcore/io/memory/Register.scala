@@ -22,7 +22,7 @@ import scala.reflect.{ClassTag, classTag}
 import daqcore.util._
 
 
-trait Register[T] { thisRegister =>
+trait Register[@specialized(Byte, Short, Int, Long) T] { thisRegister =>
   import Register._
 
   trait RegBitSelection extends BitSelection[T] {
@@ -61,7 +61,7 @@ object Register {
 }
 
 
-class SimpleRegister[T] extends Register[T] {
+class SimpleRegister[@specialized(Byte, Short, Int, Long) T] extends Register[T] {
   thisRegister =>
 
   case class RegBit(n: Int = 0) extends RegSingleBit

@@ -21,7 +21,7 @@ import daqcore.util._
 
 
 
-trait BitSelection[T] extends Ordered[BitSelection[T]] {
+trait BitSelection[@specialized(Byte, Short, Int, Long) T] extends Ordered[BitSelection[T]] {
   import BitSelection._
 
   def firstBit: Int
@@ -55,13 +55,13 @@ object BitSelection {
   val nIntBits = (8 * sizeOf[Int])
   val nLongBits = (8 * sizeOf[Long])
 
-  def apply[T](n: Int) = SimpleBit[T](n)
-  def apply[T](bits: Range) = SimpleBitRange[T](bits)
+  def apply[@specialized(Byte, Short, Int, Long) T](n: Int) = SimpleBit[T](n)
+  def apply[@specialized(Byte, Short, Int, Long) T](bits: Range) = SimpleBitRange[T](bits)
 }
 
 
 
-trait Bit[T] extends BitSelection[T] {
+trait Bit[@specialized(Byte, Short, Int, Long) T] extends BitSelection[T] {
   import BitSelection._
 
   def n:Int
@@ -92,16 +92,16 @@ trait Bit[T] extends BitSelection[T] {
 
 
 object Bit {
-  def apply[T](n: Int) = SimpleBit[T](n)
+  def apply[@specialized(Byte, Short, Int, Long) T](n: Int) = SimpleBit[T](n)
 }
 
 
 
-case class SimpleBit[T](n: Int = 0) extends Bit[T]
+case class SimpleBit[@specialized(Byte, Short, Int, Long) T](n: Int = 0) extends Bit[T]
 
 
 
-trait BitRange[T] extends BitSelection[T] {
+trait BitRange[@specialized(Byte, Short, Int, Long) T] extends BitSelection[T] {
   import BitSelection._
 
   def bits: Range
@@ -130,9 +130,9 @@ trait BitRange[T] extends BitSelection[T] {
 
 
 object BitRange {
-  def apply[T](bits: Range) = SimpleBitRange[T](bits)
+  def apply[@specialized(Byte, Short, Int, Long) T](bits: Range) = SimpleBitRange[T](bits)
 }
 
 
 
-case class SimpleBitRange[T](bits: Range) extends BitRange[T]
+case class SimpleBitRange[@specialized(Byte, Short, Int, Long) T](bits: Range) extends BitRange[T]
