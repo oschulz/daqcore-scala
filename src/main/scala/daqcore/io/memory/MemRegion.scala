@@ -20,11 +20,21 @@ package daqcore.io.memory
 import daqcore.util._
 
 
-class MemRegion(val from: MemRegion.MemAddress, val until: MemRegion.MemAddress, val parent: Option[MemRegion] = None) {
+class MemRegion(val from: MemRegion.MemAddress, val until: MemRegion.MemAddress) {
   thisRegion =>
 
   import MemRegion._
   import Register._
+
+
+  def parent: Option[MemRegion] = None
+
+  class SubRegion(from: MemRegion.MemAddress, until: MemRegion.MemAddress)
+    extends MemRegion(thisRegion.from + from, thisRegion.from+until)
+  {
+    override def parent: Option[MemRegion] = Some(thisRegion)
+  }
+
 
   def length = until - from
   def size = length
@@ -32,15 +42,49 @@ class MemRegion(val from: MemRegion.MemAddress, val until: MemRegion.MemAddress,
   trait MemRegister[@specialized(Byte, Short, Int, Long) T] extends Register[T] {
     thisMemRegister =>
 
+    case class FullValue(value: T) {
+      final def register = thisMemRegister
+
+      final def +|(x: PartialValue)(implicit numType: IntegerNumType[T]) =
+        FullValue(numType.bitwiseMerge(value, x.value, x.bitMask))
+
+      final def +|(bits: RegBitSelection, x: T)(implicit numType: IntegerNumType[T]) =
+        FullValue(bits.setBits(value, x))
+
+      final def +|(bit: RegSingleBit, x: Boolean)(implicit numType: IntegerNumType[T]) =
+        FullValue(bit.setBit(value, x))
+
+      override def toString = s"${getClass.getSimpleName}(${hex(value)})"
+    }
+
+    case class PartialValue(bmValue: BitMaskedInteger[T]) {
+      final def register = thisMemRegister
+      final def value = bmValue.value
+      final def bitMask = bmValue.mask
+      final def +|(that: PartialValue)(implicit numType: IntegerNumType[T]) = PartialValue(this.bmValue +| that.bmValue)
+    }
+
+    final def zero(implicit numType: IntegerNumType[T]) = FullValue(numType.zero)
+
+    final def ~>(value: T) = FullValue(value)
+
     def region = thisRegion
 
-    def addr: MemAddress
+    def address: MemAddress
+
+    final def absoluteAddress: MemAddress = thisRegion.from + address
 
     trait MemBitSelection extends RegBitSelection {
       override def register: MemRegister[T] = thisMemRegister
+
+      final def ~>(value: T)(implicit numType: IntegerNumType[T]): PartialValue =
+        PartialValue(BitMaskedInteger(setBits(numType.zero, value), bitMask))
     }
 
-    trait MemSingleBit extends RegSingleBit with MemBitSelection
+    trait MemSingleBit extends RegSingleBit with MemBitSelection {
+      final def ~>(value: Boolean)(implicit numType: IntegerNumType[T]): PartialValue =
+        PartialValue(BitMaskedInteger(setBit(numType.zero, value), bitMask))
+    }
 
     trait MemBitRange extends RegBitRange with MemBitSelection
   }
@@ -50,9 +94,10 @@ class MemRegion(val from: MemRegion.MemAddress, val until: MemRegion.MemAddress,
   trait ReadableRegister[@specialized(Byte, Short, Int, Long) T] extends MemRegister[T] { thisRegister =>
     trait ReadableBitSelection extends MemBitSelection
     trait ReadableBit extends MemSingleBit with ReadableBitSelection
+    trait ReadableBitRange extends MemBitRange with ReadableBitSelection
 
-    case class ROBit(n: Int) extends MemSingleBit with ReadableBitSelection
-    case class ROBitRange(bits: Range) extends MemBitRange with ReadableBitSelection
+    case class ROBit(n: Int) extends ReadableBit
+    case class ROBitRange(bits: Range) extends ReadableBitRange
 
     class ReadableContent extends Content {
       type Fields = Seq[(String, ReadableBitSelection)]
@@ -72,13 +117,10 @@ class MemRegion(val from: MemRegion.MemAddress, val until: MemRegion.MemAddress,
   trait WriteableRegister[@specialized(Byte, Short, Int, Long) T] extends MemRegister[T] { thisRegister =>
     trait WriteableBitSelection extends MemBitSelection
     trait WriteableBit extends MemSingleBit with WriteableBitSelection
+    trait WriteableBitRange extends MemBitRange with WriteableBitSelection
 
-    case class WOBit(n: Int) extends MemSingleBit with WriteableBitSelection
-    case class WOBitRange(bits: Range) extends MemBitRange with WriteableBitSelection
-
-    case class COBit(n: Int) extends MemSingleBit with WriteableBitSelection
-
-    case class SOBit(n: Int) extends MemSingleBit with WriteableBitSelection
+    case class WOBit(n: Int) extends WriteableBit
+    case class WOBitRange(bits: Range) extends WriteableBitRange
 
     class WriteableContent extends Content {
       type Fields = Seq[(String, WriteableBitSelection)]
@@ -93,35 +135,58 @@ class MemRegion(val from: MemRegion.MemAddress, val until: MemRegion.MemAddress,
     }
     def w = new WriteableContent
   }
-  
-  abstract class RORegister[@specialized(Byte, Short, Int, Long) T] extends ReadableRegister[T]
 
-  abstract class WORegister[@specialized(Byte, Short, Int, Long) T] extends WriteableRegister[T]
+
+  sealed trait PartiallyWriteableRegister[@specialized(Byte, Short, Int, Long) T] extends WriteableRegister[T]
+
+
+  class RORegister[@specialized(Byte, Short, Int, Long) T](val address: MemAddress) extends ReadableRegister[T]
+
+  class WORegister[@specialized(Byte, Short, Int, Long) T](val address: MemAddress) extends WriteableRegister[T]
 
  
-  abstract class RWRegister[@specialized(Byte, Short, Int, Long) T] extends ReadableRegister[T] with WriteableRegister[T] {
-    case class RWBit(n: Int) extends MemSingleBit with ReadableBitSelection with WriteableBitSelection
-    case class RWBitRange(bits: Range) extends MemBitRange with ReadableBitSelection with WriteableBitSelection
+  class RWRegister[@specialized(Byte, Short, Int, Long) T](val address: MemAddress) extends ReadableRegister[T] with PartiallyWriteableRegister[T] {
+    trait DirectRWBitSelection extends ReadableBitSelection with WriteableBitSelection
+
+    case class RWBit(n: Int) extends ReadableBit with WriteableBit with DirectRWBitSelection
+    case class RWBitRange(bits: Range) extends ReadableBitRange with WriteableBitRange with DirectRWBitSelection
   }
 
 
-  abstract class JKRegister[@specialized(Byte, Short, Int, Long) T](val addr: MemAddress) extends ReadableRegister[T] with WriteableRegister[T] {
-    protected def jkSet(implicit numType: IntegerNumType[T]) = BitRange[T](0 to (numType.nBits / 2 - 1))
-    protected def jkClear(implicit numType: IntegerNumType[T]) = BitRange[T]((numType.nBits / 2) to 31)
+  class JKRegister[@specialized(Byte, Short, Int, Long) T](val address: MemAddress)(implicit val numType: IntegerNumType[T]) extends ReadableRegister[T] with PartiallyWriteableRegister[T] {
+    trait JKBitSelection extends ReadableBitSelection with WriteableBitSelection
 
-    case class RWBit(n: Int)(implicit numType: IntegerNumType[T]) extends MemSingleBit with ReadableBitSelection with WriteableBitSelection {
-      require(n < jkSet.bits.end, "Only lower half of bits can be declared in a J/K register")
+    case class JKBit(n: Int) extends ReadableBit with WriteableBit with JKBitSelection {
+      require(n <= jkFirstClearBit, "Only lower half of bits can be declared in a J/K register")
     }
 
-    case class RWBitRange(bits: Range)(implicit numType: IntegerNumType[T])  extends MemBitRange with ReadableBitSelection with WriteableBitSelection {
-      require(bits.end < jkSet.bits.end, "Only lower half of bits can be declared in a J/K register")
+    case class JKBitRange(bits: Range) extends ReadableBitRange with WriteableBitRange with JKBitSelection {
+      require(bits.end <= jkFirstClearBit, "Only lower half of bits can be declared in a J/K register")
     }
   }
-  
-  class KeyRegister(val addr: MemAddress)
+
+
+  class KeyRegister[@specialized(Byte, Short, Int, Long) T](val address: MemAddress) extends WriteableRegister[T] {
+    def writeValue(implicit numType: IntegerNumType[T]) = numType.one
+  }
 }
 
 
 object MemRegion {
   type MemAddress = Long
+
+  protected def jkFirstClearBit[T](implicit numType: IntegerNumType[T]) = (numType.nBits / 2)
+
+  def jkValidBitMask[T](implicit numType: IntegerNumType[T]) = numType.invertBits(numType.minus(numType.shiftLeft(numType.one, jkFirstClearBit), numType.one))
+
+  def isValidJKValue[T](value: T)(implicit numType: IntegerNumType[T]) = numType.bitwiseAnd(value, jkValidBitMask[T]) == numType.zero
+
+  def jkWriteValue[T](value: T, bitMask: T)(implicit numType: IntegerNumType[T]) = {
+    val maskedValue = numType.bitwiseAnd(value, bitMask)
+    require(isValidJKValue(maskedValue), "Only lower half of bits is usable in a J/K register")
+    numType.bitwiseOr(
+      numType.bitwiseAnd(maskedValue, bitMask),
+      numType.shiftLeft(numType.bitwiseAnd(numType.invertBits(maskedValue), bitMask), jkFirstClearBit)
+    )
+  }
 }
