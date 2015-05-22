@@ -37,12 +37,12 @@ trait BitSelection[T] extends Ordered[BitSelection[T]] {
 
   final def compare(that: BitSelection[T]) = this.firstBit compare that.firstBit
 
-  final def getBits[T](from: T)(implicit numType: IntegerNumType[T]): T = {
+  final def getBits(from: T)(implicit numType: IntegerNumType[T]): T = {
     require (isContigous, "BitSelection must be contiguous for getBits")
     numType.getBitRange(firstBit, size, from)
   }
 
-  final def setBits[T](of: T, to: T)(implicit numType: IntegerNumType[T]): T = {
+  final def setBits(of: T, to: T)(implicit numType: IntegerNumType[T]): T = {
     require (isContigous, "BitSelection must be contiguous for setBits")
     numType.setBitRange(firstBit, size, of, to)
   }
