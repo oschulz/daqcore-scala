@@ -22,7 +22,9 @@ import scala.reflect.{ClassTag, classTag}
 import daqcore.util._
 
 
-trait Register[@specialized(Byte, Short, Int, Long) T] { thisRegister =>
+trait BitCollection
+
+trait Register[@specialized(Byte, Short, Int, Long) T] extends BitCollection { thisRegister =>
   import Register._
 
   trait RegBitSelection extends BitSelection[T] {
@@ -33,6 +35,7 @@ trait Register[@specialized(Byte, Short, Int, Long) T] { thisRegister =>
 
   trait RegBitRange extends BitRange[T] with RegBitSelection
 
+  trait SubRegister extends BitCollection  // Not necessarily contiguous
 
   type Fields = Seq[(String, RegBitSelection)]
 
