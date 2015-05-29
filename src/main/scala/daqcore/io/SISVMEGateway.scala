@@ -428,19 +428,30 @@ object SIS3316VMEGateway extends IOResourceCompanion[SIS3316VMEGateway] {
 
     case class UDPActionManager(udp: UDPClient, log: Logging.Logger) {
       protected var nextPkgId: Byte = 0
-      protected var pipeliningPossible = true
-      protected val maxActiveUDPRequests = 16 // Request pipelining doesn't seem to be stable yet
+      protected val defaultMaxActiveUDPRequests = 16
+      protected var currentMaxActiveUDPRequests = defaultMaxActiveUDPRequests
       protected val activeUDPRequests = collection.mutable.HashMap[Byte, UDPRequest]()
       protected val waitingUDPActions = collection.mutable.Queue[UDPAction]()
 
       protected def canExecute(request: UDPRequest): Boolean = {
-        activeUDPRequests.isEmpty ||
-          pipeliningPossible && request.canBePipelined && (activeUDPRequests.size < maxActiveUDPRequests)
+        if (activeUDPRequests.isEmpty) {
+          true
+        } else if (request.canBePipelined) {
+          if (activeUDPRequests.size < currentMaxActiveUDPRequests) {
+            true
+          } else {
+            log.trace(s"Can't send UDP request yet, ${activeUDPRequests.size} of max. ${currentMaxActiveUDPRequests} pending") 
+            false
+          }
+        } else {
+          log.trace(s"Can't send UDP request yet, request can't be pipelined and ${activeUDPRequests.size} requests pending")
+          false
+        }
       }
 
 
       protected def execWaitingUDPActions(): Unit = if (! waitingUDPActions.isEmpty) {
-        log.trace(s"Trying to execute ${waitingUDPActions.size} waiting UDP actions")
+        log.trace(s"Trying to execute ${waitingUDPActions.size} waiting UDP actions, ${activeUDPRequests.size} requests pending")
         var continue = true
         while ( (! waitingUDPActions.isEmpty) && continue ) {
           waitingUDPActions.head match {
@@ -466,13 +477,12 @@ object SIS3316VMEGateway extends IOResourceCompanion[SIS3316VMEGateway] {
                   log.trace(s"Sending waiting UDP request $request with packet id 0x${hex(pkgId)} and frame ${frame map hex}")
                   udp.send(frame)
                   activeUDPRequests.put(pkgId, request)
-                  if (! request.canBePipelined) pipeliningPossible = false
+                  if (! request.canBePipelined) currentMaxActiveUDPRequests = 1
                 } else {
                   log.trace(s"Blocked by pending request with packet id 0x${hex(pkgId)} (packet loss?)")
                   continue = false
                 }
               } else {
-                log.trace(s"Maximum number of pending requests reached (${maxActiveUDPRequests}), waiting for requests to finish") 
                 continue = false
               }
           }
@@ -486,7 +496,7 @@ object SIS3316VMEGateway extends IOResourceCompanion[SIS3316VMEGateway] {
 
       def removeActiveRequest(pkgId: Byte): Unit = {
         activeUDPRequests.remove(pkgId)
-        if (activeUDPRequests.isEmpty) pipeliningPossible = true
+        if (activeUDPRequests.isEmpty) currentMaxActiveUDPRequests = defaultMaxActiveUDPRequests
       }
 
       def addResponse(frame: ByteString): Unit = {
