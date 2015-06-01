@@ -49,6 +49,16 @@ trait NumType[@specialized(Byte, Short, Int, Long, Float, Double) T] {
   def toDouble(x: T): Double
 }
 
+object NumType {
+  implicit def byteNumType = IntegerNumType.ByteNumType
+  implicit def shortNumType = IntegerNumType.ShortNumType
+  implicit def intNumType = IntegerNumType.IntNumType
+  implicit def longNumType = IntegerNumType.LongNumType
+  implicit def floatNumType = RealNumType.FloatNumType
+  implicit def doubleNumType = RealNumType.DoubleNumType
+}
+
+
 
 trait IntegerNumType[@specialized(Byte, Short, Int, Long) T] extends NumType[T] {
   def unsignedMax: T
