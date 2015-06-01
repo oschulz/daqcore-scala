@@ -31,13 +31,15 @@ trait NumType[@specialized(Byte, Short, Int, Long, Float, Double) T] {
   final def from(x: Short): T = fromShort(x)
   final def from(x: Int): T = fromInt(x)
   final def from(x: Long): T = fromLong(x)
+  final def from(x: Float): T = fromFloat(x)
+  final def from(x: Double): T = fromDouble(x)
 
   def fromByte(x: Byte): T
   def fromShort(x: Short): T
   def fromInt(x: Int): T
   def fromLong(x: Long): T
-  def fromDouble(x: Double): T
   def fromFloat(x: Float): T
+  def fromDouble(x: Double): T
 
   def toByte(x: T): Byte
   def toShort(x: T): Short
@@ -190,8 +192,8 @@ object IntegerNumType {
     def fromShort(x: Short) = x.toByte
     def fromInt(x: Int) = x.toByte
     def fromLong(x: Long) = x.toByte
-    def fromDouble(x: Double) = x.toByte
     def fromFloat(x: Float) = x.toByte
+    def fromDouble(x: Double) = x.toByte
 
     def toByte(x: Byte) = x
     def toShort(x: Byte) = x.toShort
@@ -241,8 +243,8 @@ object IntegerNumType {
     def fromShort(x: Short) = x
     def fromInt(x: Int) = x.toShort
     def fromLong(x: Long) = x.toShort
-    def fromDouble(x: Double) = x.toShort
     def fromFloat(x: Float) = x.toShort
+    def fromDouble(x: Double) = x.toShort
 
     def toByte(x: Short) = x.toByte
     def toShort(x: Short) = x
@@ -292,8 +294,8 @@ object IntegerNumType {
     def fromShort(x: Short) = x.toInt
     def fromInt(x: Int) = x
     def fromLong(x: Long) = x.toInt
-    def fromDouble(x: Double) = x.toInt
     def fromFloat(x: Float) = x.toInt
+    def fromDouble(x: Double) = x.toInt
 
     def toByte(x: Int) = x.toByte
     def toShort(x: Int) = x.toShort
@@ -337,8 +339,8 @@ object IntegerNumType {
     def fromShort(x: Short) = x.toLong
     def fromInt(x: Int) = x.toLong
     def fromLong(x: Long) = x
-    def fromDouble(x: Double) = x.toLong
     def fromFloat(x: Float) = x.toLong
+    def fromDouble(x: Double) = x.toLong
 
     def toByte(x: Long) = x.toByte
     def toShort(x: Long) = x.toShort
