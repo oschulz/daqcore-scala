@@ -370,3 +370,59 @@ object IntegerNumType {
   }
 
 }
+
+
+
+trait RealNumType[@specialized(Byte, Short, Int, Long) T] extends NumType[T] {
+}
+
+
+object RealNumType {
+  implicit object FloatNumType extends RealNumType[Float] {
+    def plus(x: Float, y: Float) = x + y
+    def minus(x: Float, y: Float) = x - y
+    def times(x: Float, y: Float) = x * y
+    def divide(x: Float, y: Float) = x / y
+
+    def zero = 0.toFloat
+    def one = 1.toFloat
+
+    def fromByte(x: Byte) = x.toFloat
+    def fromShort(x: Short) = x.toShort
+    def fromInt(x: Int) = x.toFloat
+    def fromLong(x: Long) = x.toFloat
+    def fromFloat(x: Float) = x
+    def fromDouble(x: Double) = x.toFloat
+
+    def toByte(x: Float) = x.toByte
+    def toShort(x: Float) = x.toShort
+    def toInt(x: Float) = x.toInt
+    def toLong(x: Float) = x.toLong
+    def toFloat(x: Float) = x
+    def toDouble(x: Float) = x.toDouble
+  }
+
+  implicit object DoubleNumType extends RealNumType[Double] {
+    def plus(x: Double, y: Double) = x + y
+    def minus(x: Double, y: Double) = x - y
+    def times(x: Double, y: Double) = x * y
+    def divide(x: Double, y: Double) = x / y
+
+    def zero = 0.toDouble
+    def one = 1.toDouble
+
+    def fromByte(x: Byte) = x.toDouble
+    def fromShort(x: Short) = x.toShort
+    def fromInt(x: Int) = x.toDouble
+    def fromLong(x: Long) = x.toDouble
+    def fromFloat(x: Float) = x.toDouble
+    def fromDouble(x: Double) = x
+
+    def toByte(x: Double) = x.toByte
+    def toShort(x: Double) = x.toShort
+    def toInt(x: Double) = x.toInt
+    def toLong(x: Double) = x.toLong
+    def toFloat(x: Double) = x.toFloat
+    def toDouble(x: Double) = x
+  }
+}
