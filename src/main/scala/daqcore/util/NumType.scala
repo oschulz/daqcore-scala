@@ -145,49 +145,6 @@ trait IntegerNumType[@specialized(Byte, Short, Int, Long) T] extends NumType[T] 
 
 
 object IntegerNumType {
-
-  final class IntegerNumTypeOps[T](val x: T) extends AnyVal {
-    def +(y: T)(implicit numType: IntegerNumType[T]) = numType.plus(x, y)
-    def -(y: T)(implicit numType: IntegerNumType[T]) = numType.minus(x, y)
-    def *(y: T)(implicit numType: IntegerNumType[T]) = numType.times(x, y)
-    def /(y: T)(implicit numType: IntegerNumType[T]) = numType.divide(x, y)
-    def %(y: T)(implicit numType: IntegerNumType[T]) = numType.modulo(x, y)
-
-    def ~(implicit numType: IntegerNumType[T]) = numType.invertBits(x)
-    def &(y: T)(implicit numType: IntegerNumType[T]) = numType.bitwiseAnd(x, y)
-    def |(y: T)(implicit numType: IntegerNumType[T]) = numType.bitwiseOr(x, y)
-
-    def <<(n: Int)(implicit numType: IntegerNumType[T]) = numType.shiftLeft(x, n)
-    def >>(n: Int)(implicit numType: IntegerNumType[T]) = numType.signedShiftRight(x, n)
-    def >>>(n: Int)(implicit numType: IntegerNumType[T]) = numType.unsignedShiftRight(x, n)
-
-    def numberOfLeadingZeros(implicit numType: IntegerNumType[T]) = numType.numberOfLeadingZeros(x)  
-    def numberOfTrailingZeros(implicit numType: IntegerNumType[T]) = numType.numberOfTrailingZeros(x)  
-
-    def bitwiseMerge(y: T, mask: T)(implicit numType: IntegerNumType[T]) = numType.bitwiseMerge(x, y, mask)
-
-    def toByte(x: T)(implicit numType: IntegerNumType[T]) = numType.toByte(x)
-    def toShort(x: T)(implicit numType: IntegerNumType[T]) = numType.toShort(x)
-    def toInt(x: T)(implicit numType: IntegerNumType[T]) = numType.toInt(x)
-    def toLong(x: T)(implicit numType: IntegerNumType[T]) = numType.toLong(x)
-    def toFloat(x: T)(implicit numType: IntegerNumType[T]) = numType.toFloat(x)
-    def toDouble(x: T)(implicit numType: IntegerNumType[T]) = numType.toDouble(x)
-
-    def getBit(bit: Int)(implicit numType: IntegerNumType[T]) = numType.getBit(bit, x)
-
-    def setBit(bit: Int, to: Boolean)(implicit numType: IntegerNumType[T])  = numType.setBit(bit, x, to)
-
-    def setBit(bit: Int)(implicit numType: IntegerNumType[T]) = numType.setBit(bit, x)
-    def clearBit(bit: Int)(implicit numType: IntegerNumType[T]) = numType.clearBit(bit, x)
-
-    def getBitRange(firstBit: Int, nBits: Int)(implicit numType: IntegerNumType[T]) = numType.getBitRange(firstBit, nBits, x)
-    def setBitRange(firstBit: Int, nBits: Int, to: T)(implicit numType: IntegerNumType[T]) = numType.setBitRange(firstBit, nBits, x, to)
-
-    def getBits(bits: Range)(implicit numType: IntegerNumType[T]) = numType.getBits(bits, x)
-    def setBits(bits: Range, to: T)(implicit numType: IntegerNumType[T]) = numType.setBits(bits, x, to)
-  }
-
-
   implicit object ByteNumType extends IntegerNumType[Byte] {
     def plus(x: Byte, y: Byte) = (x + y).toByte
     def minus(x: Byte, y: Byte) = (x - y).toByte
@@ -378,7 +335,6 @@ object IntegerNumType {
 
     def hex(x: Long) = "%016x".format(x)
   }
-
 }
 
 
