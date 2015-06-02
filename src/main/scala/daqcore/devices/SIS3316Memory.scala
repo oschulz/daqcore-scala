@@ -320,7 +320,23 @@ object SIS3316Memory extends DeviceCompanion[SIS3316Memory] {
   }
 
 
+
+  case object BCDConv extends ValueConv[Int, Int] with ValueRevConv.SimpleUnapplyConv[Int, Int] {
+    def apply(raw: Int) = "%x".format(raw).toInt
+
+    def applyRev(conv: Int) = Integer.parseInt(250.toString, 16)
+  }
+
+
+
   object registers extends MemRegion(0x000000, 0x005000) {
+     object CfdCtrl extends Enumeration {
+      val CFDDisabled     = Value(0)  // CFD function disabled
+      val CFDDisabled_alt = Value(1)  // CFD function disabled
+      val CFDZeroCross    = Value(2)  // CFD function enabled with Zero crossing
+      val CDF50Percent    = Value(3)  // CFD function enabled with 50 percent
+    }
+
 
     // VME interface registers
     // -----------------------
@@ -341,9 +357,9 @@ object SIS3316Memory extends DeviceCompanion[SIS3316Memory] {
 
     /** Module Id. and Firmware Revision Register */
     object modid extends RORegister[Int](0x04) {
-      val module_id         = ROBitRange(16 to 31)  // Module Id. (BCD)
-      val major_revision    = ROBitRange( 8 to 15)  // Major Revision (BCD)
-      val minor_revision    = ROBitRange( 0 to  7)  // Minor Revision (BCD)
+      val module_id         = ROBits(16 to 31) withConv BCDConv  // Module Id. (BCD)
+      val major_revision    = ROBits( 8 to 15)  // Major Revision (BCD)
+      val minor_revision    = ROBits( 0 to  7)  // Minor Revision (BCD)
     }
 
     // object udp_prot_configuration extends RWRegister[Int](0x08) {}  // UDP Protocol Configuration Register
@@ -352,7 +368,7 @@ object SIS3316Memory extends DeviceCompanion[SIS3316Memory] {
     // object irq_control extends RWRegister[Int](0x0C) {}  // Interrupt Control Register
 
     /** Interface Access Arbitration Control Register */
-    object interface_access_arbitration_control extends RWRegister[Int](0x10) {
+    object interface_access_arbitration_control extends RVRegister[Int](0x10) {
       val kill_other_if_req = RWBit(31)  // Kill of other interface request bit command
       // val other_if_req_stat = RWBit(21)  // Status of other interface grant bit
       // val own_if_req_stat   = RWBit(20)  // Status of own interface grant bit
@@ -365,7 +381,7 @@ object SIS3316Memory extends DeviceCompanion[SIS3316Memory] {
 
     /** Hardware Version Register */
     object hardware_version extends RORegister[Int](0x1C) {
-      val version           = ROBitRange( 0 to  3)  // Hardware Version
+      val version           = ROBits( 0 to  3)  // Hardware Version
     }
 
 
@@ -374,16 +390,16 @@ object SIS3316Memory extends DeviceCompanion[SIS3316Memory] {
 
     /** Temperature Register */
     object internal_temperature_reg extends RWRegister[Int](0x20) {
-      val temperature       = ROBitRange( 0 to  9)  // Temperature Data //!! CONV
+      val temperature       = ROBits( 0 to  9) withConv LinearConv(scale = 0.25)  // Temperature Data
     }
 
     // object one_wire_control_reg extends RWRegister[Int](0x24) {}  // Onewire EEPROM Control Register
 
     /** Serial Number Register */
     object serial_number_reg extends RORegister[Int](0x28) {
-      val dhcp_option       = ROBitRange(24 to 31)  // DHCP Option Value
+      val dhcp_option       = ROBits(24 to 31)  // DHCP Option Value
       val serno_invalid     = ROBit(16)  // Serial Number Not Valid Flag
-      val serno             = ROBitRange(0 to 15)  // Serial Number
+      val serno             = ROBits(0 to 15)  // Serial Number
     }
 
     // object internal_transfer_speed_reg extends RWRegister[Int](0x2C) {}  // Internal Transfer Speed register
@@ -392,14 +408,14 @@ object SIS3316Memory extends DeviceCompanion[SIS3316Memory] {
     // object spi_flash_data extends RWRegister[Int]() {0x38}  // SPI Flash Data register
 
     /** Programmable Clock I2C Register */
-    class ClkOscI2CRegister(address: MemAddress) extends RWRegister[Int](address) {
+    class ClkOscI2CRegister(address: MemAddress) extends RVRegister[Int](address) {
       val read_byte         = RWBit(13)  // Read byte, put ACK
       val write_byte        = RWBit(12)  // Write byte, put ACK
       val stop              = RWBit(11)  // STOP
       val repeat_start      = RWBit(10)  // Repeat START
       val start             = RWBit( 9)  // START
       val ack               = RWBit( 8)  // Read: Received Ack on write cycle; Write: Ack on read cycle
-      val data              = RWBitRange(0 to 7)  // Read: Read data; Write: Write data
+      val data              = RWBits(0 to 7)  // Read: Read data; Write: Write data
     }
 
     /** Programmable ADC Clock I2C Register */
@@ -411,7 +427,7 @@ object SIS3316Memory extends DeviceCompanion[SIS3316Memory] {
 
     /** ADC Sample Clock distribution control Register */
     object sample_clock_distribution_control extends RWRegister[Int](0x50) {
-      val adc_clk_mux       = RWBitRange(0 to 1)  // ADC Sample Clock Multiplexer select bits
+      val adc_clk_mux       = RWBits(0 to 1)  // ADC Sample Clock Multiplexer select bits
         // (0: Internal osc.; 1: VXS; 2: FP-LVDS; 3: FP-NIM)
     }
 
@@ -420,11 +436,11 @@ object SIS3316Memory extends DeviceCompanion[SIS3316Memory] {
       * (Cmd Bit 1, Cmd Bit 0) == (0, 0): Execute SPI Write/Read Cmd
       * (Cmd Bit 1, Cmd Bit 0) == (0, 1): Reset Cmd
       */
-    object nim_clk_multiplier_spi_reg extends RWRegister[Int](0x54) {
+    object nim_clk_multiplier_spi_reg extends RVRegister[Int](0x54) {
       val cmd_bit_1         = RWBit(31)  // Write: Cmd Bit 1; Read: Read/Write Cmd BUSY Flag
       val cmd_bit_0         = RWBit(30)  // Write: Cmd Bit 0; Read: Reset Cmd BUSY Flag
-      val instruction       = RWBitRange(8 to 15) // Write: Instruction Byte
-      val addr_data         = RWBitRange(0 to 7)  // Write: Address/Data; Read: Data
+      val instruction       = RWBits(8 to 15) // Write: Instruction Byte
+      val addr_data         = RWBits(0 to 7)  // Write: Address/Data; Read: Data
     }
 
     /** FP-Bus control Register */
@@ -455,10 +471,10 @@ object SIS3316Memory extends DeviceCompanion[SIS3316Memory] {
 
     /** NIM Input Control/Status Register */
     object nim_input_control_reg extends RWRegister[Int](0x5C) {
-      val input_sig_ui_stat = RWBit(25)  // Write: reserved; Read: Status of NIM Input signal UI
-      val ext_in_ui_stat    = RWBit(24)  // Write: reserved; Read: Status of External NIM Input UI
-      val input_sig_ti_stat = RWBit(21)  // Write: reserved; Read: Status of NIM Input signal UI
-      val ext_in_ti_stat    = RWBit(20)  // Write: reserved; Read: Status of External NIM Input UI
+      val input_sig_ui_stat = ROBit(25)  // Write: reserved; Read: Status of NIM Input signal UI
+      val ext_in_ui_stat    = ROBit(24)  // Write: reserved; Read: Status of External NIM Input UI
+      val input_sig_ti_stat = ROBit(21)  // Write: reserved; Read: Status of NIM Input signal UI
+      val ext_in_ti_stat    = ROBit(20)  // Write: reserved; Read: Status of External NIM Input UI
       val in_ui_pss_en      = RWBit(13)  // NIM Input UI as PPS Enable
       val in_ui_veto_en     = RWBit(12)  // NIM Input UI as Veto Enable
       val in_ui_func        = RWBit(11)  // Set NIM Input UI Function
@@ -484,8 +500,8 @@ object SIS3316Memory extends DeviceCompanion[SIS3316Memory] {
       */
     object acquisition_control_status extends RWRegister[Int](0x60) {
       class FPGABits(offset: Int) extends SubRegister {
-        val mem_addr_thresh = RWBit(offset + 1)  // Write: reserved; Read: Status of Memory Address Threshold Flag
-        val smpl_busy       = RWBit(offset + 0)  // Write: reserved; Read: Status of Sample Logic Busy
+        val mem_addr_thresh = ROBit(offset + 1)  // Write: reserved; Read: Status of Memory Address Threshold Flag
+        val smpl_busy       = ROBit(offset + 0)  // Write: reserved; Read: Status of Sample Logic Busy
       }
 
       val fpga4 = new FPGABits(30)  // FPGA 4 bits
@@ -495,14 +511,14 @@ object SIS3316Memory extends DeviceCompanion[SIS3316Memory] {
 
       val fpga = Map(1 -> fpga1, 2 -> fpga2, 3 -> fpga3, 4 -> fpga4)
 
-      val pps_latch_stat    = RWBit(23)  // Write: reserved; Read: Status of "PPS latch bit"
-      val nim_bank_swap_en  = RWBit(22)  // Write: reserved; Read: Status of "Sample Bank Swap Control with NIM Input TI/UI" Logic enabled
-      val fp_addr_thresh    = RWBit(21)  // Write: reserved; Read: Status of FP-Bus-In Status 2: Address Threshold flag
-      val fp_smpl_busy      = RWBit(20)  // Write: reserved; Read: Status of FP-Bus-In Status 1: Sample Logic busy
-      val mem_addr_thresh   = RWBit(19)  // Write: reserved; Read: Status of Memory Address Threshold flag (OR)
-      val smpl_busy         = RWBit(18)  // Write: reserved; Read: Status of Sample Logic Busy (OR)
-      val smpl_bank2_armed  = RWBit(17)  // Write: reserved; Read: Status of ADC Sample Logic Armed On Bank2 flag
-      val smpl_armed        = RWBit(16)  // Write: reserved; Read: Status of ADC Sample Logic Armed
+      val pps_latch_stat    = ROBit(23)  // Write: reserved; Read: Status of "PPS latch bit"
+      val nim_bank_swap_en  = ROBit(22)  // Write: reserved; Read: Status of "Sample Bank Swap Control with NIM Input TI/UI" Logic enabled
+      val fp_addr_thresh    = ROBit(21)  // Write: reserved; Read: Status of FP-Bus-In Status 2: Address Threshold flag
+      val fp_smpl_busy      = ROBit(20)  // Write: reserved; Read: Status of FP-Bus-In Status 1: Sample Logic busy
+      val mem_addr_thresh   = ROBit(19)  // Write: reserved; Read: Status of Memory Address Threshold flag (OR)
+      val smpl_busy         = ROBit(18)  // Write: reserved; Read: Status of Sample Logic Busy (OR)
+      val smpl_armed_bank   = ROBit(17) withConv ((1, 2))  // Write: reserved; Read: Status of ADC Sample Logic Armed On Bank2 flag
+      val smpl_armed        = ROBit(16)  // Write: reserved; Read: Status of ADC Sample Logic Armed
       val ext_trig_dis_on_b = RWBit(15)  // External Trigger Disable with internal Busy select
       val int_trig_to_ext   = RWBit(14)  // Feedback Selected Internal Trigger as External Trigger Enable
       val nim_ui_bank_swap  = RWBit(13)  // NIM Input UI as "disarm Bankx and arm alternate Bank" command Enable
@@ -519,20 +535,20 @@ object SIS3316Memory extends DeviceCompanion[SIS3316Memory] {
     }
 
     /** Trigger Coincidence Lookup Table Control Register */
-    object lookup_table_control_reg extends RWRegister[Int](0x64) {
+    object lookup_table_control_reg extends RVRegister[Int](0x64) {
       val table_clear       = RWBit(31)  // Write: Lookup Table Clear command; Read: Status Clear Busy
-      val table2_pulse_len  = RWBitRange(8 to 15)  // Lookup Table 2 Coincidence output pulse length
-      val table1_pulse_len  = RWBitRange(0 to 7)   // Lookup Table 1 Coincidence output pulse lengt
+      val table2_pulse_len  = RWBits(8 to 15)  // Lookup Table 2 Coincidence output pulse length
+      val table1_pulse_len  = RWBits(0 to 7)   // Lookup Table 1 Coincidence output pulse length
     }
 
     /** Trigger Coincidence Lookup Table Address Register */
-    object lookup_table_addr_reg extends RWRegister[Int](0x68) {
-      val mask              = RWBitRange(16 to 31)  // Lookup Table 1 and 2  Channel Trigger Mask
-      val rw_addr           = RWBitRange(0 to 15)  // Lookup Table 1 and 2 Write/Read Address
+    object lookup_table_addr_reg extends RVRegister[Int](0x68) {
+      val mask              = RWBits(16 to 31)  // Lookup Table 1 and 2  Channel Trigger Mask
+      val rw_addr           = RWBits(0 to 15)  // Lookup Table 1 and 2 Write/Read Address
     }
 
     /** Trigger Coincidence Lookup Table Data register */
-    object lookup_table_data_reg extends RWRegister[Int](0x6C) {
+    object lookup_table_data_reg extends RVRegister[Int](0x6C) {
       val table2_val        = RWBit(1)  // Lookup Table 2 Coincidence validation bit
       val table1_val        = RWBit(0)  // Lookup Table 1 Coincidence validation bit
     }
@@ -553,30 +569,40 @@ object SIS3316Memory extends DeviceCompanion[SIS3316Memory] {
       val sel_sum_trig_grp3 = RWBit(18)  // Select internal SUM-Trigger stretched pulse ch19-12
       val sel_sum_trig_grp2 = RWBit(17)  // Select internal SUM-Trigger stretched pulse ch5-8
       val sel_sum_trig_grp1 = RWBit(16)  // Select internal SUM-Trigger stretched pulse ch1-4
-      val int_trig_sel_mask = RWBitRange(0 to 15)  // Select internal Trigger stretched pulse ch 1 to 16
+      val int_trig_sel_mask = RWBits(0 to 15)  // Select internal Trigger stretched pulse ch 1 to 16
+
+      val sel_sum_trig = Map(
+        1 -> sel_sum_trig_grp1, 2 -> sel_sum_trig_grp2,
+        3 -> sel_sum_trig_grp3, 4 -> sel_sum_trig_grp4
+      )
     }
 
 
-    /** ADC FPGA Data Transfer Control Register
-      *
-      * Command bits value:
-      *     * 0 or 1: Reset Transfer FSM
-      *     * 2: Start Read Transfer
-      *     * 3: Start Write Transfer
-      *
-      * Space select bits values:
-      *     * 0: Memory 1 (Ch. 1 and 2, resp. 5 and 6, etc.)
-      *     * 1: Memory 2 (Ch. 3 and 4, resp. 7 and 8, etc.)
-      *     * 2: reserved
-      *     * 3: Statistic Counter (128 32-bit words)
-      */
-    class DataTransferCtlReg(address: MemAddress) extends RWRegister[Int](address) {
-      val cmd               = RWBitRange(30 to 31)  // Cmd
-      val mem_space         = RWBitRange(28 to 29)  // Space select bits
-      val mem_addr          = RWBitRange(0 to 27)  // Memory 32-bit start address (128 Meg x 16 : only address bits 25-0 are used )
+    /** ADC FPGA Data Transfer Control Register */
+    class DataTransferCtlReg(address: MemAddress) extends RVRegister[Int](address) {
+      import DataTransferCtlReg.{Cmd, MemSpaceSel}
 
-      def fullValue(cmd: Int = 0, mem_space: Int = 0, mem_addr: Int = 0) =
-        zero +| (this.cmd, cmd) +| (this.mem_space, mem_space) +| (this.mem_addr, mem_addr)
+      val cmd               = RWBits(30 to 31) withConv Cmd  // Cmd
+      val mem_space_sel     = RWBits(28 to 29) withConv MemSpaceSel  // Space select bits
+      val mem_addr          = RWBits(0 to 27)  // Memory 32-bit start address (128 Meg x 16 : only address bits 25-0 are used )
+
+      def tiedValue(cmd: Cmd.Value, mem_space_sel: MemSpaceSel.Value = MemSpaceSel.Mem1, mem_addr: Int = 0) =
+        zero +| (this.cmd, cmd) +| (this.mem_space_sel, mem_space_sel) +| (this.mem_addr, mem_addr)
+    }
+
+    object DataTransferCtlReg {
+      object Cmd extends Enumeration {
+        val Reset           = Value(0)  // Reset Transfer FSM
+        val Reset_Also      = Value(1)  // 
+        val Read            = Value(2)  // Start Read Transfer
+        val Write           = Value(3)  // Start Write Transfer
+      }
+
+      object MemSpaceSel extends Enumeration {
+        val Mem1            = Value(0)  // Memory 1 (Ch. 1 and 2, resp. 5 and 6, etc.)
+        val Mem2            = Value(1)  // Memory 2 (Ch. 3 and 4, resp. 7 and 8, etc.)
+        val StatCounter     = Value(3)  // Statistic Counter (128 32-bit words)
+      }
     }
 
     /** ADC FPGA Data Transfer Control Register, Ch. 1 to 4 */
@@ -605,7 +631,7 @@ object SIS3316Memory extends DeviceCompanion[SIS3316Memory] {
       val fifo_near_full    = ROBit(28)  // FIFO (read VME FIFO) Data AlmostFull Flag
       val max_no_pend_read  = ROBit(27)  // "max_nof_pending_read_requests"
       val no_pend_read      = ROBit(26)  // "no_pending_read_requests"
-      val int_addr_counter  = ROBitRange(0 to 25)  // Data Transfer internal 32-bit Address counter
+      val int_addr_counter  = ROBits(0 to 25)  // Data Transfer internal 32-bit Address counter
     }
 
     /** ADC FPGA Data Transfer Status Register, Ch. 1 to 4 */
@@ -628,16 +654,16 @@ object SIS3316Memory extends DeviceCompanion[SIS3316Memory] {
 
 
     /** VME FPGA – ADC FPGA Data Link Status register */
-    object vme_fpga_link_adc_prot_status extends RWRegister[Int](0xA0) {
+    object vme_fpga_link_adc_prot_status extends RVRegister[Int](0xA0) {
       class FPGABits(offset: Int) extends SubRegister {
         val frame_err_cl      = RWBit(offset + 7)  // Write: ADC FPGA: Clear Frame_error_latch; Read: ADC FPGA: Frame_error_latch
         val soft_err_cl       = RWBit(offset + 6)  // Write: ADC FPGA: Clear Soft_error_latch; Read: ADC FPGA: Soft_error_latch
         val hard_err_cl       = RWBit(offset + 5)  // Write: ADC FPGA: Clear Hard_error_latch; Read: ADC FPGA: Hard_error_latch
-        val lane_up           = RWBit(offset + 4)  // Write: no; Read: ADC FPGA: Lane_up_flag
-        val ch_up             = RWBit(offset + 3)  // Write: no; Read: ADC FPGA: Channel_up_flag
-        val frame_err         = RWBit(offset + 2)  // Write: no; Read: ADC FPGA: Frame_error_flag
-        val soft_err          = RWBit(offset + 1)  // Write: no; Read: ADC FPGA: Soft_error_flag
-        val hard_err          = RWBit(offset + 0)  // Write: no; Read: ADC FPGA: Hard_error_flag
+        val lane_up           = ROBit(offset + 4)  // Read: ADC FPGA: Lane_up_flag
+        val ch_up             = ROBit(offset + 3)  // Read: ADC FPGA: Channel_up_flag
+        val frame_err         = ROBit(offset + 2)  // Read: ADC FPGA: Frame_error_flag
+        val soft_err          = ROBit(offset + 1)  // Read: ADC FPGA: Soft_error_flag
+        val hard_err          = ROBit(offset + 0)  // Read: ADC FPGA: Hard_error_flag
       }
 
       val fpga4 = new FPGABits(24)  // FPGA 4 bits
@@ -659,10 +685,10 @@ object SIS3316Memory extends DeviceCompanion[SIS3316Memory] {
 
 
     /** Prescaler Output Pulse Divider register */
-    val prescaler_output_pulse_divider_reg = new RWRegister[Int](0xB8)
+    val prescaler_output_pulse_divider_reg = new RVRegister[Int](0xB8)
 
     /** Prescaler Output Pulse Length register */
-    val prescaler_output_pulse_length_reg = new RWRegister[Int](0xBC)
+    val prescaler_output_pulse_length_reg = new RVRegister[Int](0xBC)
 
 
     // ADC key registers
@@ -681,11 +707,16 @@ object SIS3316Memory extends DeviceCompanion[SIS3316Memory] {
     /** Key address: Timestamp Clear */
     val key_timestamp_clear = new KeyRegister[Int](0x41C)
 
+
     /** Key address: Disarm Bankx and Arm Bank1 */
     val key_disarm_and_arm_bank1 = new KeyRegister[Int](0x420)
 
     /** Key address: Disarm Bankx and Arm Bank2 */
     val key_disarm_and_arm_bank2 = new KeyRegister[Int](0x424)
+
+    /** Key address: Disarm Bankx and Arm Banky */
+    val key_disarm_and_arm_bank = Map(1 -> key_disarm_and_arm_bank1, 2 -> key_disarm_and_arm_bank2)
+
 
     /** Key address: Enable Sample Bank Swap Control with NIM Input TI/UI Logic */
     val key_enable_sample_bank_swap_control_with_nim_input = new KeyRegister[Int](0x428)
@@ -707,13 +738,13 @@ object SIS3316Memory extends DeviceCompanion[SIS3316Memory] {
     class FPGARegsRegion(from: MemAddress) extends SubRegion(from, from + 0x001000) {
 
       /** ADC Input Tap Delay Register */
-      object input_tap_delay_reg extends RWRegister[Int](0x0000) {
+      object input_tap_delay_reg extends RVRegister[Int](0x0000) {
         val half_smpl_delay   = RWBit(12)  // Add 1⁄2 Sample Clock period delay bit (since ADC Version V-0250-0004 and V-0125-0004)
         val calib             = RWBit(11)  // Calibration
         val lnk_err_latch_clr = RWBit(10)  // Clear Link Error Latch bits
         val sel_ch_34         = RWBit(9)  // Ch. 3 and 4 select
         val sel_ch_12         = RWBit(8)  // Ch. 1 and 2 select
-        val tap_delay         = RWBitRange(0 to 7)  // Tap delay value (times 40ps, max. 1⁄2 Sample Clock period)
+        val tap_delay         = RWBits(0 to 7)  // Tap delay value (times 40ps, max. 1⁄2 Sample Clock period)
       }
 
       /** ADC Gain and Termination Control Register
@@ -727,7 +758,7 @@ object SIS3316Memory extends DeviceCompanion[SIS3316Memory] {
       object analog_ctrl_reg extends RWRegister[Int](0x0004) {
         class ChBits(offset: Int) extends SubRegister {
           val term_dis        = RWBit(offset + 2)  // Disable 50 Ohm Termination
-          val gain_ctrl       = RWBitRange(offset + 0 to offset + 1)  // Gain Control
+          val gain_ctrl       = RWBits(offset + 0 to offset + 1)  // Gain Control
         }
 
         val ch4 = new ChBits(24)  // Ch. 4 bits
@@ -740,36 +771,37 @@ object SIS3316Memory extends DeviceCompanion[SIS3316Memory] {
 
       /** ADC Offset (DAC) Control Register */
       object dac_offset_ctrl_reg extends WORegister[Int](0x0008) {
-        val crtl_mode         = WOBitRange(29 to 31)  // DAC Ctrl Mode
-        val command           = WOBitRange(24 to 27)  // DAC Command
-        val dac_addr          = WOBitRange(20 to 23)  // DAC Address
-        val data              = WOBitRange(4 to 19)  //  DAC Data
+        val crtl_mode         = WOBits(29 to 31)  // DAC Ctrl Mode
+        val command           = WOBits(24 to 27)  // DAC Command
+        val dac_addr          = WOBits(20 to 23)  // DAC Address
+        val data              = WOBits(4 to 19)  //  DAC Data
+      }
+
+      /** ADC Offset (DAC) Readback Register */
+      object dac_offset_readback_reg extends RORegister[Int](0x0108) {
+        val data              = ROBits(0 to 15)  // DAC Read Data
       }
 
       /** ADC SPI Control Register */
-      object dac_offset_readback_reg extends RORegister[Int](0x0108) {
-        val data              = ROBitRange(0 to 15)  // DAC Read Data
-      }
-
-      /** ADC SPI Control Register
-        *
-        * Command value:
-        *     * 0: no function
-        *     * 1: Reserved (ADC Synch Cmd)
-        *     * 2: Write Cmd (relevant bits: 22 and 20 to 0)
-        *     * 3: Read Cmd (relevant bits: 22 and 20 to 0)
-        */
-      object spi_ctrl_reg extends RWRegister[Int](0x000C) {
-        val command           = RWBitRange(30 to 31)  // Command
+      object spi_ctrl_reg extends RVRegister[Int](0x000C) {
+        val cmd               = RWBits(30 to 31) withConv Cmd  // Command
         val data_out_en       = RWBit(24)  // ADC Data Output Enable
         val sel_ch34          = RWBit(22)  // Select ADCx ch3/ch4 bit
-        val rw_addr           = RWBitRange(8 to 20)  // Address
-        val data              = RWBitRange(0 to 7)  // Write Data
+        val rw_addr           = RWBits(8 to 20)  // Address
+        val data              = RWBits(0 to 7)  // Write Data
+
+        object Cmd extends Enumeration {
+          val NoOp            = Value(0)  // no function
+          val Reserved        = Value(1)  // Reserved (ADC Synch Cmd)
+          val Write           = Value(2)  // Write Cmd (relevant bits: 22 and 20 to 0)
+          val Read            = Value(3)  // Read Cmd (relevant bits: 22 and 20 to 0)
+        }
       }
+
 
       /** ADC SPI Readback Register */
       object spi_readback_reg extends RORegister[Int](0x010C) {
-        val data              = ROBitRange(0 to 15)  // Read Data
+        val data              = ROBits(0 to 15)  // Read Data
       }
 
       /** Event Configuration Register */
@@ -795,18 +827,18 @@ object SIS3316Memory extends DeviceCompanion[SIS3316Memory] {
 
       /** Channel Header ID Register */
       object channel_header_reg extends RWRegister[Int](0x0014) {
-        val id                = RWBitRange(20 to 31)  // Channel Header/ID
+        val id                = RWBits(20 to 31)  // Channel Header/ID
       }
 
       /** End Address Threshold Register */
       object address_threshold_reg extends RWRegister[Int](0x0018) {
         val stop_on_thresh    = RWBit(31)  // "Suppress saving of more Hits/Events if Memory Address Threshold Flag is valid" Enable
-        val add_thresh_value  = RWBitRange(0 to 23)  // End Address Threshold value
+        val addr_thresh_value = RWBits(0 to 23) withConv (ValueConv(1 to 0xff0000) andThen IntMultOffsetConv(scale = 4)) // End Address Threshold value
       }
 
       /** Active Trigger Gate Window Length Register */
       object trigger_gate_window_length_reg extends RWRegister[Int](0x001C) {
-        val length            = RWBitRange(0 to 15)  // Active Trigger Gate Window Length (bit 0 not used)
+        val length            = RWBits(0 to 15)  // Active Trigger Gate Window Length (bit 0 not used)
       }
 
       /** Raw Data Buffer Configuration Register
@@ -815,8 +847,8 @@ object SIS3316Memory extends DeviceCompanion[SIS3316Memory] {
         * data is stored in packets of 2 consecutive samples).
         */
       object raw_data_buffer_config_reg extends RWRegister[Int](0x0020) {
-        val sample_length     = RWBitRange(16 to 31)  // Raw Buffer Sample_Length
-        val start_index       = RWBitRange(0 to 15)  // Raw Buffer_Start_Index
+        val sample_length     = RWBits(16 to 31)  // Raw Buffer Sample_Length
+        val start_index       = RWBits(0 to 15)  // Raw Buffer_Start_Index
       }
 
       /** Pileup Configuration Register
@@ -824,8 +856,8 @@ object SIS3316Memory extends DeviceCompanion[SIS3316Memory] {
         * Note: Bit 0 of repileup_win_len and pileup_win_len is always zero.
         */
       object pileup_config_reg extends RWRegister[Int](0x0024) {
-        val repileup_win_len  = RWBitRange(16 to 31)  // Re-Pileup Window Length
-        val pileup_win_len    = RWBitRange(0 to 15)  // Pileup Window Length
+        val repileup_win_len  = RWBits(16 to 31)  // Re-Pileup Window Length
+        val pileup_win_len    = RWBits(0 to 15)  // Pileup Window Length
       }
 
       /** Pre-Trigger Delay Register
@@ -836,7 +868,7 @@ object SIS3316Memory extends DeviceCompanion[SIS3316Memory] {
         */
       object pre_trigger_delay_reg extends RWRegister[Int](0x0028) {
         val additional        = RWBit(15)  // Additional Delay of Fir Trigger P+G Bit
-        val delay             = RWBitRange(0 to 13)  // Pretrigger Delay
+        val delay             = RWBits(0 to 13)  // Pretrigger Delay
       }
 
       /** Average Configuration Register
@@ -848,9 +880,9 @@ object SIS3316Memory extends DeviceCompanion[SIS3316Memory] {
         * is always zero).
         */
       object average_configuration_reg extends RWRegister[Int](0x002C) {
-        val mode              = RWBitRange(28 to 30)  // Average Mode
-        val pretrig_delay     = RWBitRange(16 to 27)  // Average Pretrigger Delay
-        val sample_len        = RWBitRange(0 to 15)  // Average Sample Length
+        val mode              = RWBits(28 to 30)  // Average Mode
+        val pretrig_delay     = RWBits(16 to 27)  // Average Pretrigger Delay
+        val sample_len        = RWBits(0 to 15)  // Average Sample Length
       }
 
       /** Data Format Configuration Register
@@ -883,8 +915,8 @@ object SIS3316Memory extends DeviceCompanion[SIS3316Memory] {
         * Bit 0 of pretrig_delay and buffer_len is always zero.
         */
       object maw_test_buffer_config_reg extends RWRegister[Int](0x0034) {
-        val pretrig_delay  = RWBitRange(16 to 25)  // MAW Test Buffer Pretrigger Delay
-        val buffer_len  = RWBitRange(0 to 10)  // MAW Test Buffer Length
+        val pretrig_delay  = RWBits(16 to 25)  // MAW Test Buffer Pretrigger Delay
+        val buffer_len  = RWBits(0 to 10)  // MAW Test Buffer Length
       }
 
       /** Internal Trigger Delay Configuration Register
@@ -893,7 +925,7 @@ object SIS3316Memory extends DeviceCompanion[SIS3316Memory] {
         */
       object internal_trigger_delay_config_reg extends RWRegister[Int](0x0038) {
         class ChBits(offset: Int) extends SubRegister {
-          val delay           = RWBitRange(offset + 0 to offset + 7)  // Internal Trigger Delay
+          val delay           = RWBits(offset + 0 to offset + 7)  // Internal Trigger Delay
         }
 
         val ch4 = new ChBits(24)  // Ch. 4 bits
@@ -921,8 +953,8 @@ object SIS3316Memory extends DeviceCompanion[SIS3316Memory] {
 
         val ch = Map(1 -> ch1, 2 -> ch2, 3 -> ch3, 4 -> ch4)
 
-        val gate_len        = RWBitRange(8 to 15)  // Internal Gate Length
-        val coind_gate_len  = RWBitRange(0 to 7)  // Internal Coincidence Gate Length
+        val gate_len        = RWBits(8 to 15)  // Internal Gate Length
+        val coind_gate_len  = RWBits(0 to 7)  // Internal Coincidence Gate Length
       }
 
 
@@ -933,9 +965,9 @@ object SIS3316Memory extends DeviceCompanion[SIS3316Memory] {
         * Valid values for nim_tp_len: 2, 4, 6, ...., 256.
         */
       class FIRTriggerSetupRegister(address: MemAddress) extends RWRegister[Int](address) {
-        val nim_tp_len        = RWBitRange(24 to 31)  // External NIM Out Trigger Pulse Length (streched).
-        val gap_time          = RWBitRange(12 to 23)  // G: Gap time (Flat Time)
-        val peak_time         = RWBitRange(24 to 31)  // P : Peaking time
+        val nim_tp_len        = RWBits(24 to 31)  // External NIM Out Trigger Pulse Length (streched).
+        val gap_time          = RWBits(12 to 23)  // G: Gap time (Flat Time)
+        val peak_time         = RWBits(24 to 31)  // P : Peaking time
       }
 
       /** Ch. 1 FIR Trigger Setup Register */
@@ -962,18 +994,13 @@ object SIS3316Memory extends DeviceCompanion[SIS3316Memory] {
 
       /** Trigger Threshold Register
         *
-        * cfd_ctrl value:
-        *     * 0 or 1: CFD function disabled
-        *     *      2: CFD function enabled with Zero crossing
-        *     *      3: CFD function enabled with 50 percent
-        *
         * Note: High energy suppression only works with CFD enabled.
         */
       class TriggerThresholdRegister(address: MemAddress) extends RWRegister[Int](address) {
-        val trig_en           = RWBit(31)  // High Energy Suppress Trigger Mode
+        val trig_en           = RWBit(31)  // Trigger enable
         val high_e_suppr      = RWBit(30)  // High Energy Suppress Trigger Mode
-        val cfd_ctrl          = RWBitRange(28 to 29)  // CFD control bits
-        val threshold         = RWBitRange(0 to 27)  // Trigger threshold value
+        val cfd_ctrl          = RWBits(28 to 29) withConv CfdCtrl  // CFD control bits
+        val threshold         = RWBits(0 to 27) withConv IntMultOffsetConv(offset = -0x8000000)  // Trigger threshold value
       }
 
       /** Ch. 1 Trigger Threshold Register */
@@ -1002,7 +1029,7 @@ object SIS3316Memory extends DeviceCompanion[SIS3316Memory] {
       class HighETriggerThresholdRegister(address: MemAddress) extends RWRegister[Int](address) {
         val trig_both_edges   = RWBit(31)  // Trigger on both edges enable bit
         val trig_out          = RWBit(28)  // High Energy stretched Trigger Out select bit
-        val threshold         = RWBitRange(0 to 27)  // High Energy Trigger Threshold value
+        val threshold         = RWBits(0 to 27)  // High Energy Trigger Threshold value
       }
 
       /** Ch. 1 High Energy Trigger Threshold Register */
@@ -1044,8 +1071,8 @@ object SIS3316Memory extends DeviceCompanion[SIS3316Memory] {
         */
       object peak_charge_configuration_reg extends RWRegister[Int](0x0094) {
         val peak_charge_en    = RWBit(31)  // Enable Peak/Charge Mode
-        val bl_avg_mode       = RWBitRange(28 to 29)  // Baseline Average Mode
-        val bl_pregate_delay  = RWBitRange(16 to 27)  // Baseline Pregate Delay
+        val bl_avg_mode       = RWBits(28 to 29)  // Baseline Average Mode
+        val bl_pregate_delay  = RWBits(16 to 27)  // Baseline Pregate Delay
       }
 
       /** Extended Raw Data Buffer Configuration Register
@@ -1054,14 +1081,14 @@ object SIS3316Memory extends DeviceCompanion[SIS3316Memory] {
         * zero.
         */
       object extended_raw_data_buffer_config_reg extends RWRegister[Int](0x0098) {
-        val sample_len        = RWBitRange(0 to 24)  // Extended Raw Buffer Sample Length
+        val sample_len        = RWBits(0 to 24)  // Extended Raw Buffer Sample Length
       }
 
 
       /** Accumulator Gate Configuration Register */
       class AccGateConfigRegister(address: MemAddress) extends RWRegister[Int](address) {
-        val gate_len          = RWBitRange(16 to 24)  // Gate Length
-        val gate_start        = RWBitRange(0 to 15)  // Gate Start Index (Address)
+        val gate_len          = RWBits(16 to 24)  // Gate Length
+        val gate_start        = RWBits(0 to 15)  // Gate Start Index (Address)
       }
 
       /** Accumulator Gate 1 Configuration Register */
@@ -1111,11 +1138,11 @@ object SIS3316Memory extends DeviceCompanion[SIS3316Memory] {
         *     * 3: Average of 16
         */
       class FIREnergySetupRegister(address: MemAddress) extends RWRegister[Int](address) {
-        val tau_table         = RWBitRange(30 to 31)  // Tau table selection
-        val tau_factor        = RWBitRange(24 to 29)  // Tau factor
-        val extra_filter      = RWBitRange(22 to 23)  // Extra filter
-        val gap_time          = RWBitRange(12 to 21)  // G: Gap time (Flat Time)
-        val peak_time         = RWBitRange( 0 to 11)  // P : Peaking time
+        val tau_table         = RWBits(30 to 31)  // Tau table selection
+        val tau_factor        = RWBits(24 to 29)  // Tau factor
+        val extra_filter      = RWBits(22 to 23)  // Extra filter
+        val gap_time          = RWBits(12 to 21)  // G: Gap time (Flat Time)
+        val peak_time         = RWBits( 0 to 11)  // P : Peaking time
       }
 
       /** Ch. 1 FIR Energy Setup Register */
@@ -1141,8 +1168,8 @@ object SIS3316Memory extends DeviceCompanion[SIS3316Memory] {
       class EHistConfigRegister(address: MemAddress) extends RWRegister[Int](address){
         val mem_evt_write_dis = RWBit(31)  // Writing Hits/Events into Event Memory Disable bit
         val clear_hist_w_ts   = RWBit(30)  // Histogram clear with Timestamp-Clear Disable bit
-        val energy_div        = RWBitRange(16 to 27)  // Energy Divider (value = 0 is not allowed)
-        val energy_offs       = RWBitRange(8 to 11)  // Energy Subtract Offset
+        val energy_div        = RWBits(16 to 27)  // Energy Divider (value = 0 is not allowed)
+        val energy_offs       = RWBits(8 to 11)  // Energy Subtract Offset
         val pileup_en         = RWBit(1)  // Pileup Enable bit
         val hist_en           = RWBit(0)  // Histogramming Enable bit
       }
@@ -1173,9 +1200,9 @@ object SIS3316Memory extends DeviceCompanion[SIS3316Memory] {
         *     * 0x0250: 250 MHz 14-bit ADC
         */
       object firmware_reg extends RORegister[Int](0x0100) {
-        val fw_type           = ROBitRange(16 to 31)  // Firmware Type
-        val fw_version        = ROBitRange(8 to 15)  // Firmware Version
-        val fw_revision       = ROBitRange(0 to 7)  // Firmware Revision
+        val fw_type           = ROBits(16 to 31) withConv BCDConv  // Firmware Type
+        val fw_version        = ROBits(8 to 15)  // Firmware Version
+        val fw_revision       = ROBits(0 to 7)  // Firmware Revision
       }
 
       /** ADC FPGA Status Register */
@@ -1199,8 +1226,8 @@ object SIS3316Memory extends DeviceCompanion[SIS3316Memory] {
       /** Sample Address Register */
       class SampleAddrRegister(address: MemAddress) extends RORegister[Int](address){
         val ch_offset         = ROBit(25)  // Indicates the Channel Offset
-        val bank              = ROBit(24)  // Indicates the Bank
-        val sample_addr       = ROBitRange(0 to 23)  // Actual Sample Address
+        val bank              = ROBit(24) withConv ((1, 2))  // Indicates the Bank^
+        val sample_addr       = ROBits(0 to 23) withConv IntMultOffsetConv(scale = 4)  // Actual Sample Address
       }
 
 
@@ -1254,7 +1281,7 @@ object SIS3316Memory extends DeviceCompanion[SIS3316Memory] {
     )
   }
 
-  object data extends MemRegion(0x100000, 0x500000) {
+  object dataRegion extends MemRegion(0x100000, 0x500000) {
     dataRegion =>
 
     class FIFORegion(from: MemAddress) extends SubRegion(from, from + 0x0FFFFD) {}
@@ -1264,6 +1291,28 @@ object SIS3316Memory extends DeviceCompanion[SIS3316Memory] {
       2 -> new FIFORegion(0x200000 - dataRegion.from),
       3 -> new FIFORegion(0x300000 - dataRegion.from),
       4 -> new FIFORegion(0x400000 - dataRegion.from)
+    )
+
+
+    def fpgaChFIFOAddrOffset(fpgaCh: Int, bank: Int) = {
+      ( fpgaCh match {
+        case 1 => 0x00000000L
+        case 2 => 0x02000000L
+        case 3 => 0x00000000L
+        case 4 => 0x02000000L
+        case _ => throw new IllegalArgumentException("ADC FPGA channel number must be between 1 and 4")
+      } ) + ( bank match {
+        case 1 => 0x00000000L
+        case 2 => 0x01000000L
+        case _ => throw new IllegalArgumentException("Bank must be 1 or 2")
+      } )
+    }
+
+    val fpgaChMemSpaceSel = Map(
+      1 -> registers.DataTransferCtlReg.MemSpaceSel.Mem1,
+      2 -> registers.DataTransferCtlReg.MemSpaceSel.Mem1,
+      3 -> registers.DataTransferCtlReg.MemSpaceSel.Mem2,
+      4 -> registers.DataTransferCtlReg.MemSpaceSel.Mem2
     )
   }
 }
