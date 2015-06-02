@@ -47,6 +47,8 @@ trait NumType[@specialized(Byte, Short, Int, Long, Float, Double) T] {
   def toLong(x: T): Long
   def toFloat(x: T): Float
   def toDouble(x: T): Double
+
+  val identityConv = ValueConv.IdentityConv[T]()
 }
 
 object NumType {
