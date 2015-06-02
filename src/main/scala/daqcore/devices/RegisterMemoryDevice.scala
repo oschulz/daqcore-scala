@@ -77,32 +77,32 @@ object RegisterMemoryDevice {
     }
 
 
-    implicit class BitSelectionReadAccess(bits: MemRegion#ReadableRegister[Value]#ReadableBitSelection) {
+    implicit class BitSelectionReadAccess(bits: MemRegion#ReadableRegister[Value]#ReadableBitSelection[_]) {
       def read()(implicit ctx: ExecutionContext, numType: IntegerNumType[Value]): Future[Value] =
         memDevice.read(bits.register.absoluteAddress) map bits.getBits
     }
 
-    implicit class RWBitSelectionWriteAccess(bits: MemRegion#RWRegister[Value]#DirectRWBitSelection) {
+    implicit class RWBitSelectionWriteAccess(bits: MemRegion#RWRegister[Value]#DirectRWBitSelection[_]) {
       def write(value: Value)(implicit ctx: ExecutionContext, numType: IntegerNumType[Value]): Future[Unit] =
         memDevice.partialRWWrite(bits.register.absoluteAddress, bits.setBits(numType.zero, value), bits.bitMask)
     }
 
-    implicit class JKBitSelectionWriteAccess(bits: MemRegion#JKRegister[Value]#JKBitSelection) {
+    implicit class JKBitSelectionWriteAccess(bits: MemRegion#JKRegister[Value]#JKBitSelection[_]) {
       def write(value: Value)(implicit ctx: ExecutionContext, numType: IntegerNumType[Value]): Future[Unit] =
         memDevice.partialJKWrite(bits.register.absoluteAddress, bits.setBits(numType.zero, value), bits.bitMask)
     }
 
-    implicit class BitSelectionSyncAccess(bits: MemRegion#MemRegister[Value]#MemBitSelection) {
+    implicit class BitSelectionSyncAccess(bits: MemRegion#MemRegister[Value]#MemBitSelection[_]) {
       def sync()(implicit ctx: ExecutionContext): Future[Unit] = memDevice.getSync()
     }
 
 
-    implicit class BitReadAccess(bit: MemRegion#ReadableRegister[Value]#ReadableBit) {
+    implicit class BitReadAccess(bit: MemRegion#ReadableRegister[Value]#ReadableBit[_]) {
       def read()(implicit ctx: ExecutionContext, numType: IntegerNumType[Value]): Future[Boolean] =
         memDevice.read(bit.register.absoluteAddress) map bit.getBit
     }
 
-    implicit class RWBitWriteAccess(bit: MemRegion#RWRegister[Value]#RWBit) {
+    implicit class RWBitWriteAccess(bit: MemRegion#RWRegister[Value]#DirectRWSingleBit[_]) {
       def set()(implicit ctx: ExecutionContext, numType: IntegerNumType[Value]): Future[Unit] =
         memDevice.partialRWWrite(bit.register.absoluteAddress, bit.setBit(numType.zero), bit.bitMask)
 
@@ -113,7 +113,7 @@ object RegisterMemoryDevice {
         if (value) set() else clear()
     }
 
-    implicit class JKBitWriteAccess(bit: MemRegion#JKRegister[Value]#JKBit) {
+    implicit class JKBitWriteAccess(bit: MemRegion#JKRegister[Value]#JKSingleBit[_]) {
       def set()(implicit ctx: ExecutionContext, numType: IntegerNumType[Value]): Future[Unit] =
         memDevice.partialJKWrite(bit.register.absoluteAddress, bit.setBit(numType.zero), bit.bitMask)
 
@@ -124,7 +124,7 @@ object RegisterMemoryDevice {
         if (value) set() else clear()
     }
 
-    implicit class BitSyncAccess(bit: MemRegion#MemRegister[Value]#MemSingleBit) {
+    implicit class BitSyncAccess(bit: MemRegion#MemRegister[Value]#MemSingleBit[_]) {
       def sync()(implicit ctx: ExecutionContext): Future[Unit] = memDevice.getSync()
     }
   }
@@ -133,13 +133,8 @@ object RegisterMemoryDevice {
   implicit class ImplicitFunctions[@specialized(Byte, Short, Int, Long) Value](val memDevice: RegisterMemoryDevice[Value]) {
     def registerAccess = new RegisterAccess(memDevice)
 
+
     def read(register: MemRegion#ReadableRegister[Value]): Future[Value] = memDevice.read(register.absoluteAddress)
-
-    def read(bits: MemRegion#ReadableRegister[Value]#ReadableBitSelection)(implicit ctx: ExecutionContext, numType: IntegerNumType[Value]): Future[Value] =
-      memDevice.read(bits.register.absoluteAddress) map bits.getBits
-
-    def read(bit: MemRegion#ReadableRegister[Value]#ReadableBit)(implicit ctx: ExecutionContext, numType: IntegerNumType[Value]): Future[Boolean] =
-      memDevice.read(bit.register.absoluteAddress) map bit.getBit
 
     def write(value: MemRegion#MemRegister[Value]#FullValue)(implicit ctx: ExecutionContext, numType: IntegerNumType[Value]): Future[Unit] =
       memDevice.write(value.register.absoluteAddress, value.value)
@@ -150,5 +145,21 @@ object RegisterMemoryDevice {
         case register: MemRegion#JKRegister[Value] => memDevice.partialJKWrite(register.absoluteAddress, value.value, value.bitMask)
       }
     }
+
+
+    def readRaw(bits: MemRegion#ReadableRegister[Value]#ReadableBitSelection[_])(implicit ctx: ExecutionContext, numType: IntegerNumType[Value]): Future[Value] =
+      memDevice.read(bits.register.absoluteAddress) map bits.getBits
+
+    def readRaw(bit: MemRegion#ReadableRegister[Value]#ReadableBit[_])(implicit ctx: ExecutionContext, numType: IntegerNumType[Value]): Future[Boolean] =
+      memDevice.read(bit.register.absoluteAddress) map bit.getBit
+
+    def readConv[@specialized(Int, Long, Float, Double)  U](bits: MemRegion#ReadableRegister[Value]#ReadableBitSelection[U])(implicit ctx: ExecutionContext, numType: IntegerNumType[Value]): Future[U] =
+      memDevice.read(bits.register.absoluteAddress) map bits.getConvBits
+
+    def writeRaw(bits: MemRegion#PartiallyWriteableRegister[Value]#WriteableBitSelection[_], value: Value)(implicit ctx: ExecutionContext, numType: IntegerNumType[Value]): Future[Unit] =
+      partialWrite(bits ~/> value)
+
+    def writeConv[@specialized(Int, Long, Float, Double)  U](bits: MemRegion#PartiallyWriteableRegister[Value]#WriteableBitSelection[U], value: U)(implicit ctx: ExecutionContext, numType: IntegerNumType[Value]): Future[Unit] =
+      partialWrite(bits ~> value)
   }
 }
