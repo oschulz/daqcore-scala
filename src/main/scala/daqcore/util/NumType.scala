@@ -48,7 +48,7 @@ trait NumType[@specialized(Byte, Short, Int, Long, Float, Double) T] {
   def toFloat(x: T): Float
   def toDouble(x: T): Double
 
-  val identityConv = ValueConv.IdentityConv[T]()
+  def identityConv: ValueConv[T, T]
 }
 
 object NumType {
@@ -171,6 +171,8 @@ object IntegerNumType {
     def toFloat(x: Byte) = x.toFloat
     def toDouble(x: Byte) = x.toDouble
 
+    val identityConv = ValueConv.IdentityConv[Byte]()
+
     def modulo(x: Byte, y: Byte) = (x % y).toByte
 
     def nBytes = 1
@@ -221,6 +223,8 @@ object IntegerNumType {
     def toLong(x: Short) = x.toLong
     def toFloat(x: Short) = x.toFloat
     def toDouble(x: Short) = x.toDouble
+
+    val identityConv = ValueConv.IdentityConv[Short]()
 
     def modulo(x: Short, y: Short) = (x % y).toShort
 
@@ -273,6 +277,8 @@ object IntegerNumType {
     def toFloat(x: Int) = x.toFloat
     def toDouble(x: Int) = x.toDouble
 
+    val identityConv = ValueConv.IdentityConv[Int]()
+
     def modulo(x: Int, y: Int) = x % y
 
     def nBytes = 4
@@ -317,6 +323,8 @@ object IntegerNumType {
     def toLong(x: Long) = x
     def toFloat(x: Long) = x.toFloat
     def toDouble(x: Long) = x.toDouble
+
+    val identityConv = ValueConv.IdentityConv[Long]()
 
     def modulo(x: Long, y: Long) = x % y
 
@@ -368,6 +376,8 @@ object RealNumType {
     def toLong(x: Float) = x.toLong
     def toFloat(x: Float) = x
     def toDouble(x: Float) = x.toDouble
+
+    val identityConv = ValueConv.IdentityConv[Float]()
   }
 
   implicit object DoubleNumType extends RealNumType[Double] {
@@ -392,5 +402,7 @@ object RealNumType {
     def toLong(x: Double) = x.toLong
     def toFloat(x: Double) = x.toFloat
     def toDouble(x: Double) = x
+
+    val identityConv = ValueConv.IdentityConv[Double]()
   }
 }
