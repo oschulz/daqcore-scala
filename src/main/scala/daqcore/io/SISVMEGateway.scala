@@ -428,7 +428,7 @@ object SIS3316VMEGateway extends IOResourceCompanion[SIS3316VMEGateway] {
 
     case class UDPActionManager(udp: UDPClient, log: Logging.Logger) {
       protected var nextPkgId: Byte = 0
-      protected val defaultMaxActiveUDPRequests = 16
+      protected val defaultMaxActiveUDPRequests = 16  // Pipelined requests don't seem to work right yet
       protected var currentMaxActiveUDPRequests = defaultMaxActiveUDPRequests
       protected val activeUDPRequests = collection.mutable.HashMap[Byte, UDPRequest]()
       protected val waitingUDPActions = collection.mutable.Queue[UDPAction]()
@@ -600,6 +600,8 @@ object SIS3316VMEGateway extends IOResourceCompanion[SIS3316VMEGateway] {
       require(nBytes % sizeOfInt == 0)
       def cmd = 0x30
 
+      override def canBePipelined: Boolean = false
+
       def expectedResultSize = nBytes
       protected val recvData = collection.mutable.HashMap[Int, ByteString]()
       var recvDataTotalSize: Int = 0
@@ -654,6 +656,8 @@ object SIS3316VMEGateway extends IOResourceCompanion[SIS3316VMEGateway] {
       require ((data.size >= 1) && (data.size <= maxShortValue + 1))
       require(data.size % sizeOfInt == 0)
       def cmd = 0x31
+
+      override def canBePipelined: Boolean = false
 
       protected def putReqContent(builder: ByteStringBuilder) = {
         builder.sizeHint(sizeOfShort + sizeOfInt + data.size)
