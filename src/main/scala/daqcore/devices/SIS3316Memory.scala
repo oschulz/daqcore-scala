@@ -198,6 +198,9 @@ object SIS3316Memory extends DeviceCompanion[SIS3316Memory] {
 
       def exec() {
         import daqcore.defaults.defaultTimeout
+
+        registerCache = MemValues[Address, Int]() // clear register cache
+
         val initialReadAddrs = reads.addrs filter {addr => !registerCache.contains(addr)}
         val readAddrs = rwWrites.memValues.values.foldLeft(initialReadAddrs){ case (readAddrs, (writeAddr, writeValue))=>
           if (writeValue.isMasked && !registerCache.contains(writeAddr)) readAddrs + writeAddr
@@ -223,7 +226,6 @@ object SIS3316Memory extends DeviceCompanion[SIS3316Memory] {
         }
         val combinedWrites = combinedWritesBuilder.result
         if (!combinedWrites.isEmpty) {
-          registerCache = MemValues(combinedWrites.foldLeft(registerCache.values){ _ - _._1 })
           val writeResult = vmeBus.writeIntRegs(combinedWrites, regWriteMode, deviceByteOrder)
           writeResult.get
         }
