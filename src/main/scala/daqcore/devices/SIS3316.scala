@@ -33,6 +33,13 @@ import daqcore.io.memory._
 trait SIS3316 extends Device {
   def memory: Future[SIS3316Memory]
 
+  def serNo(): Future[String]
+  def internalTemperature(): Future[Double]
+
+  def startFIFOReadTransfer(ch: Int, bank: Int, relAddr: Int = 0): Future[Unit]
+  def resetFIFO(ch: Int): Future[Unit]
+  def readFIFOData(ch: Int, nWords: Int): Future[ByteString]
+
   //def vmeFWVersion: Future[String]
 }
 
@@ -40,15 +47,64 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
   def impl = { case uri => new SIS3316Impl(uri.toString) }
 
   class SIS3316Impl(vmeURI: String) extends SIS3316
-    with CloseableTAImpl with SyncableImpl
+    with CloseableTAImpl with SyncableImpl with LocalECTypedActorImpl
   {
+    import SIS3316Impl._
+    val registers = SIS3316Memory.registers
+
     val mem = SIS3316Memory(vmeURI, "memory")
 
     def memory = successful(mem)
 
 
-    def identity = successful("SIS3316")
+    def identity = localExec( async {
+      val modId = mem.readConv(registers.modid.module_id)
+      val fwType = mem.readConv(registers.modid.module_id)
+      s"SIS${await(modId)}-${await(fwType)}"
+    } (_) )
+
+
+    def serNo = mem.read(registers.serial_number_reg) map { x => x.toString }
+
+    def internalTemperature() = mem.readConv(registers.internal_temperature_reg.temperature)
+
+
+    def startFIFOReadTransfer(ch: Int, bank: Int, relAddr: Int) = {
+      import SIS3316Memory.registers.DataTransferCtlReg.Cmd.{Read => fifoReadCmd}
+      import SIS3316Memory.dataRegion.{fpgaChMemSpaceSel, fpgaChFIFOAddrOffset}
+
+      val group = fpgaNum(ch)
+      val grpCh = fpgaCh(ch)
+      mem.sync()
+      mem.write(registers.data_transfer_ctrl_reg(group).tiedValue(
+        cmd = fifoReadCmd, mem_space_sel = fpgaChMemSpaceSel(grpCh),
+        mem_addr = fpgaChFIFOAddrOffset(grpCh, bank).toInt + relAddr
+      ))
+    }
+
+
+    def resetFIFO(ch: Int) = {
+      import SIS3316Memory.registers.DataTransferCtlReg.Cmd.{Reset => fifoResetCmd}
+      val group = fpgaNum(ch)
+      mem.sync()
+      mem.write(registers.data_transfer_ctrl_reg(group).tiedValue(cmd = fifoResetCmd))
+    }
+
+
+    def readFIFOData(ch: Int, nBytes: Int) = {
+      val group = fpgaNum(ch)
+      val readAddr = SIS3316Memory.dataRegion.fifo(group).from
+      mem.sync()
+      mem.readBulk(readAddr, nBytes)
+    }
 
     ///def vmeFWVersion = ...
+  }
+
+
+  object SIS3316Impl {
+    def fpgaNum(devCh: Int) = (devCh - 1) / 4 + 1
+
+    def fpgaCh(devCh: Int) = (devCh - 1) % 4 + 1
   }
 }
