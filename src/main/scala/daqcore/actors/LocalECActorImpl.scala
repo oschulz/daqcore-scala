@@ -24,7 +24,15 @@ import akka.actor.ActorRef
 trait LocalECActorImpl extends AbstractActorImpl {
   import LocalECActorImpl._
 
-  val localExecContext = new LocalEC(selfRef)
+  protected val localExecContext = new LocalEC(selfRef)
+
+  protected def localExec[T](futureExec: (ExecutionContext => Future[T])): Future[T] =
+    monitor(futureExec(localExecContext))
+
+  protected def monitor[T](future: Future[T]) = {
+    future.onFailure(throwAll)(localExecContext)
+    future
+  }
 
   protected def recvLocalExec: PartialFunction[Any, Unit] = {
     case msg: LocalExecMsg => msg match {
@@ -34,11 +42,6 @@ trait LocalECActorImpl extends AbstractActorImpl {
       case LocalExecFailed(cause) =>
         throw cause
     }
-  }
-
-  protected def monitor[T](future: Future[T]) = {
-    future.onFailure(throwAll)(localExecContext)
-    future
   }
 }
 
