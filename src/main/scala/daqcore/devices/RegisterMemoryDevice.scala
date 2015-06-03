@@ -139,6 +139,9 @@ object RegisterMemoryDevice {
     def write(value: MemRegion#MemRegister[Value]#FullValue)(implicit ctx: ExecutionContext, numType: IntegerNumType[Value]): Future[Unit] =
       memDevice.write(value.register.absoluteAddress, value.value)
 
+    def write(register: MemRegion#KeyRegister[Value])(implicit ctx: ExecutionContext, numType: IntegerNumType[Value]): Future[Unit] =
+      memDevice.write(register.absoluteAddress, register.writeValue)
+
     def partialWrite(value: MemRegion#PartiallyWriteableRegister[Value]#PartialValue)(implicit ctx: ExecutionContext, numType: IntegerNumType[Value]): Future[Unit] = {
       value.register match {
         case register: MemRegion#RWRegister[Value] => memDevice.partialRWWrite(register.absoluteAddress, value.value, value.bitMask)
