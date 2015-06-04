@@ -1315,4 +1315,47 @@ object SIS3316Memory extends DeviceCompanion[SIS3316Memory] {
       4 -> registers.DataTransferCtlReg.MemSpaceSel.Mem2
     )
   }
+
+  object eventFormat {
+    object evtDataHdr1 extends SimpleRegister[Int] {
+      val timestamp_high    = RegBits(16 to 31)  // Timestamp, high bits
+      val ch_id             = RegBits( 4 to 15)  // Channel ID
+      val have_energy       = RegBit(3)  // Event contains Start Energy MAW value and Max. Energy MAW value
+      val have_ft_maw       = RegBit(2)  // Event contains 3 x Fast Trigger MAW values (max value, value before Trigger, value with Trigger)
+      val have_acc_78       = RegBit(1)  // Event contains 2 x Accumulator values (Gates 7,8)
+      val have_ph_acc16     = RegBit(0)  // Event contains Peak High values and 6 x Accumulator values (Gates 1,2, ..,6)
+    }
+
+    object evtDataHdr2 extends SimpleRegister[Int] {
+      val timestamp_low     = RegBits(0 to 31)  // Timestamp, low bits
+    }
+
+    object evtDataPeakHeight extends SimpleRegister[Int] {
+      val peak_heigh_idx    = RegBits(16 to 31)  // Index of Peakhigh value
+      val peak_heigh_val    = RegBits( 0 to 15)  // Peakhigh value
+    }
+
+    object evtDataAccSumG1 extends SimpleRegister[Int] {
+      val overflow_flag     = RegBit(24 + 7)  // Overflow flag
+      val underflow_flag    = RegBit(24 + 6)  // Underflow flag
+      val repileup_flag     = RegBit(24 + 5)  // RePileup flag
+      val pileup_flag       = RegBit(24 + 4)  // Pileup flag
+      val acc_sum_g1        = RegBits(0 to 23)  // Accumulator sum of Gate 1
+    }
+
+    object evtDataAccSum extends SimpleRegister[Int] {
+      val acc_sum           = RegBits(0 to 27)  // Accumulator sum of Gate (for Gates 2 to 8)
+    }
+
+    object evtDataMAWValue extends SimpleRegister[Int] {
+      val maw_val           = RegBits(0 to 27)  // MAW value (maximum or value before or after trigger)
+    }
+
+    object evtSamplesHdr extends SimpleRegister[Int] {
+      val const_tag         = RegBits(28 to 31)  // Always 0xE
+      val maw_test_flag     = RegBit(27)  // MAW Test Flag
+      val any_pileup_flag   = RegBit(26)  // RePileup or Pileup Flag
+      val n_sample_words    = RegBits(0 to 25) // number of raw samples (x 2 samples, 32-bit words)
+    }
+  }
 }
