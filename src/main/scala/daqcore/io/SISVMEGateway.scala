@@ -209,17 +209,17 @@ object SIS3316VMEGateway extends IOResourceCompanion[SIS3316VMEGateway] {
 
 
     def readADCFifoRaw(address: VMEAddress, nBytes: Int) = {
-      require ((nBytes > 0) && (nBytes % sizeOfInt == 0))
-
-      val udpRespHeaderSize = 45 // According to SIS3316 docs - why not 28 (17 + 8 + 3)?
-      val maxNRespDataFrames = 15
-
-      val maxNBytesPerReq = math.min(
-        maxNRespDataFrames * (maxUDPRespPkgSize - udpRespHeaderSize),
-        (maxShortValue + 1) * sizeOfInt
-      ) / sizeOfInt * sizeOfInt
+      require (nBytes % sizeOfInt == 0)
 
       if (nBytes >= 1) {
+        val udpRespHeaderSize = 45 // According to SIS3316 docs - why not 28 (17 + 8 + 3)?
+        val maxNRespDataFrames = 15
+
+        val maxNBytesPerReq = math.min(
+          maxNRespDataFrames * (maxUDPRespPkgSize - udpRespHeaderSize),
+          (maxShortValue + 1) * sizeOfInt
+        ) / sizeOfInt * sizeOfInt
+
         if (nBytes <= maxNBytesPerReq) {
           val result = Promise[ByteString]()
           udpActionManager.addRequest( UDPADCFifoReadRaw(address, nBytes, result) )
