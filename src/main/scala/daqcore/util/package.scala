@@ -127,6 +127,18 @@ def hex(v: Any) : String = {
 }
 
 
+def phex(v: Any) : String = {
+  v match {
+    case x: Byte     =>  "0x%02x".format(x)
+    case x: Short    =>  "0x%04x".format(x)
+    case x: Int      =>  "0x%08x".format(x)
+    case x: Long     =>  "0x%016x".format(x)
+    case x: Boolean  =>  if (x) "0x1" else "0x0"
+    case _ => throw new IllegalArgumentException("hex() does not support %s".format(classTagFrom(v)))
+  }
+}
+
+
 def floorLog2(x: Int) = 8 * sizeOf[Int] - 1 - java.lang.Integer.numberOfLeadingZeros(x)
 def ceilLog2(x: Int) = 8 * sizeOf[Int] - java.lang.Integer.numberOfLeadingZeros(x-1)
 
