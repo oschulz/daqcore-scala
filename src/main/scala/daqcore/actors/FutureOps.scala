@@ -23,7 +23,7 @@ import scala.concurrent.Future
 import akka.util.Timeout
 
 
-class FutureOps[A](future: Future[A]) {
+class FutureOps[A](val future: Future[A]) extends AnyVal {
   def get(implicit timeout: Timeout): A = {
     scala.concurrent.Await.result(future, timeout.duration)
   }
@@ -33,5 +33,5 @@ class FutureOps[A](future: Future[A]) {
     catch { case e: java.util.concurrent.TimeoutException => None }
   }
 
-  override def toString = "FutureOps(%s)".format(future.toString)
+  def v = future.value.get.get
 }
