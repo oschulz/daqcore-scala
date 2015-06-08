@@ -172,12 +172,13 @@ object SIS3316VMEGateway extends IOResourceCompanion[SIS3316VMEGateway] {
     def readADCRegs(addrs: Seq[VMEAddress]) = {
       require(addrs forall { ! isVMEInterfaceReg(_) })
       if (addrs.size >= 1) {
-        if (addrs.size <= 64) {
+        if (addrs.size <= 1) {
+            // Should be able to read 64 addresses at once, but doesn't seem to work correctly
             val result = Promise[ArrayVec[Int]]()
             udpActionManager.addRequest( UDPADCRegsRead(addrs, result) )
             result.future
           } else {
-            Future.sequence(addrs.grouped(64).toSeq map readADCRegs) map { results =>
+            Future.sequence(addrs.grouped(1).toSeq map readADCRegs) map { results =>
               val builder = ArrayVec.newBuilder[Int]
               results foreach { builder ++= _ }
               builder.result
@@ -192,12 +193,13 @@ object SIS3316VMEGateway extends IOResourceCompanion[SIS3316VMEGateway] {
     def writeADCRegs(addrValues: Seq[(VMEAddress, Int)]) = {
       require(addrValues forall { case(a, v) => ! isVMEInterfaceReg(a) })
       if (addrValues.size >= 1) {
-        if (addrValues.size <= 64) {
+        if (addrValues.size <= 1) {
+            // Should be able to write 64 addresses at once, but doesn't seem to work correctly
             val result = Promise[Unit]()
             udpActionManager.addRequest( UDPADCRegsWrite(addrValues, result) )
             result.future
           } else {
-            Future.sequence(addrValues.grouped(64).toSeq map writeADCRegs) map
+            Future.sequence(addrValues.grouped(1).toSeq map writeADCRegs) map
               { results => {} }
           }
       } else {
