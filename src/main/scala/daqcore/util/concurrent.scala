@@ -17,28 +17,33 @@
 
 package daqcore.util
 
-import scala.language.implicitConversions
+import scala.language.{implicitConversions, higherKinds}
 import scala.concurrent.{Future, ExecutionContext}
+import scala.collection.generic.CanBuildFrom
+import scala.collection.breakOut
 
 
 package object concurrent {
-  implicit def combineFutureSeq1[T](xs: Seq[Future[T]])(implicit executor: ExecutionContext): Future[Seq[T]] =
-    Future.sequence(xs)
+  implicit def combineFutureSeq1[T, M[X] <: Traversable[X]]
+    (xs: M[Future[T]]) (implicit
+      cbf: CanBuildFrom[M[Future[T]], T, M[T]],
+      executor: ExecutionContext
+    ): Future[M[T]] = Future.sequence(xs)
 
   implicit def combineFutureSeq2[T](xs: Seq[Seq[Future[T]]])(implicit executor: ExecutionContext): Future[Seq[Seq[T]]] =
-    combineFutureSeq1(xs map combineFutureSeq1)
+    combineFutureSeq1(xs map { x => combineFutureSeq1(x) })
 
   implicit def combineFutureSeq3[T](xs: Seq[Seq[Seq[Future[T]]]])(implicit executor: ExecutionContext): Future[Seq[Seq[Seq[T]]]] =
     combineFutureSeq1(xs map combineFutureSeq2)
 
 
-  implicit def combineUnitFutureSeq1(xs: Seq[Future[Unit]])(implicit executor: ExecutionContext): Future[Unit] =
+  implicit def combineUnitFutureSeq1(xs: Traversable[Future[Unit]])(implicit executor: ExecutionContext): Future[Unit] =
     Future.sequence(xs) map { _ => {} }
 
-  implicit def combineUnitFutureSeq2(xs: Seq[Seq[Future[Unit]]])(implicit executor: ExecutionContext): Future[Unit] =
+  implicit def combineUnitFutureSeq2(xs: Traversable[Traversable[Future[Unit]]])(implicit executor: ExecutionContext): Future[Unit] =
     combineUnitFutureSeq1(xs map combineUnitFutureSeq1)
 
-  implicit def combineUnitFutureSeq3(xs: Seq[Seq[Seq[Future[Unit]]]])(implicit executor: ExecutionContext): Future[Unit] =
+  implicit def combineUnitFutureSeq3(xs: Traversable[Traversable[Traversable[Future[Unit]]]])(implicit executor: ExecutionContext): Future[Unit] =
     combineUnitFutureSeq1(xs map combineUnitFutureSeq2)
 
 
