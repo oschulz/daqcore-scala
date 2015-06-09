@@ -136,6 +136,9 @@ object RegisterMemoryDevice {
 
     def read(register: MemRegion#ReadableRegister[Value]): Future[Value] = memDevice.read(register.absoluteAddress)
 
+    def write(register: MemRegion#WriteableRegister[Value], value: Value)(implicit ctx: ExecutionContext, numType: IntegerNumType[Value]): Future[Unit] =
+      memDevice.write(register.absoluteAddress, value)
+
     def write(value: MemRegion#MemRegister[Value]#FullValue)(implicit ctx: ExecutionContext, numType: IntegerNumType[Value]): Future[Unit] =
       memDevice.write(value.register.absoluteAddress, value.value)
 
