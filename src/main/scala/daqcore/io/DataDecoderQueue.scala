@@ -53,6 +53,11 @@ class DataDecoderQueue {
   
   def pendingChunks = dataQueue.size
   def pendingDecoders = decoderQueue.size
+
+  def clear(): Unit = {
+    dataQueue.clear()
+    decoderQueue.clear()
+  }
 }
 
 

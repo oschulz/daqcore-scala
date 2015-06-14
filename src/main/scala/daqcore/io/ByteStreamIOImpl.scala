@@ -71,19 +71,25 @@ trait ByteStreamOutputImpl extends ByteStreamOutput with CloseableTAImpl
 trait ByteStreamInputImpl extends ByteStreamInput with CloseableTAImpl {
   val inputQueue = DataDecoderQueue()
 
+  protected def postRecvRequest(): Unit = {}
+
   def recv(): Future[ByteString] = recv(Decoder.takeAny)
   def recv(receiver: ActorRef, repeat: Boolean): Unit = recv(receiver, Decoder.takeAny, repeat)
   
   def recv[A](decoder: Decoder[A]): Future[A] = {
     val result = Promise[A]()
     inputQueue pushDecoder { decoder map { result success _ } }
+    postRecvRequest()
     result.future
   }
 
-  def recv(receiver: ActorRef, decoder: Decoder[_], repeat: Boolean): Unit = inputQueue pushDecoder {
-    val action = decoder map { receiver ! _ }
-    if (repeat) Decoder.repeat { action }
-    else action
+  def recv(receiver: ActorRef, decoder: Decoder[_], repeat: Boolean): Unit = {
+    inputQueue pushDecoder {
+      val action = decoder map { receiver ! _ }
+      if (repeat) Decoder.repeat { action }
+      else action
+    }
+    postRecvRequest()
   }
 }
 
