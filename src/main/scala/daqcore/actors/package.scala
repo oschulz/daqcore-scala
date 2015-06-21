@@ -28,6 +28,8 @@ import daqcore.util.Timeout
 
 
 package object actors {
+  type StateCount = Long
+
   object TypedActorTraits {
     type Supervisor = TypedActor.Supervisor
     type PreStart = TypedActor.PreStart

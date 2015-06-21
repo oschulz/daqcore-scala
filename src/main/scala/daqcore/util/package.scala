@@ -36,6 +36,9 @@ object ByteStringBuilder { def apply() = ByteString.newBuilder }
 type Timeout = akka.util.Timeout
 val  Timeout = akka.util.Timeout
 
+type TimeStamp = Double
+type NanoTime = Long
+
 implicit def tupleToPropKeyValTuple[K, V](x: (K, V)) (implicit pathConv: PropPath.From[K], valConv: PropVal.From[V]): (PropPath, PropVal) = pathConv.from(x._1) -> valConv.from(x._2)
 implicit def tupleToPropKeyValTuple[K](x: (K, PropVal)) (implicit pathConv: PropPath.From[K]): (PropPath, PropVal) = pathConv.from(x._1) -> x._2
 implicit def tupleToPropKeyValTuple[V](x: (PropPath, V)) (implicit valConv: PropVal.From[V]): (PropPath, PropVal) = x._1 -> valConv.from(x._2)
