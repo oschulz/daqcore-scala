@@ -129,6 +129,7 @@ trait SIS3316 extends Device {
   def readFIFOData(ch: Int, nWords: Int): Future[ByteString]
 
   def event_format_get(ch: Ch = Ch(1 to 16)): Future[ChV[EventFormat]]
+  def event_format_set(chV: ChV[EventFormat]): Future[Unit]
 
   def sampling_status: Future[SamplingStatus]
 
@@ -221,7 +222,7 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
 
 
     case class EventFormat(
-      save_maw_test: Option[Boolean] = None,  // Save (Energy or Trigger) MAW Test Data
+      save_maw_values: Option[Boolean] = None,  // Save (Energy or Trigger) MAW Test Data
       save_energy: Boolean = false,  // Save energy values (at trigger and maximum during trigger window)
       save_ft_maw: Boolean = false,  // Save fast trigger MAW values (max value, value before Trigger, value with Trigger)
       save_acc_78: Boolean = false,  // Save accumulator values for gates 7 and 8
@@ -242,7 +243,7 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
           (if (save_energy) 2 else 0) +
           1 +
           nSamples / 2 +
-          (if (save_maw_test != None) nMAWValues else 0)
+          (if (save_maw_values != None) nMAWValues else 0)
 
         nEvtWords * sizeOfInt
       }
@@ -571,7 +572,7 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
         val formatConfReg = registers.fpga(group).dataformat_config_reg.ch(grpCh)
 
         val sel_test_buf = getMemConv(formatConfReg.sel_test_buf)
-        val save_maw_test = getMemConv(formatConfReg.save_maw_test)
+        val save_maw_values = getMemConv(formatConfReg.save_maw_values)
         val save_energy = getMemConv(formatConfReg.save_energy)
         val save_ft_maw = getMemConv(formatConfReg.save_ft_maw)
         val save_acc_78 = getMemConv(formatConfReg.save_acc_78)
@@ -582,12 +583,12 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
         val nMAWValues = getMemConv(fpgaRegs.maw_test_buffer_config_reg.buffer_len)
 
         await(Seq(
-          sel_test_buf, save_maw_test, save_energy, save_ft_maw, save_acc_78, save_ph_acc16,
+          sel_test_buf, save_maw_values, save_energy, save_ft_maw, save_acc_78, save_ph_acc16,
           nSamples, nMAWValues
         ))
 
         ch -> EventFormat(
-          save_maw_test = if (save_maw_test.v) Some(sel_test_buf.v) else None,
+          save_maw_values = if (save_maw_values.v) Some(sel_test_buf.v) else None,
           save_energy = save_energy.v,
           save_ft_maw = save_ft_maw.v,
           save_acc_78 = save_acc_78.v,
@@ -598,6 +599,31 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
       } (_) )
 
       ChV.future(for (channel <- ch.toSeq) yield getSingle(channel))
+    }
+
+
+    def event_format_set(chV: ChV[EventFormat]) = {
+      def setSingle(ch: Int, format: EventFormat): Future[Unit] = {
+        // TODO: Add support for extended sample length
+        // TODO: Add support for averaging value data format
+
+        val (group, grpCh) = fpgaNumCh(ch)
+        val fpgaRegs = registers.fpga(group)
+        val formatConfReg = registers.fpga(group).dataformat_config_reg.ch(grpCh)
+
+        Seq(
+          setMemConv(formatConfReg.sel_test_buf, format.save_maw_values.getOrElse(false)),
+          setMemConv(formatConfReg.save_maw_values, format.save_maw_values != None),
+          setMemConv(formatConfReg.save_energy, format.save_energy),
+          setMemConv(formatConfReg.save_ft_maw, format.save_ft_maw),
+          setMemConv(formatConfReg.save_acc_78, format.save_acc_78),
+          setMemConv(formatConfReg.save_ph_acc16, format.save_ph_acc16),
+          setMemConv(fpgaRegs.raw_data_buffer_config_reg.sample_length, format.nSamples),
+          setMemConv(fpgaRegs.maw_test_buffer_config_reg.buffer_len, format.nMAWValues)
+        )
+      }
+
+      for ((channel, format) <- chV.toSeq) yield setSingle(channel, format)
     }
 
 
