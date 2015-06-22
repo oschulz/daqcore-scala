@@ -892,7 +892,7 @@ object SIS3316Memory extends DeviceCompanion[SIS3316Memory] {
       object dataformat_config_reg extends RWRegister[Int](0x0030) {
         class ChBits(offset: Int) extends SubRegister {
           val sel_test_buf      = RWBit(offset + 5)  // Select Energy MAW Test Buffer
-          val save_maw_test     = RWBit(offset + 4)  // Save MAW Test Buffer Enable
+          val save_maw_values   = RWBit(offset + 4)  // Save MAW Test Buffer Enable
           val save_energy       = RWBit(offset + 3)  // Save Start Energy MAW value and Max. Energy MAW value
           val save_ft_maw       = RWBit(offset + 2)  // Save 3 x Fast Trigger MAW values (max value, value before Trigger, value with Trigger)
           val save_acc_78       = RWBit(offset + 1)  // Save 2 x Accumulator values (Gates 7,8)
