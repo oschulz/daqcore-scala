@@ -45,6 +45,9 @@ trait SIS3316 extends Device {
   def trigger_intern_enabled_get(ch: Ch = allChannels): Future[ChV[Boolean]]
   def trigger_intern_enabled_set(chV: ChV[Boolean]): Future[Unit]
 
+  def trigger_gate_window_length_get(ch: Ch = allChannels): Future[ChV[Int]]
+  def trigger_gate_window_length_set(chV: ChV[Int]): Future[Unit]
+
   def trigger_threshold_get(ch: Ch = allChannels): Future[ChV[Int]]
   def trigger_threshold_set(chV: ChV[Int]): Future[Unit]
 
@@ -324,10 +327,16 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
     def trigger_intern_enabled_get(ch: Ch) = getMemConv(registers.fpga(_).event_config_reg.ch(_).int_trig_en)(ch)
 
     def trigger_intern_enabled_set(chV: ChV[Boolean]) = {
+      // enable/disable trigger use:
       setMemConv(registers.fpga(_).event_config_reg.ch(_).int_trig_en)(chV)
+
+      // enable/disable trigger generation:
       setMemConv(registers.fpga(_).fir_trigger_threshold_reg(_).trig_en)(chV)
     }
 
+
+    def trigger_gate_window_length_get(ch: Ch) = getMemConvFPGA(registers.fpga(_).trigger_gate_window_length_reg.length)(ch)
+    def trigger_gate_window_length_set(chV: ChV[Int]) = setMemConvFPGA(registers.fpga(_).trigger_gate_window_length_reg.length)(chV)
 
     def trigger_threshold_get(ch: Ch) = getMemConv(registers.fpga(_).fir_trigger_threshold_reg(_).threshold)(ch)
     def trigger_threshold_set(chV: ChV[Int]) = setMemConv(registers.fpga(_).fir_trigger_threshold_reg(_).threshold)(chV)
