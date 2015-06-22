@@ -114,8 +114,11 @@ trait SIS3316 extends Device {
 
   def raw_output_file_basename_get(value: String): Future[String]
   def raw_output_file_basename_set(value: String): Future[Unit]
-
   def raw_output_file_name_get: Future[String]
+
+  def props_output_file_basename_get(value: String): Future[String]
+  def props_output_file_basename_set(value: String): Future[Unit]
+  def props_output_file_name_get: Future[String]
 
   def getMem(register: MemRegion#ReadableRegister[Int]): Future[Int]
   def getMemConv[@specialized(Int, Long, Float, Double)  U](bits: MemRegion#ReadableRegister[Int]#ReadableBitSelection[U])(implicit ctx: ExecutionContext, numType: IntegerNumType[Int]): Future[U]
@@ -180,7 +183,32 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
       pileupFlag: Boolean = false,
       samples: ArrayVec[Int] = ArrayVec[Int](),
       mawSamples: ArrayVec[Int] = ArrayVec[Int]()
-    )
+    ) {
+      import daqcore.util.Props
+      def toProps: Props = {
+        val optEnergy: Option[(PropKey, PropVal)] = energyValues map { x => ('energy, x.maximum) }
+
+        val optPeakHeight: Option[(PropKey, PropVal)] = peakHeight map { x => ('peakHeight, Props (
+          'index -> x.index,
+          'value -> x.value
+        ) ) }
+
+        val optFlags: Option[(PropKey, PropVal)] = flags map { x => ('flags, Props (
+          'overflow -> x.overflow,
+          'underflow -> x.underflow,
+          'repileup -> x.repileup,
+          'pileup -> x.pileup
+        ) ) }
+
+        val content: Map[PropKey, PropVal] = Map[PropKey, PropVal](
+          ('channel, (chId + 1)),
+          ('time, timestamp),
+          ('pileup, pileupFlag)
+        ) ++ optEnergy ++ optPeakHeight ++ optFlags
+
+        Props(content)
+      }
+    }
 
 
     case class RawEvent(
@@ -480,8 +508,11 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
 
     protected var raw_output_file_basename: String = ""
     protected var raw_output_file_name: String = ""
-
     protected var rawOutputStream: Option[OutputStreamWriter] = None
+
+    protected var props_output_file_basename: String = ""
+    protected var props_output_file_name: String = ""
+    protected var propsOutputStream: Option[OutputStreamWriter] = None
 
 
     protected def openOutput(): Unit = {
@@ -494,15 +525,27 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
         val javaOS = new java.io.FileOutputStream(new java.io.File(raw_output_file_name))
         rawOutputStream = Some(OutputStreamWriter(javaOS, "raw-data-writer"))
       }
+
+      if (! props_output_file_basename.isEmpty) {
+        val timeStamp = isoTimeStamp(time_start)
+        props_output_file_name = s"${props_output_file_basename}-${timeStamp}-props.json"
+        val javaOS = new java.io.FileOutputStream(new java.io.File(props_output_file_name))
+        propsOutputStream = Some(OutputStreamWriter(javaOS, "props-data-writer"))
+      }
     }
 
 
     protected def closeOutput(): Unit = {
       raw_output_file_name = ""
-
       if (rawOutputStream != None) {
         rawOutputStream.get.close()
         rawOutputStream = None
+      }
+
+      props_output_file_name = ""
+      if (propsOutputStream != None) {
+        propsOutputStream.get.close()
+        propsOutputStream = None
       }
     }
 
@@ -515,6 +558,16 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
     }
 
     def raw_output_file_name_get = successful(raw_output_file_name)
+
+
+    def props_output_file_basename_get(value: String) = successful(props_output_file_basename)
+
+    def props_output_file_basename_set(value: String) = {
+      props_output_file_basename = value
+      successful({})
+    }
+
+    def props_output_file_name_get = successful(props_output_file_name)
 
 
     def getMem(register: MemRegion#ReadableRegister[Int]): Future[Int] =
@@ -780,7 +833,7 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
         val dataAvail = await(dataToRead(channels_active))
 
         if (dataAvail exists { case (channel, toRead) => toRead.nBytes > 0 }) {
-          dataForEvtReadOut = dataAvail
+          if (propsOutputStream != None) dataForEvtReadOut = dataAvail
           if (rawOutputStream != None) dataForRawReadOut = dataAvail
         }
 
@@ -793,19 +846,23 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
     // Sorted event read out
     protected def readOutBankDataEvt(): Unit = {
       if (!dataForEvtReadOut.isEmpty) {
+        assert(propsOutputStream != None)
+
         localExec( async {
-          /* // currently disabled:
-          val evtData: Future[ChV[ByteString]] = dataForEvtReadOut ftCVVMap { case(channel, toRead) =>
-            readRawEventData(toRead.bank, channel, toRead.from, toRead.until - toRead.from)
+          val (channel, toRead) = dataForEvtReadOut.head
+          val nBytesPerEvent = toRead.format.rawEventDataSize
+          val maxNBytes = Math.max(nBytesPerEvent, 10 * 1024 * 1024 / nBytesPerEvent * nBytesPerEvent)
+          log.trace(s"Sorted read-out of max. ${maxNBytes} bytes from channel ${channel}, starting at ${toRead.from}")
+          val (data, restDataToRead) = await(readRawEventData(channel, dataForEvtReadOut, maxNBytes))
+
+          val dataIterator = data.iterator
+          val stringCodec = StringLineCodec(LineCodec.LF, "UTF-8")
+          while (dataIterator.hasNext) {
+            val chEvent = getChEvent(dataIterator, bulkReadNIOByteOrder, toRead.format.nSamples, toRead.format.nMAWValues)
+            propsOutputStream.get.send(chEvent.toProps.toJSON, stringCodec.enc)
           }
-          await(evtData)
-          val chDataIterators: ChV[ByteIterator] = evtData.v map { case (ch, bytes) => (ch, bytes.iterator) }
 
-          val sizes = chDataIterators map { case (ch, it) => (ch, it.clone.size) }
-          log.trace(s"Event read-out channel data sizes: $sizes")
-          */
-
-          dataForEvtReadOut = ChV[DataToRead]()
+          dataForEvtReadOut = restDataToRead
           readOutBankDataEvt()
         } (_) )
       } else {
@@ -920,13 +977,13 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
     def chSubst[T](f: (Int, Int) => T)(ch: Int) = { val (fpgaNum, fpgaCh) = fpgaNumCh(ch); f(fpgaNum, fpgaCh) }
     def chSubstFPGA[T](f: Int => T)(ch: Int) = { val (fpgaNum, fpgaCh) = fpgaNumCh(ch); f(fpgaNum) }
 
-    def getChEvent(it: ByteIterator, encoding: ValEncoding, nSamples: Int, nMAWSamples: Int): dataTypes.RawChEvent = {
+    def getChEvent(it: ByteIterator, byteOrder: java.nio.ByteOrder, nSamples: Int, nMAWSamples: Int): dataTypes.RawChEvent = {
       // TODO: Add support for averaging value data format
 
       import SIS3316Memory.eventFormat._
       import dataTypes._
 
-      implicit val nioByteOrder = encoding.asInstanceOf[ByteOrder].nioByteOrder
+      implicit val nioByteOrder = byteOrder
 
       val hdr1 = it.getInt
       val hdr2 = it.getInt
