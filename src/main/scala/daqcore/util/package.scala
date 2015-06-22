@@ -146,6 +146,17 @@ def ceilLog2(x: Int) = 8 * sizeOf[Int] - java.lang.Integer.numberOfLeadingZeros(
 def currentTime: Double = java.lang.System.currentTimeMillis * 1e-3
 
 
+def isoTimeStamp(unixTime: Double, extendedFormat: Boolean = false): String = {
+  import java.util.{Date,TimeZone}, java.text.SimpleDateFormat
+  val dateFormat =
+    if (extendedFormat) new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'")
+    else new SimpleDateFormat("yyyyMMdd'T'HHmmss'Z'")
+  dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"))
+  val unixMillis = (unixTime * 1e3).toLong
+  dateFormat.format(new Date(unixMillis))
+}
+
+
 def timedExec[T](body: => T): (T, (Double, Double)) = {
   val tmxb = java.lang.management.ManagementFactory.getThreadMXBean()
   val threadId = Thread.currentThread().getId()
