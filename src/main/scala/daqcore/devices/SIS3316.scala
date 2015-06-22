@@ -75,6 +75,9 @@ trait SIS3316 extends Device {
   def nsamples_total_get(ch: Ch = allChannels): Future[ChV[Int]]
   def nsamples_total_set(chV: ChV[Int]): Future[Unit]
 
+  def nsamples_start_get(ch: Ch = allChannels): Future[ChV[Int]]
+  def nsamples_start_set(chV: ChV[Int]): Future[Unit]
+
   def nsamples_pretrig_get(ch: Ch = allChannels): Future[ChV[Int]]
   def nsamples_pretrig_set(chV: ChV[Int]): Future[Unit]
 
@@ -354,6 +357,9 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
 
     def nsamples_total_get(ch: Ch) = getMemConvFPGA(registers.fpga(_).raw_data_buffer_config_reg.sample_length)(ch)
     def nsamples_total_set(chV: ChV[Int]) = setMemConvFPGA(registers.fpga(_).raw_data_buffer_config_reg.sample_length)(chV)
+
+    def nsamples_start_get(ch: Ch) = getMemConvFPGA(registers.fpga(_).raw_data_buffer_config_reg.start_index)(ch)
+    def nsamples_start_set(chV: ChV[Int]) = setMemConvFPGA(registers.fpga(_).raw_data_buffer_config_reg.start_index)(chV)
 
     def nsamples_pretrig_get(ch: Ch) = getMemConvFPGA(registers.fpga(_).pre_trigger_delay_reg.delay)(ch)
     def nsamples_pretrig_set(chV: ChV[Int]) = setMemConvFPGA(registers.fpga(_).pre_trigger_delay_reg.delay)(chV)
