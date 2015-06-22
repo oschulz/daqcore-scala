@@ -90,13 +90,26 @@ trait SIS3316 extends Device {
   def bank_fill_threshold_stop_get(ch: Ch = allChannels): Future[ChV[Boolean]]
   def bank_fill_threshold_stop_set(chV: ChV[Boolean]): Future[Unit]
 
+  def time_start_get: Future[Double]
+
+  def time_stop_get: Future[Double]
+
   def forceTrig(): Future[Unit]
+
+  def resetTimestamp(): Future[Unit]
 
   def startCapture(): Future[Unit]
   def stopCapture(): Future[Unit]
 
   def capture_enabled_set(value: Boolean): Future[Unit]
   def capture_enabled_get: Future[Boolean]
+
+  def buffer_counter_get: Future[Int]
+
+  def raw_output_file_basename_get(value: String): Future[String]
+  def raw_output_file_basename_set(value: String): Future[Unit]
+
+  def raw_output_file_name_get: Future[String]
 
   def getMem(register: MemRegion#ReadableRegister[Int]): Future[Int]
   def getMemConv[@specialized(Int, Long, Float, Double)  U](bits: MemRegion#ReadableRegister[Int]#ReadableBitSelection[U])(implicit ctx: ExecutionContext, numType: IntegerNumType[Int]): Future[U]
@@ -124,6 +137,7 @@ trait SIS3316 extends Device {
   def dataToRead(ch: Ch = allChannels): Future[ChV[DataToRead]]
   def readAllRawEventData(channel: Int): Future[ByteString]
   def readRawEventData(bank: Int, ch: Int, from: Int, nBytes: Int): Future[ByteString]
+  def readRawEventData(channel: Int, dataToRead: ChV[DataToRead], maxNBytes: Int): Future[(ByteString, ChV[DataToRead])]
 }
 
 
@@ -140,6 +154,12 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
     case class PSAValue(index: Int, value: Int)
     case class MAWValues(maximum: Int, preTrig: Int, postTrig: Int)
     case class EnergyValues(initial: Int, maximum: Int)
+
+
+    object FirmwareType extends Enumeration {
+      val FW125 = Value(125)  // SIS3316-125
+      val FW250 = Value(250)  // SIS3316-250
+    }
 
 
     case class RawChEvent(
@@ -170,6 +190,33 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
     )
 
 
+    case class BankChannelHeaderInfo (
+      firmwareType: FirmwareType.Value,
+      bufferNo: Int,
+      channel: Int,
+      nEvents: Int,
+      nWordsPerEvent: Int,
+      nMAWValues: Int,
+      reserved: Int = 0
+    ) extends HasByteRep {
+      implicit val nioByteOrder = LittleEndian.nioByteOrder
+
+      def putBytes(builder: ByteStringBuilder): Unit = {
+        builder.putInt(0xDEADBEEF)
+        builder.putInt( firmwareType match {
+          case FirmwareType.FW125 => 1
+          case FirmwareType.FW250 => 0
+        } )
+        builder.putInt(bufferNo)
+        builder.putInt(channel - 1)
+        builder.putInt(nEvents)
+        builder.putInt(nWordsPerEvent)
+        builder.putInt(nMAWValues)
+        builder.putInt(reserved)
+      }
+    }
+
+
     case class EventFormat(
       save_maw_test: Option[Boolean] = None,  // Save (Energy or Trigger) MAW Test Data
       save_energy: Boolean = false,  // Save energy values (at trigger and maximum during trigger window)
@@ -177,7 +224,7 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
       save_acc_78: Boolean = false,  // Save accumulator values for gates 7 and 8
       save_ph_acc16: Boolean = false,  // Save peak height and accumulator values for gates 1,2, ..,6
       nSamples: Int = 0,  // Number of raw samples to save
-      nMAWTestWords: Int = 0  // Number of MAW test data words to save
+      nMAWValues: Int = 0  // Number of MAW test data words to save
     ) {
       // TODO: Add support for averaging value data format
 
@@ -192,7 +239,7 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
           (if (save_energy) 2 else 0) +
           1 +
           nSamples / 2 +
-          (if (save_maw_test != None) nMAWTestWords else 0)
+          (if (save_maw_test != None) nMAWValues else 0)
 
         nEvtWords * sizeOfInt
       }
@@ -204,7 +251,10 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
       from: Int = 0,
       until: Int = 0,
       format: EventFormat = EventFormat()
-    )
+    ) {
+      require(until >= from)
+      def nBytes: Long = until - from
+    }
 
 
     case class SamplingStatus(busy: Boolean = false, armed: Boolean = false, armedBank: Int = 0)
@@ -230,12 +280,34 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
     override def sync() = mem.sync()
     override def getSync() = mem.getSync()
 
-    def identity = localExec( async {
-      val modId = getMemConv(registers.modid.module_id)
-      val fwType = getMemConv(registers.modid.module_id)
-      s"SIS${await(modId)}-${await(fwType)}"
-    } (_) )
 
+    protected val (
+      model: String,
+      firmwareType: FirmwareType.Value,
+      bulkReadNIOByteOrder: java.nio.ByteOrder,
+      bulkWriteNIOByteOrder: java.nio.ByteOrder
+    ) = {
+      import daqcore.defaults.defaultTimeout
+      val bulkReadEncoding = mem.bulkReadEncoding.get.asInstanceOf[ByteOrder].nioByteOrder
+      val bulkWriteEncoding = mem.bulkWriteEncoding.get.asInstanceOf[ByteOrder].nioByteOrder
+
+      val ident = identity.get
+
+      val fwType = ident match {
+          case "SIS3316-125" => FirmwareType.FW125
+          case "SIS3316-250" => FirmwareType.FW250
+          case other => throw new RuntimeException(s"Found unsupported device model $other")
+      }
+
+      (ident, fwType, bulkReadEncoding, bulkWriteEncoding)
+    }
+
+
+    def identity = {
+      val modId = getMemConv(registers.modid.module_id)
+      val fwType = getMemConv(registers.fpga(1).firmware_reg.fw_type)
+      Future.sequence(Seq(modId, fwType)).map{ case Seq(id, tp) => s"SIS$id-$tp" }
+    }
 
     def serNo = mem.read(registers.serial_number_reg) map { x => x.toString }
 
@@ -298,37 +370,135 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
     def bank_fill_threshold_stop_get(ch: Ch) = getMemConvFPGA(registers.fpga(_).address_threshold_reg.stop_on_thresh)(ch)
     def bank_fill_threshold_stop_set(chV: ChV[Boolean]) = setMemConvFPGA(registers.fpga(_).address_threshold_reg.stop_on_thresh)(chV)
 
+    def time_start_get = successful(time_start)
+
+    def time_stop_get = successful(time_stop)
+
 
     def forceTrig() = {
-      val done = mem.write(registers.key_trigger)
       mem.sync()
-      done
+      mem.write(registers.key_trigger)
     }
 
 
-    def startCapture() = capture_enabled_set(true)
+    def resetTimestamp() = {
+      mem.sync()
+      mem.write(registers.key_timestamp_clear)
+    }
 
-    def stopCapture() = capture_enabled_set(false)
 
-    def capture_enabled_set(value: Boolean) = {
-      if (capture_enabled != value) {
-        log.trace(s"Setting capture_enabled to $value")
-        value match {
-          case true =>
-            capture_enabled = true
-            clearAndArm()
-            pollNewEvents()
-          case false =>
-            disarm()
-            capture_enabled = false
-            scheduledPoll foreach {_.cancel()}
+    def startCapture() = {
+      if (capture_enabled) {
+        assert(capture_active)
+      } else {
+        if (capture_active) {
+          throw new IllegalArgumentException("Can't start capture while stopping")
+        } else {
+          log.debug("Starting capture")
+
+          disarm()
+          resetTimestamp()
+          buffer_counter = 0
+
+          capture_enabled = true
+          capture_active = true
+          time_start = currentTime
+
+          clearAndArm()
+          openOutput()
+          pollNewEvents()
         }
       }
       successful({})
     }
 
 
+    protected var stopPromises: List[Promise[Unit]] = Nil
+
+    def stopCapture() = {
+      if (!capture_active) {
+        assert (!capture_enabled)
+        successful({})
+      } else {
+        if (capture_enabled) {
+          log.debug("Stopping capture")
+          capture_enabled = false
+          if (!readout_active) startReadOut()
+          else readOtherBank = true
+        }
+
+        assert(captureIsStopping)
+
+        val promise = Promise[Unit]()
+        stopPromises = promise :: stopPromises
+        promise.future
+      }
+    }
+
+
+    protected def finishCapture() = {
+      log.debug("Finishing capture")
+
+      time_stop = currentTime
+      capture_active = false
+      capture_enabled = false
+
+      cancelEventPoll()
+      closeOutput()
+      disarm()
+
+      stopPromises.reverse foreach { _ success {}}
+      stopPromises = Nil
+    }
+
+
+    def capture_enabled_set(value: Boolean) = value match {
+      case true => startCapture()
+      case false => stopCapture()
+    }
+
     def capture_enabled_get = successful(capture_enabled)
+
+    def buffer_counter_get = successful(buffer_counter)
+
+
+    protected var raw_output_file_basename: String = ""
+    protected var raw_output_file_name: String = ""
+
+    protected var rawOutputStream: Option[OutputStreamWriter] = None
+
+
+    protected def openOutput(): Unit = {
+      assert(rawOutputStream.isEmpty)
+      assert(!readout_active)
+
+      if (! raw_output_file_basename.isEmpty) {
+        val timeStamp = isoTimeStamp(time_start)
+        raw_output_file_name = s"${raw_output_file_basename}-${timeStamp}-raw.dat"
+        val javaOS = new java.io.FileOutputStream(new java.io.File(raw_output_file_name))
+        rawOutputStream = Some(OutputStreamWriter(javaOS, "raw-data-writer"))
+      }
+    }
+
+
+    protected def closeOutput(): Unit = {
+      raw_output_file_name = ""
+
+      if (rawOutputStream != None) {
+        rawOutputStream.get.close()
+        rawOutputStream = None
+      }
+    }
+
+
+    def raw_output_file_basename_get(value: String) = successful(raw_output_file_basename)
+
+    def raw_output_file_basename_set(value: String) = {
+      raw_output_file_basename = value
+      successful({})
+    }
+
+    def raw_output_file_name_get = successful(raw_output_file_name)
 
 
     def getMem(register: MemRegion#ReadableRegister[Int]): Future[Int] =
@@ -403,11 +573,11 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
 
         val nSamples = getMemConv(fpgaRegs.raw_data_buffer_config_reg.sample_length)
 
-        val nMAWTestWords = getMemConv(fpgaRegs.maw_test_buffer_config_reg.buffer_len)
+        val nMAWValues = getMemConv(fpgaRegs.maw_test_buffer_config_reg.buffer_len)
 
         await(Seq(
           sel_test_buf, save_maw_test, save_energy, save_ft_maw, save_acc_78, save_ph_acc16,
-          nSamples, nMAWTestWords
+          nSamples, nMAWValues
         ))
 
         ch -> EventFormat(
@@ -417,7 +587,7 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
           save_acc_78 = save_acc_78.v,
           save_ph_acc16 = save_ph_acc16.v,
           nSamples = nSamples.v,
-          nMAWTestWords = nMAWTestWords.v
+          nMAWValues = nMAWValues.v
         )
       } (_) )
 
@@ -464,7 +634,10 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
     }
 
 
-    def disarm() = mem.write(registers.key_disarm)
+    def disarm() = {
+      mem.sync()
+      mem.write(registers.key_disarm)
+    }
 
 
     def dataToRead(ch: Ch) = localExec( async {
@@ -497,6 +670,28 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
     } (_) )
 
 
+    def readRawEventData(channel: Int, dataToRead: ChV[DataToRead], maxNBytes: Int) = {
+      require(maxNBytes >= 0)
+      val toRead = dataToRead(channel)
+      val nBytes = Math.min(toRead.nBytes, maxNBytes).toInt
+
+      if (toRead.nBytes > 0) {
+        localExec( async {
+
+          val data = await(readRawEventData(toRead.bank, channel, toRead.from, nBytes))
+          assert(data.size == nBytes)
+          val restDataToRead = {
+            if (nBytes == toRead.nBytes) dataToRead - channel
+            else dataToRead + (channel -> toRead.copy(from  = toRead.from + nBytes))
+          }
+          (data, restDataToRead)
+        } (_) )
+      } else {
+        successful((ByteString(), dataToRead - channel))
+      }
+    }
+
+
     def readRawEventData(bank: Int, ch: Int, from: Int, nBytes: Int) = localExec( async {
       require((from >= 0) && (nBytes >= 0))
 
@@ -518,52 +713,161 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
     } (_) )
 
 
-    var channels_active: Ch = allChannels
-    var capture_enabled: Boolean = false
-    var run_continous: Boolean = true
-    var scheduledPoll: Option[Cancellable] = None
-    var dataForReadOut: ChV[DataToRead] = ChV[DataToRead]()
+    protected var time_start: Double = 0
+    protected var time_stop: Double = 0
+    protected var channels_active: Ch = allChannels
+    protected var capture_enabled: Boolean = false
+    protected var capture_active: Boolean = false
+    protected var readout_active: Boolean = false
+    protected var buffer_counter: Int = 0
+    protected var run_continous: Boolean = true
+    protected var scheduledPoll: Option[Cancellable] = None
+    protected var dataForEvtReadOut: ChV[DataToRead] = ChV[DataToRead]()
+    protected var dataForRawReadOut: ChV[DataToRead] = ChV[DataToRead]()
+
+    protected var readOtherBank = false
+    protected def captureIsStopping = capture_active && !capture_enabled
 
 
-    protected def readOutBankData(): Unit = {
-      if (!dataForReadOut.isEmpty) localExec( async {
-        val evtData: Future[ChV[ByteString]] = dataForReadOut ftCVVMap { case(channel, toRead) =>
-          readRawEventData(toRead.bank, channel, toRead.from, toRead.until - toRead.from)
+    protected def startReadOut(): Unit = {
+      readout_active = true
+      log.trace("Starting data read-out")
+
+      localExec( async {
+        await(swapBanks)
+        buffer_counter = buffer_counter + 1
+        val dataAvail = await(dataToRead(channels_active))
+
+        if (dataAvail exists { case (channel, toRead) => toRead.nBytes > 0 }) {
+          dataForEvtReadOut = dataAvail
+          if (rawOutputStream != None) dataForRawReadOut = dataAvail
         }
-        await(evtData)
-        val chDataIterators: ChV[ByteIterator] = evtData.v map { case (ch, bytes) => (ch, bytes.iterator) }
 
-        val sizes = chDataIterators map { case (ch, it) => (ch, it.clone.size) }
-        log.trace(s"Channel data sizes: $sizes")
-
-
-        dataForReadOut = ChV[DataToRead]()
-        if (run_continous) pollNewEvents()
-        else capture_enabled = false
+        log.trace("Starting sorted event data read-out")
+        readOutBankDataEvt()
       } (_) )
     }
 
 
+    // Sorted event read out
+    protected def readOutBankDataEvt(): Unit = {
+      if (!dataForEvtReadOut.isEmpty) {
+        localExec( async {
+          /* // currently disabled:
+          val evtData: Future[ChV[ByteString]] = dataForEvtReadOut ftCVVMap { case(channel, toRead) =>
+            readRawEventData(toRead.bank, channel, toRead.from, toRead.until - toRead.from)
+          }
+          await(evtData)
+          val chDataIterators: ChV[ByteIterator] = evtData.v map { case (ch, bytes) => (ch, bytes.iterator) }
+
+          val sizes = chDataIterators map { case (ch, it) => (ch, it.clone.size) }
+          log.trace(s"Event read-out channel data sizes: $sizes")
+          */
+
+          dataForEvtReadOut = ChV[DataToRead]()
+          readOutBankDataEvt()
+        } (_) )
+      } else {
+        log.trace("Starting unsorted raw data read-out")
+        readOutBankDataRaw()
+      }
+    }
+
+
+    // Raw bank-data read out (Struck raw format)
+    protected def readOutBankDataRaw(): Unit = {
+      if (!dataForRawReadOut.isEmpty) {
+        assert(bulkReadNIOByteOrder == LittleEndian.nioByteOrder)
+        assert(rawOutputStream != None)
+
+        localExec( async {
+          val (channel, toRead) = dataForRawReadOut.head
+          val maxNBytes = 10 * 1024 * 1024
+          log.trace(s"Raw read-out of max. ${maxNBytes} bytes from channel ${channel}, starting at ${toRead.from}")
+          val (data, restDataToRead) = await(readRawEventData(channel, dataForRawReadOut, maxNBytes))
+
+          if (toRead.from == 0) {
+            val nBytesPerEvent = toRead.format.rawEventDataSize
+            assert(nBytesPerEvent % 4 == 0)
+
+            val headerInfo = BankChannelHeaderInfo (
+              firmwareType = firmwareType,
+              bufferNo = buffer_counter - 1,
+              channel =  channel,
+              nEvents = toRead.until / nBytesPerEvent,
+              nWordsPerEvent = nBytesPerEvent / 4,
+              nMAWValues = toRead.format.nMAWValues,
+              reserved = 0
+            )
+
+            rawOutputStream.get.send(headerInfo.getBytes)
+          }
+          rawOutputStream.get.send(data)
+
+          dataForRawReadOut = restDataToRead
+          readOutBankDataRaw()
+        } (_) )
+      } else {
+        finishReadOut()
+      }
+    }
+
+
+    protected def finishReadOut(): Unit = {
+      log.trace("Finishing data read-out")
+      assert(dataForEvtReadOut.isEmpty)
+      assert(dataForRawReadOut.isEmpty)
+
+      buffer_counter = buffer_counter + 1
+
+      if (readOtherBank) {
+        readOtherBank = false
+        assert(captureIsStopping)
+        log.trace("Capture stopping, reading other bank too")
+        startReadOut()
+      } else {
+        readout_active = false
+        if (capture_enabled && run_continous) pollNewEvents()
+        else finishCapture()
+      }
+    }
+
+
     protected def pollNewEvents(): Unit = {
-      if (capture_enabled && dataForReadOut.isEmpty) localExec( async {
+      assert(capture_active)
+
+      if (!readout_active) localExec( async {
         if (await(newEventsAvail)) {
-          log.trace("Reading new events")
-          await(swapBanks)
-          dataForReadOut = await(dataToRead(channels_active))
-          readOutBankData()
-        } else if (scheduledPoll == None) {
-          scheduledPoll = Some(scheduleOnce(100.milliseconds, selfRef, PollNewEvents))
+          startReadOut()
+        } else {
+          if (capture_enabled) scheduleEventPoll()
+          else finishCapture()
         }
       } (_) )
+    }
+
+
+    protected def scheduleEventPoll(): Unit = {
+      assert(scheduledPoll == None)
+      scheduledPoll = Some(scheduleOnce(100.milliseconds, selfRef, PollNewEvents))
+    }
+
+    protected def cancelEventPoll(): Unit = if (scheduledPoll != None) {
+      scheduledPoll.get.cancel()
+      scheduledPoll = None
     }
 
 
     protected case object PollNewEvents
 
     override def receive = extend(super.receive) {
-      case PollNewEvents =>
+      case PollNewEvents => if (capture_active) {
         scheduledPoll = None
         pollNewEvents()
+      } else {
+        // Remnant message, ignore
+        assert(scheduledPoll == None)
+      }
     }
   }
 
