@@ -319,6 +319,7 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
     protected val (
       model: String,
       firmwareType: FirmwareType.Value,
+      sampleClock: Double,
       bulkReadNIOByteOrder: java.nio.ByteOrder,
       bulkWriteNIOByteOrder: java.nio.ByteOrder
     ) = {
@@ -334,7 +335,12 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
           case other => throw new RuntimeException(s"Found unsupported device model $other")
       }
 
-      (ident, fwType, bulkReadEncoding, bulkWriteEncoding)
+      val smplClk = fwType match {
+          case FirmwareType.FW125 => 125E6
+          case FirmwareType.FW250 => 250E6
+       }
+
+      (ident, fwType, smplClk, bulkReadEncoding, bulkWriteEncoding)
     }
 
 
@@ -858,8 +864,16 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
           val dataIterator = data.iterator
           val stringCodec = StringLineCodec(LineCodec.LF, "UTF-8")
           while (dataIterator.hasNext) {
+            import daqcore.util.Props
+
             val chEvent = getChEvent(dataIterator, bulkReadNIOByteOrder, toRead.format.nSamples, toRead.format.nMAWValues)
-            propsOutputStream.get.send(chEvent.toProps.toJSON, stringCodec.enc)
+            
+            val rawProps = chEvent.toProps;
+            val convProps = Props(
+              rawProps.asMap +
+              (PropKey('time) -> PropVal(rawProps('time).asDouble / sampleClock))
+            )
+            propsOutputStream.get.send(convProps.toJSON, stringCodec.enc)
           }
 
           dataForEvtReadOut = restDataToRead
