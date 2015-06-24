@@ -22,7 +22,7 @@ import scala.concurrent.duration._
 import scala.async.Async.{async, await}
 import scala.collection.breakOut
 import scala.collection.immutable.Queue
-import akka.actor._
+import akka.actor.{ActorRef, Cancellable}
 
 import daqcore.actors._, daqcore.actors.TypedActorTraits._
 import daqcore.util._
@@ -184,29 +184,26 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
       samples: ArrayVec[Int] = ArrayVec[Int](),
       mawSamples: ArrayVec[Int] = ArrayVec[Int]()
     ) {
-      import daqcore.util.Props
       def toProps: Props = {
-        val optEnergy: Option[(PropKey, PropVal)] = energyValues map { x => ('energy, x.maximum) }
-
-        val optPeakHeight: Option[(PropKey, PropVal)] = peakHeight map { x => ('peakHeight, Props (
-          'index -> x.index,
-          'value -> x.value
-        ) ) }
-
-        val optFlags: Option[(PropKey, PropVal)] = flags map { x => ('flags, Props (
-          'overflow -> x.overflow,
-          'underflow -> x.underflow,
-          'repileup -> x.repileup,
-          'pileup -> x.pileup
-        ) ) }
-
-        val content: Map[PropKey, PropVal] = Map[PropKey, PropVal](
-          ('channel, (chId + 1)),
-          ('time, timestamp),
-          ('pileup, pileupFlag)
-        ) ++ optEnergy ++ optPeakHeight ++ optFlags
-
-        Props(content)
+        Props(
+          'channel -> (chId + 1),
+          'time -> timestamp,
+          'pileup -> pileupFlag
+        ) ++ (
+          energyValues map { x => (PropKey('energy), PropVal(x.maximum)) }
+        ) ++ (
+          peakHeight map { x => (PropKey('peakHeight), Props (
+           'index -> x.index,
+           'value -> x.value
+          ) ) }
+        ) ++ (
+          flags map { x => (PropKey('flags), Props (
+            'overflow -> x.overflow,
+            'underflow -> x.underflow,
+            'repileup -> x.repileup,
+            'pileup -> x.pileup
+          ) ) }
+        )
       }
     }
 
@@ -864,15 +861,10 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
           val dataIterator = data.iterator
           val stringCodec = StringLineCodec(LineCodec.LF, "UTF-8")
           while (dataIterator.hasNext) {
-            import daqcore.util.Props
-
             val chEvent = getChEvent(dataIterator, bulkReadNIOByteOrder, toRead.format.nSamples, toRead.format.nMAWValues)
             
             val rawProps = chEvent.toProps;
-            val convProps = Props(
-              rawProps.asMap +
-              (PropKey('time) -> PropVal(rawProps('time).asDouble / sampleClock))
-            )
+            val convProps = rawProps + ('time -> rawProps('time).asDouble / sampleClock)
             propsOutputStream.get.send(convProps.toJSON, stringCodec.enc)
           }
 
