@@ -19,11 +19,14 @@ package daqcore.util
 
 import scala.language.implicitConversions
 
+import scala.collection.{breakOut, GenTraversableOnce}
+import scala.collection.immutable.SortedMap
+
 import play.api.libs.json._
 import org.apache.commons.codec.binary.Base64
 
 
-sealed abstract class PropKey {
+sealed abstract class PropKey extends Ordered[PropKey] {
   def as[T](implicit conv: PropKey.To[T]) = conv.to(this)
 
   def asLong: Long = throw new UnsupportedOperationException(this.getClass.getName + " cannot interpreted as a Long")
@@ -93,6 +96,11 @@ final case class IntegerPropKey (value: Long) extends PropKey {
   def toPropVal = IntegerPropVal(value)
   def toJsValue = JsNumber(value)
   override def toString = value.toString
+
+  def compare(that: PropKey): Int = that match {
+    case other: IntegerPropKey => this.value compare other.value
+    case other: SymbolPropKey => -1
+  }
 }
 
 
@@ -101,6 +109,11 @@ final case class SymbolPropKey (value: Symbol) extends PropKey {
   def toPropVal = SymbolPropVal(value)
   def toJsValue = JsString(value.name)
   override def toString = value.name
+
+  def compare(that: PropKey): Int = that match {
+    case other: IntegerPropKey => +1
+    case other: SymbolPropKey => this.value.hashCode compare other.value.hashCode
+  }
 }
 
 
@@ -184,7 +197,7 @@ sealed abstract class PropVal {
   def asSymbol: Symbol = throw new UnsupportedOperationException("PropVals of type " + this.getClass.getName + " cannot be interpreted as a Symbol")
   def asByteString: ByteString = throw new UnsupportedOperationException("PropVals of type " + this.getClass.getName + " cannot interpreted as a ByteString")
   def asSeq: Seq[PropVal] = throw new UnsupportedOperationException("PropVals of type " + this.getClass.getName + " cannot interpreted as a Seq")
-  def asMap: Map[PropKey, PropVal] = throw new UnsupportedOperationException("PropVals of type " + this.getClass.getName + " cannot interpreted as a Map")
+  def asMap: SortedMap[PropKey, PropVal] = throw new UnsupportedOperationException("PropVals of type " + this.getClass.getName + " cannot interpreted as a SortedMap")
 
   def toJsValue: JsValue
 
@@ -211,12 +224,12 @@ object PropVal {
   implicit def from[T](x: T)(implicit conv: From[T]): PropVal = PropVal(x)
 
 
-  trait From[T] {
+  trait From[-T] {
     def from(x: T): PropVal
   }
 
 
-  trait To[T] {
+  trait To[+T] {
     def to(propVal: PropVal): T
   }
 
@@ -412,8 +425,31 @@ final case class PropValSeq(value: PropVal*) extends ComplexPropVal {
 }
 
 
+final case class Props(value: SortedMap[PropKey, PropVal])
+  extends ComplexPropVal
+  with scala.collection.immutable.SortedMap[PropKey, PropVal]
+  with scala.collection.SortedMapLike[PropKey, PropVal, Props]
+  with scala.collection.immutable.MapLike[PropKey, PropVal, Props]
+  with Serializable
+{
+  // Declared in scala.collection.MapLike:
+  def -(key: PropKey): Props = Props(value - key)
+  def get(key: PropKey): Option[PropVal] = value.get(key)
+  def iterator: Iterator[(PropKey, PropVal)] = value.iterator
 
-final case class Props(value: Map[PropKey, PropVal]) extends ComplexPropVal {
+  // Declared in scala.collection.generic.Sorted:
+  def keysIteratorFrom(start: PropKey): Iterator[PropKey] = value.keysIteratorFrom(start)
+
+  // Declared in scala.collection.SortedMapLike:
+  def iteratorFrom(start: PropKey): Iterator[(PropKey, PropVal)] = value.iteratorFrom(start)
+  implicit def ordering: Ordering[PropKey] = value.ordering
+  def rangeImpl(from: Option[PropKey], until: Option[PropKey]): Props = Props(value.rangeImpl(from, until))
+  def valuesIteratorFrom(start: PropKey): Iterator[PropVal] = value.valuesIteratorFrom(start)
+
+
+  override def empty = Props.empty
+  override protected def newBuilder = Props.newBuilder
+
   override def apply(path: PropPath): PropVal = {
     if (path.isEmpty) throw new IllegalArgumentException("Cannot get value for empty PropPath")
     value.get(path.head) match {
@@ -428,44 +464,91 @@ final case class Props(value: Map[PropKey, PropVal]) extends ComplexPropVal {
     }
   }
 
-    
-  def merge(that: Props): Props = {
-    Props(
-      that.value.foldLeft(this.value) { case (result, (k, vNew)) =>
+  override def isEmpty: Boolean = value.isEmpty
+
+  override def stringPrefix = "Props"
+  override def toString = toJSON
+
+  def ++(xs: GenTraversableOnce[(PropKey, PropVal)]): Props = Props(value ++ xs)
+
+  def ++! (xs: GenTraversableOnce[(PropKey, PropVal)]): Props = patchMerge(xs, false)
+  def ++& (xs: GenTraversableOnce[(PropKey, PropVal)]): Props = patchMerge(xs, true)
+
+  //def +!(kv: (PropKey, PropVal)): Props = Props(value + kv)
+
+
+  def +[K, V](kv: (K, V))(implicit kFrom: PropKey.From[K], vFrom: PropVal.From[V]): Props = {
+    val propKey = kFrom.from(kv._1)
+    val propVal = vFrom.from(kv._2)
+    Props(value + ((propKey, propVal)))
+  }
+
+
+  def +![K, V](kv: (K, V))(implicit kFrom: PropKey.From[K], vFrom: PropVal.From[V]): Props = {
+    val propKey = kFrom.from(kv._1)
+    val newValue = vFrom.from(kv._2)
+
+    newValue match {
+      case newProps: Props => this.value.get(propKey) match {
+        case Some(oldProps: Props) => this + ((propKey, oldProps ++! newProps))
+        case _ => this + ((propKey, newValue))
+      }
+      case _ => this + ((propKey, newValue))
+    }
+  }
+
+
+  override def asMap = value
+  def toJsValue = JsObject(value.toList map {case (k,v) => (k.toString, v.toJsValue)})
+
+  protected def patchMerge(xs: GenTraversableOnce[(PropKey, PropVal)], merge: Boolean): Props = {
+    if (xs.isEmpty) this
+    else Props(
+      xs.foldLeft(this.value) { case (result, (k, vNew)) =>
         result.get(k) match {
           case Some(vOld) => (vOld, vNew) match {
             case (vOld: Props, vNew: Props) =>
-              result + {val e = (k, (vOld merge vNew)); e}
+              result + (( k, vOld.patchMerge(vNew.value, merge) ))
             case (vOld, vNew) =>
-              if (vOld.getClass == vNew.getClass) result + { val e = (k, vNew); e }
-              else throw new IllegalArgumentException("Can't merge value of class %s with class %s".format(vOld.getClass.getName, vNew.getClass.getName))
+              if (merge) {
+                if (vOld == vNew) result
+                else throw new IllegalArgumentException("Can't merge Props with conflicting contents")
+              } else {
+                result + { val e = (k, vNew); e }
+              }
           }
           case None => result + { val e = (k, vNew); e }
         }
       }
     )
   }
-
-  override def asMap = value
-  def toJsValue = JsObject(value.toList map {case (k,v) => (k.toString, v.toJsValue)})
 }
 
 
 object Props {
-  val empty = Props(Map.empty[PropKey, PropVal])
+  val empty = Props(SortedMap.empty[PropKey, PropVal])
+
+  def newBuilder = SortedMap.newBuilder[PropKey, PropVal] mapResult {Props(_)}
 
   def apply(values: (PropPath, PropVal)*): Props = {
     values.foldLeft(Props.empty) { case (props, (path, value)) =>
-      props merge {
+      props ++! (
         path.parts.reverse.foldLeft(value) {
-          case (v, k) => Props(Map(k -> v))
+          case (v, k) => Props(SortedMap(k -> v))
         }.asInstanceOf[Props]
-      }
+      )
     }
   }
 
   def fromJsObject(obj: JsObject) =
-    new Props( (obj.fields.map{ case (k,v) => (PropKey(k), PropVal.fromJsValue(v)) }.toMap))
+    new Props( obj.fields.map{ case (k,v) => (PropKey(k), PropVal.fromJsValue(v)) }(breakOut) )
   
   def fromJSON(json: String) = PropVal.fromJSON(json).asInstanceOf[Props]
+}
+
+
+object PropsTest {
+  Props('foo -> 42) +! ('bar, 33)
+  Props('foo -> 42) +! ('bar -> 33)
+  Props('foo -> 42) ++! Props('bar -> 33)
 }
