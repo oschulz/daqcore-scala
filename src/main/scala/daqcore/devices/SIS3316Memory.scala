@@ -1348,7 +1348,9 @@ object SIS3316Memory extends DeviceCompanion[SIS3316Memory] {
     }
 
     object evtDataMAWValue extends SimpleRegister[Int] {
-      val maw_val           = RegBits(0 to 27)  // MAW value (maximum or value before or after trigger)
+      // Note: Documentation says bit 0..27, but for some reason bit 27 seems
+      // to (always?) be set:
+      val maw_val           = RegBits(0 to 26)  // MAW value (maximum or value before or after trigger)
     }
 
     object evtSamplesHdr extends SimpleRegister[Int] {
