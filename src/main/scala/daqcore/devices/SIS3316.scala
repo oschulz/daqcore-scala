@@ -192,6 +192,14 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
         ) ++ (
           energy map { x => (PropKey('energy), PropVal(x.maximum)) }
         ) ++ (
+          trigMAW map { x => (PropKey('trigMAW), PropVal(x.maximum)) }
+        ) ++ (
+          trigMAW map { x => (PropKey('trigMAW), Props (
+           'maximum -> x.maximum,
+           'preTrig -> x.preTrig,
+           'postTrig -> x.postTrig
+          ) ) }
+        ) ++ (
           peakHeight map { x => (PropKey('peakHeight), Props (
            'index -> x.index,
            'value -> x.value
