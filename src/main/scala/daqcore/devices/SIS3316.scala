@@ -178,11 +178,11 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
       flags: Option[EvtFlags] = None,
       accSums: ChV[Int] = ChV[Int](),
       peakHeight: Option[PSAValue] = None,
-      mawValues: Option[MAWValues] = None,
-      energyValues: Option[EnergyValues] = None,
+      trigMAW: Option[MAWValues] = None,
+      energy: Option[EnergyValues] = None,
       pileupFlag: Boolean = false,
       samples: ArrayVec[Int] = ArrayVec[Int](),
-      mawSamples: ArrayVec[Int] = ArrayVec[Int]()
+      mawValues: ArrayVec[Int] = ArrayVec[Int]()
     ) {
       def toProps: Props = {
         Props(
@@ -190,7 +190,7 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
           'time -> timestamp,
           'pileup -> pileupFlag
         ) ++ (
-          energyValues map { x => (PropKey('energy), PropVal(x.maximum)) }
+          energy map { x => (PropKey('energy), PropVal(x.maximum)) }
         ) ++ (
           peakHeight map { x => (PropKey('peakHeight), Props (
            'index -> x.index,
@@ -214,11 +214,11 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
       flags: ChV[EvtFlags] = ChV[EvtFlags](),
       accSums: ChV[Int] = ChV[Int](),
       peakHeight: ChV[PSAValue] = ChV[PSAValue](),
-      mawValues: ChV[MAWValues] = ChV[MAWValues](),
-      energyValues: ChV[EnergyValues] = ChV[EnergyValues](),
+      trigMAW: ChV[MAWValues] = ChV[MAWValues](),
+      energy: ChV[EnergyValues] = ChV[EnergyValues](),
       pileupFlag: ChV[Boolean] = ChV[Boolean](),
       samples: ChV[ArrayVec[Int]] = ChV[ArrayVec[Int]](),
-      mawSamples: ChV[ArrayVec[Int]] = ChV[ArrayVec[Int]]()
+      mawValues: ChV[ArrayVec[Int]] = ChV[ArrayVec[Int]]()
     )
 
 
@@ -1003,8 +1003,8 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
       var evtFlags: Option[EvtFlags] = None
       var accSums: ChV[Int] = ChV[Int]()
       var peakHeight: Option[PSAValue] = None
-      var mawValues: Option[MAWValues] = None
-      var energyValues: Option[EnergyValues] = None
+      var trigMAW: Option[MAWValues] = None
+      var energy: Option[EnergyValues] = None
 
 
       if (evtDataHdr1.have_ph_acc16(hdr1)) {
@@ -1055,7 +1055,7 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
         val maw_preTrig_word = it.getInt
         val maw_postTrig_word = it.getInt
 
-        mawValues = Some( MAWValues (
+        trigMAW = Some( MAWValues (
           maximum = evtDataMAWValue.maw_val(maw_max_word),
           preTrig = evtDataMAWValue.maw_val(maw_preTrig_word),
           postTrig = evtDataMAWValue.maw_val(maw_postTrig_word)
@@ -1067,7 +1067,7 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
         val start_energy_word = it.getInt
         val max_energy_word = it.getInt
 
-        energyValues = Some( EnergyValues(
+        energy = Some( EnergyValues(
           initial = start_energy_word,
           maximum = max_energy_word
         ) )
@@ -1104,11 +1104,11 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
       require(nSamples == 2 * nSampleWords, s"Expected number of samples ($nSamples) must equal 2x number of sample words ($nSampleWords) in event")
       val samples = getSamples(nSampleWords)
 
-      var mawSamples = ArrayVec[Int]()
+      var mawValues = ArrayVec[Int]()
 
       if (mawTestFlag) {
         require(nMAWSamples % 2 == 0)
-        mawSamples = getMAWSamples(nMAWSamples)
+        mawValues = getMAWSamples(nMAWSamples)
       }
 
       RawChEvent(
@@ -1117,11 +1117,11 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
         flags = evtFlags,
         accSums = accSums,
         peakHeight = peakHeight,
-        mawValues = mawValues,
-        energyValues = energyValues,
+        trigMAW = trigMAW,
+        energy = energy,
         pileupFlag = pileupFlag,
         samples = samples,
-        mawSamples = mawSamples
+        mawValues = mawValues
       )
     }
   }
