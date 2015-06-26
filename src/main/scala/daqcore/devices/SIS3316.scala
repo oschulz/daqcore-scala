@@ -112,6 +112,9 @@ trait SIS3316 extends Device {
 
   def buffer_counter_get: Future[Int]
 
+  def input_readout_enabled_get(ch: Ch = allChannels): Future[ChV[Boolean]]
+  def input_readout_enabled_set(chV: ChV[Boolean]): Future[Unit]
+
   def raw_output_file_basename_get(value: String): Future[String]
   def raw_output_file_basename_set(value: String): Future[Unit]
   def raw_output_file_name_get: Future[String]
@@ -563,6 +566,10 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
     }
 
 
+    def input_readout_enabled_get(ch: Ch = allChannels) = successful(input_readout_enabled)
+    def input_readout_enabled_set(chV: ChV[Boolean]) = successful(input_readout_enabled = chV)
+
+
     def raw_output_file_basename_get(value: String) = successful(raw_output_file_basename)
 
     def raw_output_file_basename_set(value: String) = {
@@ -824,7 +831,7 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
 
     protected var time_start: Double = 0
     protected var time_stop: Double = 0
-    protected var channels_active: Ch = allChannels
+    protected var input_readout_enabled: ChV[Boolean] = allChannels --> true
     protected var capture_enabled: Boolean = false
     protected var capture_active: Boolean = false
     protected var readout_active: Boolean = false
@@ -837,6 +844,9 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
     protected var readOtherBank = false
     protected def captureIsStopping = capture_active && !capture_enabled
 
+    protected def channelsToRead: Ch =
+      input_readout_enabled.collect{ case (channel, true) => channel }(breakOut)
+
 
     protected def startReadOut(): Unit = {
       readout_active = true
@@ -845,7 +855,7 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
       localExec( async {
         await(swapBanks)
         buffer_counter = buffer_counter + 1
-        val dataAvail = await(dataToRead(channels_active))
+        val dataAvail = await(dataToRead(channelsToRead))
 
         if (dataAvail exists { case (channel, toRead) => toRead.nBytes > 0 }) {
           if (propsOutputStream != None) dataForEvtReadOut = dataAvail
@@ -858,6 +868,14 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
     }
 
 
+    protected def readChunkSize(toRead: DataToRead): Int = {
+      val nBytesPerEvent = toRead.format.rawEventDataSize
+      val maxChunkSize = 10 * 1024 * 1024
+      val matchedChunkSize = maxChunkSize / nBytesPerEvent * nBytesPerEvent
+      Math.max(nBytesPerEvent, matchedChunkSize)
+    }
+
+
     // Sorted event read out
     protected def readOutBankDataEvt(): Unit = {
       if (!dataForEvtReadOut.isEmpty) {
@@ -865,8 +883,7 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
 
         localExec( async {
           val (channel, toRead) = dataForEvtReadOut.head
-          val nBytesPerEvent = toRead.format.rawEventDataSize
-          val maxNBytes = Math.max(nBytesPerEvent, 10 * 1024 * 1024 / nBytesPerEvent * nBytesPerEvent)
+          val maxNBytes = readChunkSize(toRead)
           log.trace(s"Sorted read-out of max. ${maxNBytes} bytes from channel ${channel}, starting at ${toRead.from}")
           val (data, restDataToRead) = await(readRawEventData(channel, dataForEvtReadOut, maxNBytes))
 
@@ -898,7 +915,7 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
 
         localExec( async {
           val (channel, toRead) = dataForRawReadOut.head
-          val maxNBytes = 10 * 1024 * 1024
+          val maxNBytes = readChunkSize(toRead)
           log.trace(s"Raw read-out of max. ${maxNBytes} bytes from channel ${channel}, starting at ${toRead.from}")
           val (data, restDataToRead) = await(readRawEventData(channel, dataForRawReadOut, maxNBytes))
 
