@@ -149,8 +149,8 @@ trait SIS3316 extends Device {
   def disarm(): Future[Unit]
   def dataToRead(ch: Ch = allChannels): Future[ChV[DataToRead]]
   def readAllRawEventData(channel: Int): Future[ByteString]
-  def readRawEventData(bank: Int, ch: Int, from: Int, nBytes: Int): Future[ByteString]
-  def readRawEventData(channel: Int, dataToRead: ChV[DataToRead], maxNBytes: Int): Future[(ByteString, ChV[DataToRead])]
+  def readRawEventData(bank: Int, channel: Int, from: Int, nBytes: Int): Future[ByteString]
+  def readRawEventData(channel: Int, dataToRead: DataToRead): Future[ByteString]
 }
 
 
@@ -296,7 +296,7 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
       format: EventFormat = EventFormat()
     ) {
       require(until >= from)
-      def nBytes: Long = until - from
+      def nBytes: Int = until - from
     }
 
 
@@ -483,7 +483,7 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
         if (capture_enabled) {
           log.debug("Stopping capture")
           capture_enabled = false
-          if (!readout_active) startReadOut()
+          if (!readout_active) swapBanksAndReadOut()
           else readOtherBank = true
         }
 
@@ -786,29 +786,26 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
     } (_) )
 
 
-    def readRawEventData(channel: Int, dataToRead: ChV[DataToRead], maxNBytes: Int) = {
-      require(maxNBytes >= 0)
-      val toRead = dataToRead(channel)
-      val nBytes = Math.min(toRead.nBytes, maxNBytes).toInt
-
-      if (toRead.nBytes > 0) {
-        localExec( async {
-
-          val data = await(readRawEventData(toRead.bank, channel, toRead.from, nBytes))
-          assert(data.size == nBytes)
-          val restDataToRead = {
-            if (nBytes == toRead.nBytes) dataToRead - channel
-            else dataToRead + (channel -> toRead.copy(from  = toRead.from + nBytes))
-          }
-          (data, restDataToRead)
-        } (_) )
-      } else {
-        successful((ByteString(), dataToRead - channel))
-      }
+    protected def readChunkSize(toRead: DataToRead): Int = {
+      val nBytesPerEvent = toRead.format.rawEventDataSize
+      val maxChunkSize = 5 * 1024 * 1024
+      val matchedChunkSize = maxChunkSize / nBytesPerEvent * nBytesPerEvent
+      Math.min(toRead.nBytes, Math.max(nBytesPerEvent, matchedChunkSize))
     }
 
 
-    def readRawEventData(bank: Int, ch: Int, from: Int, nBytes: Int) = localExec( async {
+    protected def chunkStream(toRead: DataToRead): Stream[DataToRead] = {
+      if (toRead.nBytes > 0) {
+        val until = toRead.from + readChunkSize(toRead)
+        Stream.cons(
+          toRead.copy(until = until),
+          chunkStream(toRead.copy(from = until))
+        )
+      } else Stream.empty
+    }
+
+
+    def readRawEventData(bank: Int, channel: Int, from: Int, nBytes: Int) = localExec( async {
       require((from >= 0) && (nBytes >= 0))
 
       val until = from + nBytes
@@ -818,15 +815,19 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
       require(paddedFrom >= 0)
       require(paddedUntil <= 4 * 0xfffffE)
 
-      resetFIFO(ch)
-      startFIFOReadTransfer(ch, bank, paddedFrom)
-      val paddedData = await(readFIFOData(ch, paddedUntil - paddedFrom))
-      resetFIFO(ch)
+      resetFIFO(channel)
+      startFIFOReadTransfer(channel, bank, paddedFrom)
+      val paddedData = await(readFIFOData(channel, paddedUntil - paddedFrom))
+      resetFIFO(channel)
 
       val data = paddedData.drop(from - paddedFrom).take(nBytes)
       assert(data.size == nBytes)
       data
     } (_) )
+
+
+    def readRawEventData(channel: Int, dataToRead: DataToRead) =
+      readRawEventData(dataToRead.bank, channel, dataToRead.from, dataToRead.nBytes)
 
 
     protected var time_start: Double = 0
@@ -838,8 +839,6 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
     protected var buffer_counter: Int = 0
     protected var run_continous: Boolean = true
     protected var scheduledPoll: Option[Cancellable] = None
-    protected var dataForEvtReadOut: ChV[DataToRead] = ChV[DataToRead]()
-    protected var dataForRawReadOut: ChV[DataToRead] = ChV[DataToRead]()
 
     protected var readOtherBank = false
     protected def captureIsStopping = capture_active && !capture_enabled
@@ -848,7 +847,7 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
       input_readout_enabled.collect{ case (channel, true) => channel }(breakOut)
 
 
-    protected def startReadOut(): Unit = {
+    protected def swapBanksAndReadOut(): Unit = {
       readout_active = true
       log.trace("Starting data read-out")
 
@@ -857,112 +856,98 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
         buffer_counter = buffer_counter + 1
         val dataAvail = await(dataToRead(channelsToRead))
 
-        if (dataAvail exists { case (channel, toRead) => toRead.nBytes > 0 }) {
-          if (propsOutputStream != None) dataForEvtReadOut = dataAvail
-          if (rawOutputStream != None) dataForRawReadOut = dataAvail
+        assert( dataAvail forall { case (channel, toRead) =>
+          toRead.nBytes % toRead.format.rawEventDataSize == 0
+        } )
+
+        val dataNotEmpty = dataAvail exists{ case (channel, toRead) => toRead.nBytes > 0 }
+        if (dataNotEmpty) {
+          await(readOutBankDataEvt(dataAvail))
+          await(readOutBankDataRaw(dataAvail))
         }
 
-        log.trace("Starting sorted event data read-out")
-        readOutBankDataEvt()
+        log.trace("Finishing data read-out")
+
+        if (readOtherBank) {
+          readOtherBank = false
+          assert(captureIsStopping)
+          log.trace("Capture stopping, reading other bank too")
+          swapBanksAndReadOut()
+        } else {
+          readout_active = false
+          if (capture_enabled && run_continous) pollNewEvents()
+          else finishCapture()
+        }
       } (_) )
     }
 
 
-    protected def readChunkSize(toRead: DataToRead): Int = {
-      val nBytesPerEvent = toRead.format.rawEventDataSize
-      val maxChunkSize = 10 * 1024 * 1024
-      val matchedChunkSize = maxChunkSize / nBytesPerEvent * nBytesPerEvent
-      Math.max(nBytesPerEvent, matchedChunkSize)
-    }
-
-
     // Sorted event read out
-    protected def readOutBankDataEvt(): Unit = {
-      if (!dataForEvtReadOut.isEmpty) {
-        assert(propsOutputStream != None)
+    protected def readOutBankDataEvt(dataAvail: ChV[DataToRead]): Future[Unit] = {
+      log.trace("Starting sorted event data read-out")
+      assert(propsOutputStream != None)
 
-        localExec( async {
-          val (channel, toRead) = dataForEvtReadOut.head
-          val maxNBytes = readChunkSize(toRead)
-          log.trace(s"Sorted read-out of max. ${maxNBytes} bytes from channel ${channel}, starting at ${toRead.from}")
-          val (data, restDataToRead) = await(readRawEventData(channel, dataForEvtReadOut, maxNBytes))
+      localExec( async {
+        val availIterator = dataAvail.iterator
+        while (availIterator.hasNext) {
+          val (channel, toRead) = availIterator.next
 
-          val dataIterator = data.iterator
-          val stringCodec = StringLineCodec(LineCodec.LF, "UTF-8")
-          while (dataIterator.hasNext) {
-            val chEvent = getChEvent(dataIterator, bulkReadNIOByteOrder, toRead.format.nSamples, toRead.format.nMAWValues)
-            
-            val rawProps = chEvent.toProps;
-            val convProps = rawProps + ('time -> rawProps('time).asDouble / sampleClock)
-            propsOutputStream.get.send(convProps.toJSON, stringCodec.enc)
+          val chunksIterator = chunkStream(toRead).iterator
+          while (chunksIterator.hasNext) {
+            val chunkToRead = chunksIterator.next
+            val data = await(readRawEventData(channel, chunkToRead))
+
+            val dataIterator = data.iterator
+            val stringCodec = StringLineCodec(LineCodec.LF, "UTF-8")
+            while (dataIterator.hasNext) {
+              val chEvent = getChEvent(dataIterator, bulkReadNIOByteOrder, toRead.format.nSamples, toRead.format.nMAWValues)
+              
+              val rawProps = chEvent.toProps;
+              val convProps = rawProps + ('time -> rawProps('time).asDouble / sampleClock)
+              propsOutputStream.get.send(convProps.toJSON, stringCodec.enc)
+            }
           }
-
-          dataForEvtReadOut = restDataToRead
-          readOutBankDataEvt()
-        } (_) )
-      } else {
-        log.trace("Starting unsorted raw data read-out")
-        readOutBankDataRaw()
-      }
+        }
+      } (_) )
     }
 
 
     // Raw bank-data read out (Struck raw format)
-    protected def readOutBankDataRaw(): Unit = {
-      if (!dataForRawReadOut.isEmpty) {
-        assert(bulkReadNIOByteOrder == LittleEndian.nioByteOrder)
-        assert(rawOutputStream != None)
+    protected def readOutBankDataRaw(dataAvail: ChV[DataToRead]): Future[Unit] = {
+      log.trace("Starting unsorted raw data read-out")
+      assert(bulkReadNIOByteOrder == LittleEndian.nioByteOrder)
+      assert(rawOutputStream != None)
 
-        localExec( async {
-          val (channel, toRead) = dataForRawReadOut.head
-          val maxNBytes = readChunkSize(toRead)
-          log.trace(s"Raw read-out of max. ${maxNBytes} bytes from channel ${channel}, starting at ${toRead.from}")
-          val (data, restDataToRead) = await(readRawEventData(channel, dataForRawReadOut, maxNBytes))
+      var dataRemaining: ChV[DataToRead] = dataAvail
 
-          if (toRead.from == 0) {
-            val nBytesPerEvent = toRead.format.rawEventDataSize
-            assert(nBytesPerEvent % 4 == 0)
+      localExec( async {
+        val availIterator = dataAvail.iterator
+        while (availIterator.hasNext) {
+          val (channel, toRead) = availIterator.next
 
-            val headerInfo = BankChannelHeaderInfo (
-              firmwareType = firmwareType,
-              bufferNo = buffer_counter - 1,
-              channel =  channel,
-              nEvents = toRead.until / nBytesPerEvent,
-              nWordsPerEvent = nBytesPerEvent / 4,
-              nMAWValues = toRead.format.nMAWValues,
-              reserved = 0
-            )
+          val nBytesPerEvent = toRead.format.rawEventDataSize
+          assert(nBytesPerEvent % 4 == 0)
 
-            rawOutputStream.get.send(headerInfo.getBytes)
+          val headerInfo = BankChannelHeaderInfo (
+            firmwareType = firmwareType,
+            bufferNo = buffer_counter - 1,
+            channel =  channel,
+            nEvents = toRead.nBytes / nBytesPerEvent,
+            nWordsPerEvent = nBytesPerEvent / 4,
+            nMAWValues = toRead.format.nMAWValues,
+            reserved = 0
+          )
+
+          rawOutputStream.get.send(headerInfo.getBytes)
+
+          val chunksIterator = chunkStream(toRead).iterator
+          while (chunksIterator.hasNext) {
+            val chunkToRead = chunksIterator.next
+            val data = await(readRawEventData(channel, chunkToRead))
+            rawOutputStream.get.send(data)
           }
-          rawOutputStream.get.send(data)
-
-          dataForRawReadOut = restDataToRead
-          readOutBankDataRaw()
-        } (_) )
-      } else {
-        finishReadOut()
-      }
-    }
-
-
-    protected def finishReadOut(): Unit = {
-      log.trace("Finishing data read-out")
-      assert(dataForEvtReadOut.isEmpty)
-      assert(dataForRawReadOut.isEmpty)
-
-      buffer_counter = buffer_counter + 1
-
-      if (readOtherBank) {
-        readOtherBank = false
-        assert(captureIsStopping)
-        log.trace("Capture stopping, reading other bank too")
-        startReadOut()
-      } else {
-        readout_active = false
-        if (capture_enabled && run_continous) pollNewEvents()
-        else finishCapture()
-      }
+        }
+      } (_) )
     }
 
 
@@ -971,7 +956,7 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
 
       if (!readout_active) localExec( async {
         if (await(newEventsAvail)) {
-          startReadOut()
+          swapBanksAndReadOut()
         } else {
           if (capture_enabled) scheduleEventPoll()
           else finishCapture()
