@@ -17,7 +17,7 @@
 
 package daqcore.actors
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{Future, ExecutionContext, ExecutionContextExecutor}
 import akka.actor.ActorRef
 
 
@@ -51,7 +51,7 @@ object LocalECActorImpl {
   protected case class LocalExecRun(runnable: Runnable) extends LocalExecMsg
   protected case class LocalExecFailed(cause: Throwable) extends LocalExecMsg
 
-  protected class LocalEC(actor: ActorRef) extends ExecutionContext {
+  protected class LocalEC(actor: ActorRef) extends ExecutionContextExecutor {
     def execute(runnable: Runnable) = actor ! LocalExecRun(runnable)
     def reportFailure(cause: Throwable) = actor ! LocalExecFailed(cause)
   }
