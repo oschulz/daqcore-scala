@@ -21,7 +21,7 @@ import scala.language.postfixOps
 import scala.language.reflectiveCalls
 
 import scala.reflect.{ClassTag, classTag}
-import scala.concurrent.{Future, Promise}
+import scala.concurrent.{Future, Promise, ExecutionContext, ExecutionContextExecutor}
 import scala.concurrent.duration._
 import java.net.URI
 import akka.actor._
@@ -32,11 +32,13 @@ import TypedActorTraits._
 
 trait TypedActorBasics extends AbstractActorImpl
 {
-  implicit def dispatcher = TypedActor.dispatcher
-  implicit def context: ActorContext = TypedActor.context
+  implicit def actorRefFactory: ActorRefFactory = TypedActor.context
   implicit def selfRef: ActorRef = context.self
 
+  implicit def defaultExecContext: ExecutionContext = TypedActor.dispatcher
+
   def self[A <: AnyRef]: A = TypedActor.self[A]
+  def context: ActorContext = TypedActor.context
   def actorSystem: ActorSystem = context.system
 
   def successful[A](x: A): Future[A] = (Promise successful x).future
@@ -58,9 +60,7 @@ abstract class TypedActorCompanion[+A <: AnyRef : ClassTag] {
 trait TypedActorImpl extends TypedActorBasics with Logging with Profiling
   with PreStart with PostStop with PreRestart with PostRestart with TypedActorReceive
 {
-  override implicit val context: ActorContext = super.context
-
-  val selfId = "Typed%s(%s)".format(selfRef, this.getClass)
+  def selfId = s"Typed${selfRef}(${getClass})"
 
   log.debug("Creating object for %s".format(selfId))
   

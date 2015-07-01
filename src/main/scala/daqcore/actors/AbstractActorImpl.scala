@@ -24,6 +24,7 @@ import daqcore.util.Logging
 
 
 trait AbstractActorImpl extends Logging {
+  def actorRefFactory: ActorRefFactory
   def selfRef: ActorRef
   
   def extend(receiver: PartialFunction[Any, Unit])(extension: PartialFunction[Any, Unit]) =
