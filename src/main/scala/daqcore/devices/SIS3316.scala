@@ -121,14 +121,14 @@ trait SIS3316 extends Device {
   def props_output_file_name_get: Future[String]
 
   def getMem(register: MemRegion#ReadableRegister[Int]): Future[Int]
-  def getMemConv[@specialized(Int, Long, Float, Double)  U](bits: MemRegion#ReadableRegister[Int]#ReadableBitSelection[U])(implicit ctx: ExecutionContext, numType: IntegerNumType[Int]): Future[U]
-  def getMemConv[@specialized(Int, Long, Float, Double)  U](bits: (Int, Int) => MemRegion#ReadableRegister[Int]#ReadableBitSelection[U])(ch: Ch)(implicit ctx: ExecutionContext, numType: IntegerNumType[Int]): Future[ChV[U]]
-  def getMemConvFPGA[@specialized(Int, Long, Float, Double)  U](bits: Int => MemRegion#ReadableRegister[Int]#ReadableBitSelection[U])(ch: Ch)(implicit ctx: ExecutionContext, numType: IntegerNumType[Int]): Future[ChV[U]]
+  def getMemConv[@specialized(Int, Long, Float, Double)  U](bits: MemRegion#ReadableRegister[Int]#ReadableBitSelection[U])(implicit numType: IntegerNumType[Int]): Future[U]
+  def getMemConv[@specialized(Int, Long, Float, Double)  U](bits: (Int, Int) => MemRegion#ReadableRegister[Int]#ReadableBitSelection[U])(ch: Ch)(implicit numType: IntegerNumType[Int]): Future[ChV[U]]
+  def getMemConvFPGA[@specialized(Int, Long, Float, Double)  U](bits: Int => MemRegion#ReadableRegister[Int]#ReadableBitSelection[U])(ch: Ch)(implicit numType: IntegerNumType[Int]): Future[ChV[U]]
 
-  def setMem(register: MemRegion#WriteableRegister[Int], value: Int)(implicit ctx: ExecutionContext, numType: IntegerNumType[Int]): Future[Unit]
-  def setMemConv[@specialized(Int, Long, Float, Double)  U](bits: MemRegion#PartiallyWriteableRegister[Int]#WriteableBitSelection[U], value: U)(implicit ctx: ExecutionContext, numType: IntegerNumType[Int]): Future[Unit]
-  def setMemConv[@specialized(Int, Long, Float, Double)  U](bits: (Int, Int) => MemRegion#PartiallyWriteableRegister[Int]#WriteableBitSelection[U])(chVals: ChV[U])(implicit ctx: ExecutionContext, numType: IntegerNumType[Int]): Future[Unit]
-  def setMemConvFPGA[@specialized(Int, Long, Float, Double)  U](bits: Int => MemRegion#PartiallyWriteableRegister[Int]#WriteableBitSelection[U])(chVals: ChV[U])(implicit ctx: ExecutionContext, numType: IntegerNumType[Int]): Future[Unit]
+  def setMem(register: MemRegion#WriteableRegister[Int], value: Int)(implicit numType: IntegerNumType[Int]): Future[Unit]
+  def setMemConv[@specialized(Int, Long, Float, Double)  U](bits: MemRegion#PartiallyWriteableRegister[Int]#WriteableBitSelection[U], value: U)(implicit numType: IntegerNumType[Int]): Future[Unit]
+  def setMemConv[@specialized(Int, Long, Float, Double)  U](bits: (Int, Int) => MemRegion#PartiallyWriteableRegister[Int]#WriteableBitSelection[U])(chVals: ChV[U])(implicit numType: IntegerNumType[Int]): Future[Unit]
+  def setMemConvFPGA[@specialized(Int, Long, Float, Double)  U](bits: Int => MemRegion#PartiallyWriteableRegister[Int]#WriteableBitSelection[U])(chVals: ChV[U])(implicit numType: IntegerNumType[Int]): Future[Unit]
 
   def startFIFOReadTransfer(ch: Int, bank: Int, from: Int = 0): Future[Unit]
   def resetFIFO(ch: Int): Future[Unit]
@@ -584,25 +584,25 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
     def getMem(register: MemRegion#ReadableRegister[Int]): Future[Int] =
       mem.read(register)
 
-    def getMemConv[@specialized(Int, Long, Float, Double)  U](bits: MemRegion#ReadableRegister[Int]#ReadableBitSelection[U])(implicit ctx: ExecutionContext, numType: IntegerNumType[Int]): Future[U] =
+    def getMemConv[@specialized(Int, Long, Float, Double)  U](bits: MemRegion#ReadableRegister[Int]#ReadableBitSelection[U])(implicit numType: IntegerNumType[Int]): Future[U] =
       mem.readConv(bits)
 
-    def getMemConv[@specialized(Int, Long, Float, Double)  U](bits: (Int, Int) => MemRegion#ReadableRegister[Int]#ReadableBitSelection[U])(ch: Ch)(implicit ctx: ExecutionContext, numType: IntegerNumType[Int]): Future[ChV[U]] =
+    def getMemConv[@specialized(Int, Long, Float, Double)  U](bits: (Int, Int) => MemRegion#ReadableRegister[Int]#ReadableBitSelection[U])(ch: Ch)(implicit numType: IntegerNumType[Int]): Future[ChV[U]] =
       ch ftVMap { channel => mem.readConv(chSubst(bits)(channel))}
 
-    def getMemConvFPGA[@specialized(Int, Long, Float, Double)  U](bits: Int => MemRegion#ReadableRegister[Int]#ReadableBitSelection[U])(ch: Ch)(implicit ctx: ExecutionContext, numType: IntegerNumType[Int]): Future[ChV[U]] =
+    def getMemConvFPGA[@specialized(Int, Long, Float, Double)  U](bits: Int => MemRegion#ReadableRegister[Int]#ReadableBitSelection[U])(ch: Ch)(implicit numType: IntegerNumType[Int]): Future[ChV[U]] =
       ch ftVMap { channel => mem.readConv(chSubstFPGA(bits)(channel))}
 
-    def setMem(register: MemRegion#WriteableRegister[Int], value: Int)(implicit ctx: ExecutionContext, numType: IntegerNumType[Int]): Future[Unit] =
+    def setMem(register: MemRegion#WriteableRegister[Int], value: Int)(implicit numType: IntegerNumType[Int]): Future[Unit] =
       mem.write(register, value)
 
-    def setMemConv[@specialized(Int, Long, Float, Double)  U](bits: MemRegion#PartiallyWriteableRegister[Int]#WriteableBitSelection[U], value: U)(implicit ctx: ExecutionContext, numType: IntegerNumType[Int]): Future[Unit] =
+    def setMemConv[@specialized(Int, Long, Float, Double)  U](bits: MemRegion#PartiallyWriteableRegister[Int]#WriteableBitSelection[U], value: U)(implicit numType: IntegerNumType[Int]): Future[Unit] =
       mem.writeConv(bits, value)
 
-    def setMemConv[@specialized(Int, Long, Float, Double)  U](bits: (Int, Int) => MemRegion#PartiallyWriteableRegister[Int]#WriteableBitSelection[U])(chVals: ChV[U])(implicit ctx: ExecutionContext, numType: IntegerNumType[Int]): Future[Unit] =
+    def setMemConv[@specialized(Int, Long, Float, Double)  U](bits: (Int, Int) => MemRegion#PartiallyWriteableRegister[Int]#WriteableBitSelection[U])(chVals: ChV[U])(implicit numType: IntegerNumType[Int]): Future[Unit] =
       chVals map { case (channel, value) => mem.writeConv(chSubst(bits)(channel), value) }
 
-    def setMemConvFPGA[@specialized(Int, Long, Float, Double)  U](bits: Int => MemRegion#PartiallyWriteableRegister[Int]#WriteableBitSelection[U])(chVals: ChV[U])(implicit ctx: ExecutionContext, numType: IntegerNumType[Int]): Future[Unit] =
+    def setMemConvFPGA[@specialized(Int, Long, Float, Double)  U](bits: Int => MemRegion#PartiallyWriteableRegister[Int]#WriteableBitSelection[U])(chVals: ChV[U])(implicit numType: IntegerNumType[Int]): Future[Unit] =
       chVals map { case (channel, value) => mem.writeConv(chSubstFPGA(bits)(channel), value) }
 
 
