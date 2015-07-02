@@ -311,6 +311,8 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
     import SIS3316Memory.eventFormat._
     import dataTypes._
 
+    implicit def executor = defaultExecContext
+
     val registers = SIS3316Memory.registers
 
     val mem = SIS3316Memory(vmeURI, "memory")
