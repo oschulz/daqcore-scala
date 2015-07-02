@@ -39,6 +39,8 @@ object VacomMVC3 extends DeviceCompanion[VacomMVC3] {
 class VacomMVC3Impl(ioURI: String) extends VacomMVC3
   with CloseableTAImpl with SyncableImpl
 {
+  implicit def executor = defaultExecContext
+
   protected val nChannels = 2
 
   protected val codec = StringLineCodec(LineCodec.CR, "ASCII")

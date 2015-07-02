@@ -55,6 +55,7 @@ class RigolDP1308AImpl(ioURI: String) extends RigolDP1308A
   // too long.
 
   import daqcore.defaults.defaultTimeout
+  implicit def executor = defaultExecContext
 
   val chName = ChV(1 -> "P6V", 2 -> "P25V", 3 -> "N25V")
   protected val nChannels = chName.size

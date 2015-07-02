@@ -39,6 +39,7 @@ trait SCPIDevice extends Device {
 
 trait SCPIDeviceImpl extends SCPIDevice with CloseableTAImpl {
   import daqcore.defaults.defaultTimeout //!! get actor default timeout somehow?
+  implicit def executor = defaultExecContext
 
   val io: ByteStreamIO
   def msgIO = SCPIStreamFramer(io)

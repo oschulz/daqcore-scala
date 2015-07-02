@@ -43,6 +43,7 @@ class PfeifferTPG261Impl(ioURI: String) extends PfeifferTPG261
   import PfeifferTPG261Impl._
 
   import daqcore.defaults.defaultTimeout
+  implicit def executor = defaultExecContext
 
   protected val nChannels = 1
 

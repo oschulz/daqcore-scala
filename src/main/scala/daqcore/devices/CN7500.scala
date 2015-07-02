@@ -70,6 +70,7 @@ class CN7500Impl(busURI: String, slave: Int) extends CN7500
   import CN7500Impl._
 
   import daqcore.defaults.defaultTimeout //!! get actor default timeout somehow?
+  implicit def executor = defaultExecContext
   
   val bus = typedActor[ModbusServer](findActor(busURI).get.get)
   

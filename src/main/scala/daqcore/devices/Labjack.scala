@@ -57,6 +57,8 @@ class LabjackUE9Impl(busURI: String) extends LabjackUE9
 {
   import daqcore.io.prot.modbus.BigEndianShortCoding._
 
+  implicit def executor = defaultExecContext
+
   val bus = ModbusServer(busURI, "modbus")
   val slave = 0 // No modbus slave address required for Modbus TCP
 

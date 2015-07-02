@@ -90,6 +90,7 @@ class Keithley487Impl(busURI: String) extends Keithley487
   import Keithley487.{inputCurrentRanges, outputVoltageRanges, inputCurrentLimit}
 
   import daqcore.defaults.defaultTimeout //!! get actor default timeout somehow?
+  implicit def executor = defaultExecContext
 
   val io = ByteStreamIO(busURI, "io")
   val parser = KeithleyParser()
