@@ -35,7 +35,7 @@ trait TypedActorBasics extends AbstractActorImpl
   implicit def actorRefFactory: ActorRefFactory = TypedActor.context
   implicit def selfRef: ActorRef = context.self
 
-  implicit def defaultExecContext: ExecutionContext = TypedActor.dispatcher
+  def defaultExecContext: ExecutionContext = TypedActor.dispatcher
 
   def self[A <: AnyRef]: A = TypedActor.self[A]
   def context: ActorContext = TypedActor.context
@@ -46,10 +46,10 @@ trait TypedActorBasics extends AbstractActorImpl
   def selfStop(): Unit = context.stop(selfRef)
 
   def schedule(initialDelay: FiniteDuration, frequency: FiniteDuration, receiver: ActorRef, message: Any): Cancellable =
-    actorSystem.scheduler.schedule(initialDelay, frequency, receiver, message)
+    actorSystem.scheduler.schedule(initialDelay, frequency, receiver, message)(actorSystem.dispatcher)
   
   def scheduleOnce(delay: FiniteDuration, receiver: ActorRef, message: Any): Cancellable =
-    actorSystem.scheduler.scheduleOnce(delay, receiver, message)
+    actorSystem.scheduler.scheduleOnce(delay, receiver, message)(actorSystem.dispatcher)
 }
 
 

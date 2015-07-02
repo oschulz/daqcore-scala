@@ -21,7 +21,7 @@ import java.net.{SocketAddress, InetSocketAddress}
 
 import akka.actor.{ActorRef, ActorRefFactory}
 import scala.util.{Try, Success, Failure}
-import scala.concurrent.{Future, Promise}
+import scala.concurrent.{Future, Promise, ExecutionContext}
 
 import daqcore.util._
 
@@ -47,6 +47,8 @@ object ForkedForeach {
 
 
   class ForeachImpl[A, B](input: Seq[A], body: A => B, start: Boolean, onDone: => Unit) extends ForkedForeach[A] with TypedActorImpl with CloseableTAImpl {
+    import ForeachImpl._
+
     protected var pendingInput = input
     protected var paused = !start
     protected var currentElem: Option[A] = None
@@ -89,7 +91,8 @@ object ForkedForeach {
             result match {
               case future: Future[_] =>
                 elemDonePending = true
-                future onComplete { r => selfRef ! ElemDone(r) }
+                ForeachImpl.
+                sendElemDone(selfRef, future)(defaultExecContext)
               case r => doNext()
             }
           } else {
@@ -112,5 +115,10 @@ object ForkedForeach {
         }
       }
     }
+  }
+
+  object ForeachImpl {
+    protected def sendElemDone(actorRef: ActorRef, future: Future[_])(implicit executor: ExecutionContext) =
+      future onComplete { r => actorRef ! ElemDone(r) }
   }
 }
