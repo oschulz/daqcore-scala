@@ -19,6 +19,7 @@ package daqcore.io
 
 import akka.actor._
 import scala.concurrent.{Future, Promise}
+import scala.async.Async.{async, await}
 
 import daqcore.util._
 import daqcore.io._
@@ -66,7 +67,7 @@ object ModbusServer {
 
 
   abstract class DefaultImpl extends ModbusServer
-    with CloseableTAImpl with SyncableImpl
+    with CloseableTAImpl with SyncableImpl with LocalECTypedActorImpl
   {
     val io: ByteStreamIO
     val codec: ModbusMasterCodec
@@ -75,21 +76,29 @@ object ModbusServer {
 
     def query(req: ModbusReq): Future[ModbusResp] = {
       import daqcore.defaults.defaultTimeout
-      log.trace(req.toString)
-      val resp = queryImpl(req)
-      resp onSuccess { case r => log.trace(resp.toString) }
-      resp
+      log.trace(s"Request: ${req}")
+      val respFt = queryImpl(req)
+      localExec( async {
+        val resp = await(respFt)
+        log.trace(s"Response: $resp")
+      } (_) )
+      respFt
     }
 
     def checkedQuery[R](req: ModbusReq)(f: PartialFunction[ModbusResp, R]): Future[R] = {
-      query(req) map ( f orElse {
+      val mapFunc: Function[ModbusResp, R] = f orElse {
         case resp: ExceptionResp => throw new RuntimeException("Received modbus exception response: " + resp)
         case resp => throw new RuntimeException("Unexpected modbus response: " + resp)
-      } )
+      }
+
+      localExec( async {
+        mapFunc(await(query(req)))
+      } (_) )
     }
 
 
-    def readRegisterInput(slave: Int, address: Int): Future[Short] = readRegisterInputs(slave, address, 1) map {_.head}
+    def readRegisterInput(slave: Int, address: Int): Future[Short] =
+      readRegisterInputs(slave, address, 1).map{ _.head }(defaultExecContext)
     
     def readRegisterInputs(slave: Int, address: Int, count: Int): Future[ArrayVec[Short]] = {
       checkedQuery(ReadRegisterInputsReq(slave, address, count)) { _ match {
@@ -98,7 +107,8 @@ object ModbusServer {
     }
 
 
-    def readRegister(slave: Int, address: Int): Future[Short] = readRegisters(slave, address, 1) map {_.head}
+    def readRegister(slave: Int, address: Int): Future[Short] =
+      readRegisters(slave, address, 1).map{ _.head }(defaultExecContext)
 
     def readRegisters(slave: Int, address: Int, count: Int): Future[ArrayVec[Short]] = {
       checkedQuery(ReadRegistersReq(slave, address, count)) { _ match {
@@ -119,7 +129,8 @@ object ModbusServer {
     }
 
 
-    def readBitInput(slave: Int, address: Int): Future[Boolean] = readBitInputs(slave, address, 1) map {_.head}
+    def readBitInput(slave: Int, address: Int): Future[Boolean] =
+      readBitInputs(slave, address, 1).map{ _.head }(defaultExecContext)
 
     def readBitInputs(slave: Int, address: Int, count: Int): Future[ArrayVec[Boolean]] = {
       checkedQuery(ReadDiscreteInputsReq(slave, address, count)) { _ match {
@@ -128,7 +139,8 @@ object ModbusServer {
     }
 
 
-    def readBit(slave: Int, address: Int): Future[Boolean] = readBits(slave, address, 1) map {_.head}
+    def readBit(slave: Int, address: Int): Future[Boolean] =
+      readBits(slave, address, 1).map{ _.head }(defaultExecContext)
     
     def readBits(slave: Int, address: Int, count: Int): Future[ArrayVec[Boolean]] = {
       checkedQuery(ReadCoilsReq(slave, address, count)) { _ match {

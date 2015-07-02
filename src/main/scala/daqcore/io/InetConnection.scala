@@ -62,7 +62,7 @@ object InetConnection extends IOResourceCompanion[InetConnection] {
 
     protected def connectionRef = connectionOpt.getOrElse(throw new RuntimeException("TCP Connection not open (yet)"))
 
-    override def isOpen(): Future[Boolean] = connection map { _ => true }
+    override def isOpen(): Future[Boolean] = connection.map{ _ => true }(defaultExecContext)
 
     def flush(): Unit = {
       val bytes = outputQueue.result

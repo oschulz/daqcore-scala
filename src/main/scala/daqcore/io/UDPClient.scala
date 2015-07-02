@@ -63,7 +63,7 @@ object UDPClient extends IOResourceCompanion[UDPClient] {
     val connection: Future[ActorRef] = {
       IO(UdpConnected)(context.system).askSender(UdpConnected.Connect(selfRef, remoteAddress, localAddress)).map{
         case (UdpConnected.Connected, ref) => ref
-      }
+      }(defaultExecContext)
     }
 
 
@@ -85,7 +85,7 @@ object UDPClient extends IOResourceCompanion[UDPClient] {
     def flush() = {}
 
 
-    override def isOpen(): Future[Boolean] = connection map { _ => true }
+    override def isOpen(): Future[Boolean] = connection.map{ _ => true }(defaultExecContext)
 
     override def recv(receiver: ActorRef, repeat: Boolean) = {
       if (repeat) recvActor = Some(receiver)

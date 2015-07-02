@@ -20,7 +20,9 @@ package daqcore.io
 import scala.language.postfixOps
 
 import akka.actor._
-import scala.concurrent.{Future, Promise}
+import scala.concurrent.{Future, Promise, ExecutionContext}
+
+import java.nio.{ByteOrder => NIOByteOrder}
 
 import daqcore.util._
 import daqcore.io._
@@ -165,13 +167,13 @@ object EPOSCANOpenGateway {
     }
 
     def readByteObject(node: Int, idx: Int, subIdx: Int): Future[Byte] =
-        readObject(node, idx, subIdx) map { _.iterator.getByte }
+        getByte(readObject(node, idx, subIdx))(defaultExecContext)
 
     def readShortObject(node: Int, idx: Int, subIdx: Int): Future[Short] =
-        readObject(node, idx, subIdx) map { _.iterator.getShort }
+        getShort(readObject(node, idx, subIdx))(defaultExecContext, nioByteOrder)
 
     def readIntObject(node: Int, idx: Int, subIdx: Int): Future[Int] =
-        readObject(node, idx, subIdx) map { _.iterator.getInt }
+        getInt(readObject(node, idx, subIdx))(defaultExecContext, nioByteOrder)
 
     def writeObject(node: Int, idx: Int, subIdx: Int, value: ByteString): Future[Unit] = {
       val v = if (value.length % 2 != 0) value ++ ByteString(0) else value
@@ -217,5 +219,14 @@ object EPOSCANOpenGateway {
       builder.putByte(subIdx.toByte)
       builder.putByte(node.toByte)
     }
+
+    protected def getByte(ftBytes: Future[ByteString])(implicit executor: ExecutionContext) =
+      ftBytes map { _.iterator.getByte }
+
+    protected def getShort(ftBytes: Future[ByteString])(implicit executor: ExecutionContext, byteOrder: NIOByteOrder) =
+      ftBytes map { _.iterator.getShort }
+
+    protected def getInt(ftBytes: Future[ByteString])(implicit executor: ExecutionContext, byteOrder: NIOByteOrder) =
+      ftBytes map { _.iterator.getInt }
   }
 }

@@ -19,7 +19,7 @@ package daqcore.io
 
 import akka.actor._
 import scala.util.{Try, Success, Failure}
-import scala.concurrent.{Future, Promise}
+import scala.concurrent.{Future, Promise, ExecutionContext}
 
 import daqcore.util._
 import daqcore.actors._, daqcore.actors.TypedActorTraits._
@@ -40,22 +40,9 @@ trait ByteFrameOutputImpl extends ByteFrameOutput with CloseableTAImpl
 
 
 trait ByteFrameInputImpl extends ByteFrameInput with CloseableTAImpl {
+  import ByteFrameInputImpl._
+
   val inputQueue = new DataActionQueue[ByteString]
-
-  protected def decode[A](data: ByteString, decoder: Decoder[A]) = {
-    var result: Option[A] = None
-
-    val dec = decoder map { x => result = Some(x) }
-    val (next, rest) = dec(data)
-    next match {
-      case Decoder.Done(_) => // Nothing to do
-      case cont: Decoder.Next[_] => throw new RuntimeException("EOI during frame decoding")
-      case Decoder.Failure(cause) => throw cause
-    }
-    if (!rest.isEmpty) throw new RuntimeException("Data rest after frame decoding")
-
-    result.get
-  }
 
 
   def recv() = {
@@ -74,7 +61,7 @@ trait ByteFrameInputImpl extends ByteFrameInput with CloseableTAImpl {
 
   
   def recv[A](decoder: Decoder[A]): Future[A] =
-    recv() map { data => decode(data, decoder) }
+    transformFutureByteStream(recv(), decoder)(defaultExecContext)
 
 
   def recv(receiver: ActorRef, decoder: Decoder[_], repeat: Boolean): Unit = {
@@ -85,6 +72,26 @@ trait ByteFrameInputImpl extends ByteFrameInput with CloseableTAImpl {
   }
 }
 
+
+object ByteFrameInputImpl {
+  protected def decode[A](data: ByteString, decoder: Decoder[A]) = {
+    var result: Option[A] = None
+
+    val dec = decoder map { x => result = Some(x) }
+    val (next, rest) = dec(data)
+    next match {
+      case Decoder.Done(_) => // Nothing to do
+      case cont: Decoder.Next[_] => throw new RuntimeException("EOI during frame decoding")
+      case Decoder.Failure(cause) => throw cause
+    }
+    if (!rest.isEmpty) throw new RuntimeException("Data rest after frame decoding")
+
+    result.get
+  }
+
+  protected def transformFutureByteStream[A](futureData: Future[ByteString], decoder: Decoder[A])(implicit executor: ExecutionContext) =
+    futureData map { data => decode(data, decoder) }
+}
 
 
 trait ByteFrameIOImpl extends ByteFrameInputImpl with ByteFrameOutputImpl
