@@ -21,7 +21,7 @@ import java.net.InetSocketAddress
 
 import scala.annotation.tailrec
 import scala.reflect.{ClassTag, classTag}
-import scala.concurrent.{Future, Promise}
+import scala.concurrent.{Future, Promise, ExecutionContext}
 import scala.concurrent.duration._
 import scala.concurrent.duration._
 
@@ -190,11 +190,7 @@ object SIS3316VMEGateway extends IOResourceCompanion[SIS3316VMEGateway] {
             addAction( UDPADCRegsRead(addrs, result) )
             result.future
           } else {
-            Future.sequence(addrs.grouped(1).toSeq map readADCRegs) map { results =>
-              val builder = ArrayVec.newBuilder[Int]
-              results foreach { builder ++= _ }
-              builder.result
-            }
+            concatVectors(addrs.grouped(1).toSeq map readADCRegs)(defaultExecContext)
           }
       } else {
         successful(ArrayVec.empty[Int])
@@ -211,8 +207,7 @@ object SIS3316VMEGateway extends IOResourceCompanion[SIS3316VMEGateway] {
             addAction( UDPADCRegsWrite(addrValues, result) )
             result.future
           } else {
-            Future.sequence(addrValues.grouped(1).toSeq map writeADCRegs) map
-              { results => {} }
+            allComplete(addrValues.grouped(1).toSeq map writeADCRegs)(defaultExecContext)
           }
       } else {
         successful({})
@@ -253,11 +248,7 @@ object SIS3316VMEGateway extends IOResourceCompanion[SIS3316VMEGateway] {
             assert(rest == 0)
             builder.result
           }
-          Future.sequence(chunks map { case (a, n) => readADCFifoRaw(a, n) }) map { results =>
-            val builder = ByteString.newBuilder
-            results foreach { builder ++= _ }
-            builder.result
-          }
+          concatByteStrings(chunks map { case (a, n) => readADCFifoRaw(a, n) })(defaultExecContext)
         }
       } else {
         successful(ByteString())
@@ -293,8 +284,7 @@ object SIS3316VMEGateway extends IOResourceCompanion[SIS3316VMEGateway] {
             }
             builder.result
           }
-          Future.sequence(chunks map { case (a, d) => writeADCFifoRaw(a, d) }) map
-            { results => {} }
+          allComplete(chunks map { case (a, d) => writeADCFifoRaw(a, d) })(defaultExecContext)
         }
       } else {
         successful({})
@@ -318,7 +308,7 @@ object SIS3316VMEGateway extends IOResourceCompanion[SIS3316VMEGateway] {
 
 
     def readIntReg(address: VMEAddress, mode: Mode = A32_D32_SCT, deviceByteOrder: ByteOrder = BigEndian) =
-      readIntRegs(Seq(address), mode, deviceByteOrder) map { _.head }
+      readIntRegs(Seq(address), mode, deviceByteOrder).map{ _.head }(defaultExecContext)
 
 
     def writeIntReg(address: VMEAddress, value: Int, mode: Mode = A32_D32_SCT, deviceByteOrder: ByteOrder = BigEndian) =
@@ -332,12 +322,12 @@ object SIS3316VMEGateway extends IOResourceCompanion[SIS3316VMEGateway] {
       mode.cycle match {
         case VMECycle.SCT =>
           val grouped = segment(addrs.toArrayVec)(isVMEInterfaceReg)
-          Future.sequence (
+          concatVectors (
             grouped map {
-              case (true, addrSeq) => Future.sequence(addrSeq map readInterfaceReg)
+              case (true, addrSeq) => vectorize(addrSeq map readInterfaceReg)(defaultExecContext)
               case (false, addrSeq) => readADCRegs(addrSeq)
             }
-          ) map { _.flattenToArrayVec }
+          )(defaultExecContext)
         case _ =>
           throw new UnsupportedOperationException("VME cycle ${mode.cycle} not supported for reading of individual registers")
       }
@@ -351,12 +341,12 @@ object SIS3316VMEGateway extends IOResourceCompanion[SIS3316VMEGateway] {
       mode.cycle match {
         case VMECycle.SCT =>
           val grouped = segment(addrValues.toArrayVec) { case(a, v) => isVMEInterfaceReg(a) }
-          Future.sequence {
+          allComplete(
             grouped map {
-              case (true, avSeq) => Future.sequence(avSeq map { case (a,v) => writeInterfaceReg(a, v) })
+              case (true, avSeq) => allComplete(avSeq map { case (a,v) => writeInterfaceReg(a, v) })(defaultExecContext)
               case (false, avSeq) => writeADCRegs(avSeq)
             }
-          } map { _ => {} }
+          )(defaultExecContext)
         case _ =>
           throw new UnsupportedOperationException("VME cycle ${mode.cycle} not supported for reading of individual registers")
       }
@@ -777,6 +767,34 @@ object SIS3316VMEGateway extends IOResourceCompanion[SIS3316VMEGateway] {
     }
   }
 
+
+
+  protected def vectorize(futures: Seq[Future[Int]])(implicit executor: ExecutionContext): Future[ArrayVec[Int]] = {
+    Future.sequence(futures) map { _.toArrayVec }
+  }
+
+
+  protected def concatVectors(futures: Seq[Future[ArrayVec[Int]]])(implicit executor: ExecutionContext): Future[ArrayVec[Int]] = {
+    Future.sequence(futures) map { results =>
+      val builder = ArrayVec.newBuilder[Int]
+      results foreach { builder ++= _ }
+      builder.result
+    }
+  }
+
+
+  protected def concatByteStrings(futures: Seq[Future[ByteString]])(implicit executor: ExecutionContext): Future[ByteString] = {
+    Future.sequence(futures) map { results =>
+      val builder = ByteString.newBuilder
+      results foreach { builder ++= _ }
+      builder.result
+    }
+  }
+
+
+  protected def allComplete(futures: TraversableOnce[Future[_]])(implicit executor: ExecutionContext): Future[Unit] = {
+    Future.fold[Any, Unit](futures)({}){case (a, b) => {}}
+  }
 }
 
 
