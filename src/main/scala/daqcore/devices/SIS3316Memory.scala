@@ -249,6 +249,8 @@ object SIS3316Memory extends DeviceCompanion[SIS3316Memory] {
           this.addrs ++ that.addrs,
           that.reverseResultProcs ++ this.reverseResultProcs
         )
+
+        override def toString = s"Reads(${addrs map phex})"
       }
 
       case class Writes(
@@ -259,6 +261,8 @@ object SIS3316Memory extends DeviceCompanion[SIS3316Memory] {
           that.memValues.values.foldLeft(this.memValues){_ + _},
           that.reverseResultProcs ++ this.reverseResultProcs
         )
+
+        override def toString = s"Writes($memValues)"
       }
 
       def read(addr: Address)(processResult: Int => Unit): RegisterActions = RegisterActions(
