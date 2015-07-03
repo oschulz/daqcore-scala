@@ -21,10 +21,10 @@ import scala.concurrent.{Future, ExecutionContext, ExecutionContextExecutor}
 import akka.actor.ActorRef
 
 
-trait LocalECActorImpl extends AbstractActorImpl {
+trait LocalECActorImpl extends AbstractActorImpl with HasInstanceIDImpl {
   import LocalECActorImpl._
 
-  protected val localExecContext = new LocalEC(selfRef)
+  protected val localExecContext = new LocalEC(selfRef, getInstanceID)
 
   protected def localExec[T](futureExec: (ExecutionContext => Future[T])): Future[T] =
     monitor(futureExec(localExecContext))
@@ -35,12 +35,15 @@ trait LocalECActorImpl extends AbstractActorImpl {
   }
 
   protected def recvLocalExec: PartialFunction[Any, Unit] = {
+    // Have to ignore remnant messages from previous instances of this actor.
     case msg: LocalExecMsg => msg match {
-      case LocalExecRun(runnable) =>
+      case LocalExecRun(instance, runnable) => if (instance == getInstanceID) {
         // log.trace(s"Actor-local execution of $runnable")
         runnable.run()
-      case LocalExecFailed(cause) =>
+      }
+      case LocalExecFailed(instance, cause) => if (instance == getInstanceID) {
         throw cause
+      }
     }
   }
 }
@@ -48,12 +51,12 @@ trait LocalECActorImpl extends AbstractActorImpl {
 
 object LocalECActorImpl {
   protected sealed trait LocalExecMsg
-  protected case class LocalExecRun(runnable: Runnable) extends LocalExecMsg
-  protected case class LocalExecFailed(cause: Throwable) extends LocalExecMsg
+  protected case class LocalExecRun(instance: Long, runnable: Runnable) extends LocalExecMsg
+  protected case class LocalExecFailed(instance: Long, cause: Throwable) extends LocalExecMsg
 
-  protected class LocalEC(actor: ActorRef) extends ExecutionContextExecutor {
-    def execute(runnable: Runnable) = actor ! LocalExecRun(runnable)
-    def reportFailure(cause: Throwable) = actor ! LocalExecFailed(cause)
+  protected class LocalEC(actor: ActorRef, instance: Long) extends ExecutionContextExecutor {
+    def execute(runnable: Runnable) = actor ! LocalExecRun(instance, runnable)
+    def reportFailure(cause: Throwable) = actor ! LocalExecFailed(instance, cause)
   }
 
   protected def throwAll: PartialFunction[Throwable, Unit] = {case cause => throw cause}
