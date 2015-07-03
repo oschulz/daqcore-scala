@@ -91,6 +91,8 @@ case class MemValues[@specialized(Int, Long) Address, @specialized(Byte, Short, 
   def +(x: (Address, Value)): MemValues[Address, Value] = MemValues(values + x)
 
   // Maybe later: size(), monadic methods, full Traversable compatibility ...
+
+  override def toString = s"MemValues(${values})"
 }
 
 case object MemValues {
@@ -130,6 +132,8 @@ case class MaskedMemValues[@specialized(Int, Long) Address, @specialized(Byte, S
   }
 
   // Maybe later: size(), monadic methods, full Traversable compatibility ...
+
+  override def toString = s"MaskedMemValues(${values})"
 }
 
 case object MaskedMemValues {
