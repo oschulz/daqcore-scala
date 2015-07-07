@@ -967,7 +967,7 @@ object SIS3316Memory extends DeviceCompanion[SIS3316Memory] {
       class FIRTriggerSetupRegister(address: MemAddress) extends RWRegister[Int](address) {
         val nim_tp_len        = RWBits(24 to 31)  // External NIM Out Trigger Pulse Length (streched).
         val gap_time          = RWBits(12 to 23)  // G: Gap time (Flat Time)
-        val peak_time         = RWBits(24 to 31)  // P : Peaking time
+        val peak_time         = RWBits( 0 to 11)  // P : Peaking time
       }
 
       /** Ch. 1 FIR Trigger Setup Register */
