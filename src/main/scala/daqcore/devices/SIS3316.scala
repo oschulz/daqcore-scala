@@ -22,6 +22,9 @@ import scala.concurrent.duration._
 import scala.async.Async.{async, await}
 import scala.collection.breakOut
 import scala.collection.immutable.Queue
+
+import java.util.concurrent.TimeoutException
+
 import akka.actor.{ActorRef, Cancellable}
 
 import daqcore.actors._, daqcore.actors.TypedActorTraits._
@@ -805,25 +808,38 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
     }
 
 
-    def readRawEventData(bank: Int, channel: Int, from: Int, nBytes: Int) = localExec( async {
-      require((from >= 0) && (nBytes >= 0))
+    def readRawEventData(bank: Int, channel: Int, from: Int, nBytes: Int) = {
+      require(nBytes >= 0)
+      if (nBytes == 0) successful(ByteString.empty)
+      else localExec( async {
+        require((from >= 0) && (nBytes >= 0))
 
-      val until = from + nBytes
-      val paddedFrom =  (from / 8 * 8) // Must be a multiple of 64 bit
-      val paddedUntil = ((until + 7) / 8 * 8) // Must be a multiple of 64 bit
+        val until = from + nBytes
+        val paddedFrom =  (from / 8 * 8) // Must be a multiple of 64 bit
+        val paddedUntil = ((until + 7) / 8 * 8) // Must be a multiple of 64 bit
 
-      require(paddedFrom >= 0)
-      require(paddedUntil <= 4 * 0xfffffE)
+        require(paddedFrom >= 0)
+        require(paddedUntil <= 4 * 0xfffffE)
 
-      resetFIFO(channel)
-      startFIFOReadTransfer(channel, bank, paddedFrom)
-      val paddedData = await(readFIFOData(channel, paddedUntil - paddedFrom))
-      resetFIFO(channel)
+        var nTry = 0
+        var paddedData = ByteString.empty
 
-      val data = paddedData.drop(from - paddedFrom).take(nBytes)
-      assert(data.size == nBytes)
-      data
-    } (_) )
+        while (paddedData.isEmpty) {
+          nTry = nTry + 1
+          if (nTry >= 5) throw new RuntimeException(s"Retry limit reached for reading ${phex(nBytes)} bytes of event data from bank $bank, channel $channel, starting at ${phex(from)}")
+          if (nTry >= 2) log.debug(s"Trying again to read ${phex(nBytes)} bytes of event data from bank $bank, channel $channel, starting at ${phex(from)}, try no $nTry")
+          resetFIFO(channel)
+          await(startFIFOReadTransfer(channel, bank, paddedFrom))
+          val readResult = readFIFOData(channel, paddedUntil - paddedFrom)
+          paddedData = await(readResult.recover{case timeout: TimeoutException => ByteString.empty})
+          resetFIFO(channel)
+        }
+
+        val data = paddedData.drop(from - paddedFrom).take(nBytes)
+        assert(data.size == nBytes)
+        data
+      } (_) )
+    }
 
 
     def readRawEventData(channel: Int, dataToRead: DataToRead) =
