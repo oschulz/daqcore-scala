@@ -18,11 +18,11 @@
 package daqcore.io
 
 import java.net.InetSocketAddress
+import java.util.concurrent.TimeoutException
 
 import scala.annotation.tailrec
 import scala.reflect.{ClassTag, classTag}
 import scala.concurrent.{Future, Promise, ExecutionContext}
-import scala.concurrent.duration._
 import scala.concurrent.duration._
 
 import akka.actor._
@@ -301,12 +301,6 @@ object SIS3316VMEGateway extends IOResourceCompanion[SIS3316VMEGateway] {
     }
 
 
-    def requestResendLastPacket() {
-      val cmd = 0xee.toByte
-      udp.send(ByteString(cmd))
-    }
-
-
     def readIntReg(address: VMEAddress, mode: Mode = A32_D32_SCT, deviceByteOrder: ByteOrder = BigEndian) =
       readIntRegs(Seq(address), mode, deviceByteOrder).map{ _.head }(defaultExecContext)
 
@@ -395,7 +389,7 @@ object SIS3316VMEGateway extends IOResourceCompanion[SIS3316VMEGateway] {
     protected val waitingUDPActions = collection.mutable.Queue[UDPAction]()
 
 
-    protected final class ActiveUDPRequest (val request: UDPRequest) {
+    protected final class ActiveUDPRequest (val request: UDPRequest[_]) {
       var pkgIdVar: Byte = 0
       var sendTimeVar: Long = 0
       var nSentVar: Int = 0
@@ -412,20 +406,20 @@ object SIS3316VMEGateway extends IOResourceCompanion[SIS3316VMEGateway] {
         nSentVar = nSentVar + 1
         nReadAgainVar = 0
         if (nSent == 1) log.trace(s"Sending UDP request $request with cmd ${phex(request.cmd)}, packet id ${phex(pkgId)} and frame ${frame map hex}")
-        else log.info(s"Re-sending UDP request, cmd ${phex(request.cmd)}, packet id ${phex(pkgId)}, try no. ${nSent}")
+        else log.debug(s"Re-sending UDP request, cmd ${phex(request.cmd)}, packet id ${phex(pkgId)}, try no. ${nSent}")
         sendTimeVar = java.lang.System.nanoTime
         udp.send(frame)
       }
 
       def resend(): Unit = {
-        if (nSent >= maxNResend + 1) throw new RuntimeException("Re-send limit reached for request $request, giving up")
+        if (nSent >= maxNResend + 1) throw new RuntimeException(s"Re-send limit reached for request $request, giving up")
         send(pkgId)
       }
 
       def readAgain(): Unit = {
-        if (nReadAgain >= maxNReadAgain) throw new RuntimeException("Read-again limit reached for request $request, giving up")
+        if (nReadAgain >= maxNReadAgain) throw new RuntimeException(s"Read-again limit reached for UDP request, packet id ${phex(pkgId)}, cmd ${phex(request.cmd)}")
         nReadAgainVar = nReadAgainVar + 1
-        log.info(s"Re-reading response to UDP request, cmd ${phex(request.cmd)}, packet id ${phex(pkgId)}, try no. ${nReadAgainVar}")
+        log.debug(s"Re-reading response to UDP request, packet id ${phex(pkgId)}, cmd ${phex(request.cmd)}, try no. ${nReadAgainVar}")
         sendTimeVar = java.lang.System.nanoTime
         udp.send(ByteString(0xEE))
       }
@@ -433,7 +427,8 @@ object SIS3316VMEGateway extends IOResourceCompanion[SIS3316VMEGateway] {
       def isTimedOut: Boolean = {
         val currentTime = java.lang.System.nanoTime
         val age = java.lang.System.nanoTime - sendTime
-        // log.trace(s"Checking active UDP request, cmd ${phex(request.cmd)}, packet id ${phex(pkgId)}, age ${age.toDouble / 1E6} ms.")
+        if ((nSent > 1) || (nReadAgain > 0))
+          log.debug(s"Checking active UDP request, cmd ${phex(request.cmd)}, packet id ${phex(pkgId)}, age ${age.toDouble / 1E6} ms.")
         (java.lang.System.nanoTime > sendTime + reqTimeout.toNanos)
       }
     }
@@ -450,6 +445,7 @@ object SIS3316VMEGateway extends IOResourceCompanion[SIS3316VMEGateway] {
       lastReqCmd = activeUDPRequest.get.request.cmd
       lastReqPkgId = activeUDPRequest.get.pkgId
       activeUDPRequest = None
+      processWaitingActions()
     }
 
 
@@ -466,7 +462,7 @@ object SIS3316VMEGateway extends IOResourceCompanion[SIS3316VMEGateway] {
                 case None =>
               }
               processWaitingActions()
-            case request: UDPRequest =>
+            case request: UDPRequest[_] =>
               val activeReq = new ActiveUDPRequest(request)
               setActiveRequest(activeReq)
               activeReq.send(nextPkgId)
@@ -480,7 +476,12 @@ object SIS3316VMEGateway extends IOResourceCompanion[SIS3316VMEGateway] {
       activeUDPRequest match {
         case Some(activeReq) =>
           if (activeReq.isTimedOut) {
-            activeReq.readAgain()
+            if (activeReq.request.canRetry) {
+              activeReq.readAgain()
+            } else {
+              activeReq.request.result failure new TimeoutException(s"Timeout on non-retry UDP request, packet id ${phex(activeReq.pkgId)}, cmd ${phex(activeReq.request.cmd)}")
+              removeActiveRequest()
+            }
           } else {
             scheduleCheckActiveRequest()
           }
@@ -502,10 +503,22 @@ object SIS3316VMEGateway extends IOResourceCompanion[SIS3316VMEGateway] {
       activeUDPRequest match {
         case Some(activeReq) =>
           if (pkgId == activeReq.pkgId) {
-            log.trace(s"Received response to UDP request with packet id ${phex(pkgId)}")
             try {
-              if (cmd != activeReq.request.cmd) throw new RuntimeException(s"UDP response cmd code ${phex(cmd)} doesn't match request cmd code ${phex(activeReq.request.cmd)}")
+              if (cmd != activeReq.request.cmd) throw new RuntimeException(s"UDP response cmd ${phex(cmd)} doesn't match request cmd ${phex(activeReq.request.cmd)}")
+
+              if ((activeReq.nSent > 1) || (activeReq.nReadAgain > 0)) {
+                log.debug(s"Received response to UDP request with packet id ${phex(pkgId)}, cmd ${phex(cmd)}, nSent = ${activeReq.nSent}, nReadAgain = ${activeReq.nReadAgain}")
+              } else {
+                log.trace(s"Received response to UDP request with packet id ${phex(pkgId)}")
+              }
+
               val reqFinished = activeReq.request.processResponse(it.toByteString)
+
+              // if ((activeReq.nSent > 1) || (activeReq.nReadAgain > 0)) {
+              //   if (reqFinished) log.debug(s"Processed all responses to UDP request with packet id ${phex(pkgId)}, cmd ${phex(cmd)}, nSent = ${activeReq.nSent}, nReadAgain = ${activeReq.nReadAgain}")
+              //   else log.debug(s"Processed a response to UDP request with packet id ${phex(pkgId)}, cmd ${phex(cmd)}, nSent = ${activeReq.nSent}, nReadAgain = ${activeReq.nReadAgain}")
+              // }
+
               if (reqFinished) removeActiveRequest()
             } catch {
               case e: Exception =>
@@ -514,6 +527,7 @@ object SIS3316VMEGateway extends IOResourceCompanion[SIS3316VMEGateway] {
             }
           } else {
             if (activeReq.nReadAgain > 0) {
+              assert(activeReq.request.canRetry)
               if ((cmd == lastReqCmd) && (pkgId == lastReqPkgId)) {
                 log.debug(s"Received response to previous request (command ${phex(cmd)}, package ID ${phex(pkgId)}) on read-again, re-sending current request")
                 activeReq.resend()
@@ -522,13 +536,12 @@ object SIS3316VMEGateway extends IOResourceCompanion[SIS3316VMEGateway] {
                 activeReq.resend()
               }
             } else {
-              log.info(s"Ignoring (possibly stale) UDP response with unexpected packet ID ${phex(pkgId)}, expected ID ${phex(activeReq.pkgId)}")
+              log.debug(s"Ignoring (possibly stale) UDP response with unexpected packet ID ${phex(pkgId)}, expected ID ${phex(activeReq.pkgId)}")
             }
           }
         case None =>
-          log.info(s"Ignoring (possibly stale) UDP response with packet id ${phex(pkgId)}, no request is active")
+          log.debug(s"Ignoring (possibly stale) UDP response with packet id ${phex(pkgId)}, no request is active")
       }
-      processWaitingActions()
     }
   }
 
@@ -564,19 +577,21 @@ object SIS3316VMEGateway extends IOResourceCompanion[SIS3316VMEGateway] {
     case class UDPSyncWait(result: Option[Promise[Unit]]) extends UDPAction
 
 
-    abstract class UDPRequest extends UDPAction {
+    abstract class UDPRequest[T] extends UDPAction {
       implicit val nioByteOrder = gwByteOrder.nioByteOrder
 
       def cmd: Byte
 
       val timestamp: Long = System.nanoTime()
 
-      def canBePipelined: Boolean = true
+      def canRetry: Boolean
 
       protected def putReqContent(builder: ByteStringBuilder): Unit
 
       // Returns true if all responses to this request have been received:
       def processResponse(response: ByteString): Boolean
+
+      def result: Promise[T]
 
       def getReqFrame(pkgId: Byte): ByteString = {
         val frameBuilder = ByteString.newBuilder
@@ -592,10 +607,9 @@ object SIS3316VMEGateway extends IOResourceCompanion[SIS3316VMEGateway] {
     }
 
 
-    case class UDPVMEIfRegRead(address: VMEAddress, result: Promise[Int]) extends UDPRequest {
+    case class UDPVMEIfRegRead(address: VMEAddress, result: Promise[Int]) extends UDPRequest[Int] {
       def cmd = 0x10
-
-      override def canBePipelined: Boolean = false
+      def canRetry = false
 
       protected def putReqContent(builder: ByteStringBuilder) = {
         builder.putInt(address.toUnsignedInt)
@@ -615,9 +629,10 @@ object SIS3316VMEGateway extends IOResourceCompanion[SIS3316VMEGateway] {
     }
 
 
-    case class UDPADCRegsRead(addrs: Seq[VMEAddress], result: Promise[ArrayVec[Int]]) extends UDPRequest {
+    case class UDPADCRegsRead(addrs: Seq[VMEAddress], result: Promise[ArrayVec[Int]]) extends UDPRequest[ArrayVec[Int]] {
       require ((addrs.size >= 1) && (addrs.size <= 64))
       def cmd = 0x20
+      def canRetry = true
 
       protected def putReqContent(builder: ByteStringBuilder) = {
         builder.sizeHint(sizeOfShort + addrs.size * sizeOfInt)
@@ -642,9 +657,10 @@ object SIS3316VMEGateway extends IOResourceCompanion[SIS3316VMEGateway] {
     }
 
 
-    case class UDPADCRegsWrite(addrValues: Seq[(VMEAddress, Int)], result: Promise[Unit]) extends UDPRequest {
+    case class UDPADCRegsWrite(addrValues: Seq[(VMEAddress, Int)], result: Promise[Unit]) extends UDPRequest[Unit] {
       require ((addrValues.size >= 1) && (addrValues.size <= 64))
       def cmd = 0x21
+      def canRetry = true
 
       protected def putReqContent(builder: ByteStringBuilder) = {
         builder.putShort((addrValues.size - 1).toUnsignedShort)
@@ -664,12 +680,11 @@ object SIS3316VMEGateway extends IOResourceCompanion[SIS3316VMEGateway] {
     }
 
 
-    case class UDPADCFifoReadRaw(address: VMEAddress, nBytes: Int, result: Promise[ByteString]) extends UDPRequest {
+    case class UDPADCFifoReadRaw(address: VMEAddress, nBytes: Int, result: Promise[ByteString]) extends UDPRequest[ByteString] {
       require ((nBytes >= 1) && (nBytes <= maxShortValue + 1))
       require(nBytes % sizeOfInt == 0)
       def cmd = 0x30
-
-      override def canBePipelined: Boolean = false
+      def canRetry = false
 
       def expectedResultSize = nBytes
       protected val recvData = collection.mutable.HashMap[Int, ByteString]()
@@ -721,12 +736,11 @@ object SIS3316VMEGateway extends IOResourceCompanion[SIS3316VMEGateway] {
     }
 
 
-    case class UDPADCFifoWriteRaw(address: VMEAddress, data: ByteString, result: Promise[Unit]) extends UDPRequest {
+    case class UDPADCFifoWriteRaw(address: VMEAddress, data: ByteString, result: Promise[Unit]) extends UDPRequest[Unit] {
       require ((data.size >= 1) && (data.size <= maxShortValue + 1))
       require(data.size % sizeOfInt == 0)
       def cmd = 0x31
-
-      override def canBePipelined: Boolean = false
+      def canRetry = false
 
       protected def putReqContent(builder: ByteStringBuilder) = {
         builder.sizeHint(sizeOfShort + sizeOfInt + data.size)
@@ -754,7 +768,7 @@ object SIS3316VMEGateway extends IOResourceCompanion[SIS3316VMEGateway] {
     val udpRespStatus = new UDPRespStatus
 
 
-    def checkRespStatus(request: UDPRequest, status: Byte) {
+    def checkRespStatus(request: UDPRequest[_], status: Byte) {
       if (udpRespStatus.protError(status)) {
         throw new RuntimeException("Error response ${phex(status)} to UDP command ${phex(request.cmd)}: Protocol error")
       }
