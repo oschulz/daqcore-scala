@@ -184,8 +184,7 @@ object SIS3316VMEGateway extends IOResourceCompanion[SIS3316VMEGateway] {
     def readADCRegs(addrs: Seq[VMEAddress]) = {
       require(addrs forall { ! isVMEInterfaceReg(_) })
       if (addrs.size >= 1) {
-        if (addrs.size <= 1) {
-            // Should be able to read 64 addresses at once, but doesn't seem to work correctly
+        if (addrs.size <= 64) {
             val result = Promise[ArrayVec[Int]]()
             addAction( UDPADCRegsRead(addrs, result) )
             result.future
