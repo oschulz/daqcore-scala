@@ -610,11 +610,15 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
       import SIS3316Memory.registers.DataTransferCtlReg.Cmd.{Read => fifoReadCmd}
       import SIS3316Memory.dataRegion.{fpgaChMemSpaceSel, fpgaChFIFOAddrOffset}
 
+      require(from % 4 == 0)
+      require(from < 0x10000000)
+      val fromWord = from / 4
+
       val (group, grpCh) = fpgaNumCh(ch)
       mem.sync()
       mem.write(registers.data_transfer_ctrl_reg(group).tiedValue(
         cmd = fifoReadCmd, mem_space_sel = fpgaChMemSpaceSel(grpCh),
-        mem_addr = fpgaChFIFOAddrOffset(grpCh, bank).toInt + from
+        mem_addr = fpgaChFIFOAddrOffset(grpCh, bank).toInt + fromWord
       ))
     }
 
