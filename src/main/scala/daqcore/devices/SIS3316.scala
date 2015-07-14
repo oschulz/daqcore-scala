@@ -747,13 +747,11 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
 
     def dataToRead(ch: Ch) = localExec( async {
       val armedBank = getMemConv(registers.acquisition_control_status.smpl_armed_bank)
-
-
       val prevBank = getMemConv(registers.fpga(_).previous_bank_sample_address_reg(_).bank)(ch)
       val prevBankFill = getMemConv(registers.fpga(_).previous_bank_sample_address_reg(_).sample_addr)(ch)
       val format = event_format_get(ch)
 
-      await(Seq(prevBank, prevBankFill, format))
+      await(Seq(armedBank, prevBank, prevBankFill, format))
 
       ch vMap { channel =>
         val bank = prevBank.v(channel)
