@@ -26,6 +26,8 @@ import scala.concurrent.duration._
 import scala.async.Async.{async, await}
 import scala.collection.immutable.Queue
 
+import java.util.concurrent.TimeoutException
+
 import daqcore.actors._
 import daqcore.util._
 import daqcore.io._
@@ -77,49 +79,49 @@ object SIS3316Memory extends DeviceCompanion[SIS3316Memory] {
 
     override def getSync() = {
       val resultPromise = Promise[Unit]()
-      actionsQueue.add(SyncAction(List(resultPromise success _)))
+      actionsQueue.add(SyncAction(List(resultPromise)))
       resultPromise.future
     }
 
 
     def read(address: Address) = {
       val resultPromise = Promise[Int]()
-      actionsQueue.add(RegisterActions.read(address){resultPromise success _})
+      actionsQueue.add(RegisterActions.read(address, resultPromise))
       resultPromise.future
     }
 
 
     def write(address: Address, value: Int) = {
       val resultPromise = Promise[Unit]()
-      actionsQueue.add(RegisterActions.write(address, value){resultPromise success _})
+      actionsQueue.add(RegisterActions.write(address, value, resultPromise))
       resultPromise.future
     }
 
 
     def partialRWWrite(address: Address, value: Int, bitMask: Int) = {
       val resultPromise = Promise[Unit]()
-      actionsQueue.add(RegisterActions.partialRWWrite(address, value, bitMask){resultPromise success _})
+      actionsQueue.add(RegisterActions.partialRWWrite(address, value, bitMask, resultPromise))
       resultPromise.future
     }
 
 
     def partialJKWrite(address: Address, value: Int, bitMask: Int) = {
       val resultPromise = Promise[Unit]()
-      actionsQueue.add(RegisterActions.partialJKWrite(address, value, bitMask){resultPromise success _})
+      actionsQueue.add(RegisterActions.partialJKWrite(address, value, bitMask, resultPromise))
       resultPromise.future
     }
 
 
     def readBulk(address: Address, nBytes: Int) = {
       val resultPromise = Promise[ByteString]()
-      actionsQueue.add(BulkRead(address, nBytes){resultPromise success _})
+      actionsQueue.add(BulkRead(address, nBytes, resultPromise))
       resultPromise.future
     }
 
 
     def writeBulk(address: Address, data: ByteString) = {
       val resultPromise = Promise[Unit]()
-      actionsQueue.add(BulkWrite(address, data){resultPromise success _})
+      actionsQueue.add(BulkWrite(address, data, resultPromise))
       resultPromise.future
     }
 
@@ -173,9 +175,9 @@ object SIS3316Memory extends DeviceCompanion[SIS3316Memory] {
       def exec(): Unit
     }
 
-    case class SyncAction(reverseResultProcs: List[Unit => Unit] = Nil) extends Actions {
+    case class SyncAction(reverseResultPromises: List[Promise[Unit]] = Nil) extends Actions {
       def ++(actions: Actions): Option[SyncAction] = actions match {
-        case that: SyncAction => Some(SyncAction(that.reverseResultProcs ++ this.reverseResultProcs))
+        case that: SyncAction => Some(SyncAction(that.reverseResultPromises ++ this.reverseResultPromises))
         case _ => None
       }
 
@@ -183,7 +185,7 @@ object SIS3316Memory extends DeviceCompanion[SIS3316Memory] {
         import daqcore.defaults.defaultTimeout
         vmeBus.getSync().get
         registerCache = MemValues[Address, Int]()
-        reverseResultProcs.reverse foreach {_({})}
+        reverseResultPromises.reverse foreach {_ success {}}
       }
     }
 
@@ -217,8 +219,9 @@ object SIS3316Memory extends DeviceCompanion[SIS3316Memory] {
           val readResult = vmeBus.readIntRegs(sortedReadAddrs, regReadMode, deviceByteOrder)
           registerCache = registerCache ++ MemValues(sortedReadAddrs zip readResult.get: _*)
         }
-        reads.reverseResultProcs.reverse foreach { _(registerCache) }
-
+        reads.reverseResultPromises.reverse foreach { case (addr, promise) =>
+          promise success registerCache(addr)
+        }
 
         val combinedWritesBuilder = ArrayVec.newBuilder[(Address,Int)]
         rwWrites.memValues.values foreach { case (addr, wr) =>
@@ -235,19 +238,19 @@ object SIS3316Memory extends DeviceCompanion[SIS3316Memory] {
           val writeResult = vmeBus.writeIntRegs(combinedWrites, regWriteMode, deviceByteOrder)
           writeResult.get
         }
-        rwWrites.reverseResultProcs.reverse foreach { _(Unit) }
-        jkWrites.reverseResultProcs.reverse foreach { _(Unit) }
+        rwWrites.reverseResultPromises.reverse foreach { _ success Unit }
+        jkWrites.reverseResultPromises.reverse foreach { _ success Unit }
       }
     }
 
     object RegisterActions {
       case class Reads(
         addrs: Set[Address] = Set.empty[Address],
-        reverseResultProcs: List[(Address => Int) => Unit] = Nil
+        reverseResultPromises: List[(Address, Promise[Int])] = Nil
       ) {
         def++(that: Reads) = Reads(
           this.addrs ++ that.addrs,
-          that.reverseResultProcs ++ this.reverseResultProcs
+          that.reverseResultPromises ++ this.reverseResultPromises
         )
 
         override def toString = s"Reads(${addrs map phex})"
@@ -255,60 +258,68 @@ object SIS3316Memory extends DeviceCompanion[SIS3316Memory] {
 
       case class Writes(
         memValues: MaskedMemValues[Address, Int] = MaskedMemValues[Address, Int](),
-        reverseResultProcs: List[Unit => Unit] = Nil
+        reverseResultPromises: List[Promise[Unit]] = Nil
       ) {
         def++(that: Writes) = Writes(
           that.memValues.values.foldLeft(this.memValues){_ + _},
-          that.reverseResultProcs ++ this.reverseResultProcs
+          that.reverseResultPromises ++ this.reverseResultPromises
         )
 
         override def toString = s"Writes($memValues)"
       }
 
-      def read(addr: Address)(processResult: Int => Unit): RegisterActions = RegisterActions(
+      def read(addr: Address, resultPromise: Promise[Int]): RegisterActions = RegisterActions(
         reads = Reads(
           Set(addr),
-          List({ readCache: (Address => Int) => processResult(readCache(addr)) })
+          List((addr, resultPromise))
         )
       )
 
-      def write(addr: Address, value: Int)(processResult: Unit => Unit): RegisterActions =
-        partialRWWrite(addr, value, -1)(processResult)
+      def write(addr: Address, value: Int, resultPromise: Promise[Unit]): RegisterActions =
+        partialRWWrite(addr, value, -1, resultPromise)
 
-      def partialRWWrite(addr: Address, value: Int, bitMask: Int)(processResult: Unit => Unit) = RegisterActions(
+      def partialRWWrite(addr: Address, value: Int, bitMask: Int, resultPromise: Promise[Unit]) = RegisterActions(
         rwWrites = Writes(
           MaskedMemValues(addr -> BitMaskedInteger(value, bitMask)),
-          List(processResult)
+          List(resultPromise)
         )
       )
 
-      def partialJKWrite(addr: Address, value: Int, bitMask: Int)(processResult: Unit => Unit) = RegisterActions(
+      def partialJKWrite(addr: Address, value: Int, bitMask: Int, resultPromise: Promise[Unit]) = RegisterActions(
         jkWrites = Writes(
           MaskedMemValues(addr -> BitMaskedInteger(value, bitMask)),
-          List(processResult)
+          List(resultPromise)
         )
       )
     }
 
 
-    case class BulkRead(address: Address, nBytes: Int)(resultProc: ByteString => Unit)  extends Actions {
+    case class BulkRead(address: Address, nBytes: Int, resultPromise: Promise[ByteString])  extends Actions {
       def ++(actions: Actions) = None
 
       def exec() = {
         import daqcore.defaults.defaultTimeout
-        val result = vmeBus.readBulk(address, nBytes, bulkReadMode).get
-        resultProc(result)
+        val result = vmeBus.readBulk(address, nBytes, bulkReadMode)
+        try {
+          resultPromise success result.get
+        } catch {
+          case error: TimeoutException => resultPromise failure error
+        }
       }
     }
 
 
-    case class BulkWrite(address: Address, data: ByteString)(resultProc: Unit => Unit) extends Actions {
+    case class BulkWrite(address: Address, data: ByteString, resultPromise: Promise[Unit]) extends Actions {
       def ++(actions: Actions) = None
 
       def exec() = {
         import daqcore.defaults.defaultTimeout
-        val result = vmeBus.writeBulk(address, data, bulkWriteMode).get
-        resultProc(result)
+        val result = vmeBus.writeBulk(address, data, bulkWriteMode)
+        try {
+          resultPromise success result.get
+        } catch {
+          case error: TimeoutException => resultPromise failure error
+        }
       }
     }
   }
