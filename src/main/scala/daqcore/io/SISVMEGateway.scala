@@ -200,8 +200,7 @@ object SIS3316VMEGateway extends IOResourceCompanion[SIS3316VMEGateway] {
     def writeADCRegs(addrValues: Seq[(VMEAddress, Int)]) = {
       require(addrValues forall { case(a, v) => ! isVMEInterfaceReg(a) })
       if (addrValues.size >= 1) {
-        if (addrValues.size <= 1) {
-            // Should be able to write 64 addresses at once, but doesn't seem to work correctly
+        if (addrValues.size <= 64) {
             val result = Promise[Unit]()
             addAction( UDPADCRegsWrite(addrValues, result) )
             result.future
