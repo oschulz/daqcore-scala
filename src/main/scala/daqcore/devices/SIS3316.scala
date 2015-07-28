@@ -972,7 +972,8 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
 
       if (!readout_active) localExec( async {
         if (await(newEventsAvail)) {
-          swapBanksAndReadOut()
+          if (capture_enabled) swapBanksAndReadOut()
+          else log.debug("Capture disabled, aborting event poll")
         } else {
           if (capture_enabled) scheduleEventPoll()
           else finishCapture()
