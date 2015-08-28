@@ -1112,7 +1112,7 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
       val pileupFlag = evtSamplesHdr.any_pileup_flag(samples_hdr_word)
       val nSampleWords = evtSamplesHdr.n_sample_words(samples_hdr_word)
 
-      evtFlags foreach { flags => require(flags.pileup == pileupFlag) }
+      evtFlags foreach { flags => require( pileupFlag == (flags.pileup || flags.repileup) ) }
 
       def getSamples(nSampleWords: Int): ArrayVec[Int] = {
         val samplesBuilder = ArrayVec.newBuilder[Int]
