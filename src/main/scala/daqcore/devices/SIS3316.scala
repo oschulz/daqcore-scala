@@ -883,8 +883,8 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
 
         val dataNotEmpty = dataAvail exists{ case (channel, toRead) => toRead.nBytes > 0 }
         if (dataNotEmpty) {
-          await(readOutBankDataEvt(dataAvail))
-          await(readOutBankDataRaw(dataAvail))
+          if (propsOutputStream != None) await(readOutBankDataEvt(dataAvail))
+          if (rawOutputStream != None) await(readOutBankDataRaw(dataAvail))
         }
 
         log.trace("Finishing data read-out")
