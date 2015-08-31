@@ -864,11 +864,16 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
 
 
     protected def swapBanksAndReadOut(): Unit = {
+      assert(capture_active)
+
       readout_active = true
       log.trace("Starting data read-out")
 
       localExec( async {
+        assert(capture_active)
         await(swapBanks)
+        assert(capture_active)
+
         buffer_counter = buffer_counter + 1
         val dataAvail = await(dataToRead(channelsToRead))
 
