@@ -973,15 +973,18 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
 
 
     protected def pollNewEvents(): Unit = {
-      assert(capture_active)
-
-      if (!readout_active) localExec( async {
-        if (await(newEventsAvail)) {
-          if (capture_enabled) swapBanksAndReadOut()
-          else log.debug("Capture disabled, aborting event poll")
+      localExec( async {
+        assert(capture_active)
+        val avail = await(newEventsAvail)
+        if (!readout_active) {
+          if (capture_enabled) {
+            if (avail) swapBanksAndReadOut()
+            else scheduleEventPoll()
+          } else {
+            log.debug("Capture disabled, aborting event poll")
+          }
         } else {
-          if (capture_enabled) scheduleEventPoll()
-          else finishCapture()
+          log.debug("Readout active, aborting event poll")
         }
       } (_) )
     }
