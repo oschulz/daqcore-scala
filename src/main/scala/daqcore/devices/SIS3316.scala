@@ -48,6 +48,9 @@ trait SIS3316 extends Device {
   def trigger_intern_enabled_get(ch: Ch = allChannels): Future[ChV[Boolean]]
   def trigger_intern_enabled_set(chV: ChV[Boolean]): Future[Unit]
 
+  def trigger_intern_feedback_get(ch: Ch = allChannels): Future[ChV[Boolean]]
+  def trigger_intern_feedback_set(chV: ChV[Boolean]): Future[Unit]
+
   def trigger_gate_window_length_get(ch: Ch = allChannels): Future[ChV[Int]]
   def trigger_gate_window_length_set(chV: ChV[Int]): Future[Unit]
 
@@ -381,6 +384,18 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
 
       // enable/disable trigger generation:
       setMemConv(registers.fpga(_).fir_trigger_threshold_reg(_).trig_en)(chV)
+    }
+
+
+    def trigger_intern_feedback_get(ch: Ch) = getMemConv(registers.internal_trigger_feedback_select_reg.sel_trig(_))(ch)
+
+    def trigger_intern_feedback_set(chV: ChV[Boolean]) = {
+      // Enable general internal trigger forwarding if required:
+      if ( chV exists {case (ch,v) => v == true} )
+        setMemConv(registers.acquisition_control_status.int_trig_to_ext, true)
+
+      // Enable internal trigger forwarding for selected channels:
+      setMemConv(registers.internal_trigger_feedback_select_reg.sel_trig(_))(chV)
     }
 
 

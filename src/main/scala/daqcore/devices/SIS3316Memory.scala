@@ -584,7 +584,29 @@ object SIS3316Memory extends DeviceCompanion[SIS3316Memory] {
       val sel_sum_trig_grp3 = RWBit(18)  // Select internal SUM-Trigger stretched pulse ch19-12
       val sel_sum_trig_grp2 = RWBit(17)  // Select internal SUM-Trigger stretched pulse ch5-8
       val sel_sum_trig_grp1 = RWBit(16)  // Select internal SUM-Trigger stretched pulse ch1-4
-      val int_trig_sel_mask = RWBits(0 to 15)  // Select internal Trigger stretched pulse ch 1 to 16
+      val sel_trig_ch16 = RWBit(15)  // Select internal Trigger stretched pulse ch 16
+      val sel_trig_ch15 = RWBit(14)  // Select internal Trigger stretched pulse ch 15
+      val sel_trig_ch14 = RWBit(13)  // Select internal Trigger stretched pulse ch 14
+      val sel_trig_ch13 = RWBit(12)  // Select internal Trigger stretched pulse ch 13
+      val sel_trig_ch12 = RWBit(11)  // Select internal Trigger stretched pulse ch 12
+      val sel_trig_ch11 = RWBit(10)  // Select internal Trigger stretched pulse ch 11
+      val sel_trig_ch10 = RWBit(9)  // Select internal Trigger stretched pulse ch 10
+      val sel_trig_ch9 = RWBit(8)  // Select internal Trigger stretched pulse ch 9
+      val sel_trig_ch8 = RWBit(7)  // Select internal Trigger stretched pulse ch 8
+      val sel_trig_ch7 = RWBit(6)  // Select internal Trigger stretched pulse ch 7
+      val sel_trig_ch6 = RWBit(5)  // Select internal Trigger stretched pulse ch 6
+      val sel_trig_ch5 = RWBit(4)  // Select internal Trigger stretched pulse ch 5
+      val sel_trig_ch4 = RWBit(3)  // Select internal Trigger stretched pulse ch 4
+      val sel_trig_ch3 = RWBit(2)  // Select internal Trigger stretched pulse ch 3
+      val sel_trig_ch2 = RWBit(1)  // Select internal Trigger stretched pulse ch 2
+      val sel_trig_ch1 = RWBit(0)  // Select internal Trigger stretched pulse ch 1
+
+      val sel_trig = Map(
+        1 -> sel_trig_ch1, 2 -> sel_trig_ch2, 3 -> sel_trig_ch3, 4 -> sel_trig_ch4,
+        5 -> sel_trig_ch5, 6 -> sel_trig_ch6, 7 -> sel_trig_ch7, 8 -> sel_trig_ch8,
+        9 -> sel_trig_ch9, 10 -> sel_trig_ch10, 11 -> sel_trig_ch11, 12 -> sel_trig_ch12,
+        13 -> sel_trig_ch13, 14 -> sel_trig_ch14, 15 -> sel_trig_ch15, 16 -> sel_trig_ch16
+      )
 
       val sel_sum_trig = Map(
         1 -> sel_sum_trig_grp1, 2 -> sel_sum_trig_grp2,
