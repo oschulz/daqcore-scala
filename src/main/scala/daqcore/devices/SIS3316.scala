@@ -81,6 +81,12 @@ trait SIS3316 extends Device {
   def input_invert_get(ch: Ch = allChannels): Future[ChV[Boolean]]
   def input_invert_set(chV: ChV[Boolean]): Future[Unit]
 
+  def input_termination_get(ch: Ch = allChannels): Future[ChV[Boolean]]
+  def input_termination_set(chV: ChV[Boolean]): Future[Unit]
+
+  def input_gain_get(ch: Ch = allChannels): Future[ChV[Int]]
+  def input_gain_set(chV: ChV[Int]): Future[Unit]
+
   def nsamples_total_get(ch: Ch = allChannels): Future[ChV[Int]]
   def nsamples_total_set(chV: ChV[Int]): Future[Unit]
 
@@ -428,6 +434,12 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
 
     def input_invert_get(ch: Ch) = getMemConv(registers.fpga(_).event_config_reg.ch(_).input_inv)(ch)
     def input_invert_set(chV: ChV[Boolean]) = setMemConv(registers.fpga(_).event_config_reg.ch(_).input_inv)(chV)
+
+    def input_termination_get(ch: Ch) = getMemConv(registers.fpga(_).analog_ctrl_reg.ch(_).term_dis)(ch) map { _ vMap (a => !a)}
+    def input_termination_set(chV: ChV[Boolean]) = setMemConv(registers.fpga(_).analog_ctrl_reg.ch(_).term_dis)(chV vMap (a => !a))
+
+    def input_gain_get(ch: Ch) = getMemConv(registers.fpga(_).analog_ctrl_reg.ch(_).gain_ctrl)(ch)
+    def input_gain_set(chV: ChV[Int]) = setMemConv(registers.fpga(_).analog_ctrl_reg.ch(_).gain_ctrl)(chV)
 
     def nsamples_total_get(ch: Ch) = getMemConvFPGA(registers.fpga(_).raw_data_buffer_config_reg.sample_length)(ch)
     def nsamples_total_set(chV: ChV[Int]) = setMemConvFPGA(registers.fpga(_).raw_data_buffer_config_reg.sample_length)(chV)
