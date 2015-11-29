@@ -311,6 +311,7 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
     ) {
       require(until >= from)
       def nBytes: Int = until - from
+      def isEmpty: Boolean = ! (from < until)
     }
 
 
@@ -832,13 +833,20 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
     }
 
 
-    protected def chunkStream(toRead: DataToRead): Stream[DataToRead] = {
-      if (toRead.nBytes > 0) {
+    protected def splitToRead(toRead: DataToRead): (DataToRead, DataToRead) = {
+      if (toRead.isEmpty) {
+        (toRead, toRead)
+      } else {
         val until = toRead.from + readChunkSize(toRead)
-        Stream.cons(
-          toRead.copy(until = until),
-          chunkStream(toRead.copy(from = until))
-        )
+        (toRead.copy(until = until), toRead.copy(from = until))
+      }
+    }
+
+
+    protected def chunkStream(toRead: DataToRead): Stream[DataToRead] = {
+      if (!toRead.isEmpty) {
+        val (next, rest) = splitToRead(toRead)
+        Stream.cons(next, chunkStream(rest))
       } else Stream.empty
     }
 
@@ -938,30 +946,96 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
     }
 
 
+    class ChEventIterator(val channel: Int, val toRead: DataToRead) extends BufferedIterator[Future[RawChEvent]] {
+      def hasNext: Boolean = {
+        !currentHead.isEmpty ||
+        !readBuffer.isEmpty ||
+        !restToRead.isEmpty ||
+        readingData
+      }
+
+
+      def head: Future[RawChEvent] = {
+        fulfillPromises()
+
+        currentHead match {
+          case Some(futureChEvent) =>
+            futureChEvent
+          case None =>
+            if (hasNext) {
+              val promise = Promise[RawChEvent]()
+              promises.enqueue(promise)
+              val futureChEvent = promise.future
+              currentHead = Some(futureChEvent)
+              fulfillPromises()
+
+              if ((readBuffer.len < readBufferThreshold) && !restToRead.isEmpty && !readingData) {
+                readingData = true
+                localExec( async {
+                  val (chunkToRead, rest) = splitToRead(restToRead)
+                  restToRead = rest
+                  readBuffer = readBuffer ++ await(readRawEventData(channel, chunkToRead)).iterator
+                  fulfillPromises()
+                  readingData = false
+                } (_) )
+              }
+
+              futureChEvent
+            } else {
+              Iterator.empty.next()
+            }
+        }
+      }
+
+
+      def next(): Future[RawChEvent] = {
+        val result = head
+        currentHead = None
+        result
+      }
+
+
+      val readBufferThreshold = {
+        val nBytesPerEvent = toRead.format.rawEventDataSize
+        val defaultThreshold = 1 * 1024 * 1024
+        defaultThreshold / nBytesPerEvent * nBytesPerEvent
+      }
+
+      protected var readBuffer: ByteIterator = ByteString().iterator
+
+
+      protected var restToRead = toRead
+      protected var currentHead: Option[Future[RawChEvent]] = None
+      protected val promises = collection.mutable.Queue[Promise[RawChEvent]]()
+      protected var readingData = false
+
+
+      protected def fulfillPromises(): Unit = {
+        while (!promises.isEmpty && !readBuffer.isEmpty) {
+          val promise = promises.dequeue()
+          val chEvent = getChEvent(readBuffer, bulkReadNIOByteOrder, toRead.format.nSamples, toRead.format.nMAWValues)
+          promise success chEvent
+        }
+      }
+    }
+
+
     // Sorted event read out
     protected def readOutBankDataEvt(dataAvail: ChV[DataToRead]): Future[Unit] = {
       log.trace("Starting sorted event data read-out")
       assert(propsOutputStream != None)
+      val stringCodec = StringLineCodec(LineCodec.LF, "UTF-8")
 
       localExec( async {
         val availIterator = dataAvail.iterator
         while (availIterator.hasNext) {
           val (channel, toRead) = availIterator.next
-
-          val chunksIterator = chunkStream(toRead).iterator
-          while (chunksIterator.hasNext) {
-            val chunkToRead = chunksIterator.next
-            val data = await(readRawEventData(channel, chunkToRead))
-
-            val dataIterator = data.iterator
-            val stringCodec = StringLineCodec(LineCodec.LF, "UTF-8")
-            while (dataIterator.hasNext) {
-              val chEvent = getChEvent(dataIterator, bulkReadNIOByteOrder, toRead.format.nSamples, toRead.format.nMAWValues)
-              
-              val rawProps = chEvent.toProps;
-              val convProps = rawProps + ('time -> rawProps('time).asDouble / sampleClock)
-              propsOutputStream.get.send(convProps.toJSON, stringCodec.enc)
-            }
+          val evtIterator = new ChEventIterator(channel, toRead)
+          while (evtIterator.hasNext) {
+            val chEvent = await(evtIterator.next())
+            val rawProps = chEvent.toProps;
+            val convProps = rawProps + ('time -> rawProps('time).asDouble / sampleClock)
+            propsOutputStream.get.send(convProps.toJSON, stringCodec.enc)
           }
         }
       } (_) )
