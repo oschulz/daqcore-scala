@@ -1092,7 +1092,7 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
 
         peakHeight = Some( PSAValue (
           index = evtDataPeakHeight.peak_heigh_idx(ph_word),
-          value = evtDataPeakHeight.peak_heigh_val(ph_word) - (1<<13)
+          value = evtDataPeakHeight.peak_heigh_val(ph_word)
         ) )
 
         evtFlags = Some( EvtFlags (
