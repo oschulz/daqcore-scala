@@ -970,13 +970,16 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
               fulfillPromises()
 
               if ((readBuffer.len < readBufferThreshold) && !restToRead.isEmpty && !readingData) {
+                log.trace(s"Only ${readBuffer.len} bytes buffered for channel ${channel}, need to read more")
                 readingData = true
                 localExec( async {
                   val (chunkToRead, rest) = splitToRead(restToRead)
+                  log.trace(s"Reading next ${chunkToRead.nBytes} bytes from channel ${channel}, ${rest.nBytes} remain")
                   restToRead = rest
                   readBuffer = readBuffer ++ await(readRawEventData(channel, chunkToRead)).iterator
                   fulfillPromises()
                   readingData = false
+                  log.trace(s"Finished reading ${chunkToRead.nBytes} bytes from channel ${channel}")
                 } (_) )
               }
 
