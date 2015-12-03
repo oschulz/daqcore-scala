@@ -42,6 +42,9 @@ trait SIS3316 extends Device {
   def serNo: Future[String]
   def internalTemperature: Future[Double]
 
+  def event_builder_time_window(): Future[Double]
+  def event_builder_time_window(value: Double): Future[Unit]
+
   def trigger_extern_enabled_get(ch: Ch = allChannels): Future[ChV[Boolean]]
   def trigger_extern_enabled_set(chV: ChV[Boolean]): Future[Unit]
 
@@ -378,6 +381,13 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
     def serNo = mem.read(registers.serial_number_reg) map { x => x.toString }
 
     def internalTemperature = getMemConv(registers.internal_temperature_reg.temperature)
+
+    var evtBuilderTimeWindow = 16E-9
+    def event_builder_time_window() = successful(evtBuilderTimeWindow)
+    def event_builder_time_window(value: Double) = {
+      evtBuilderTimeWindow = value
+      successful({})
+    }
 
     def trigger_extern_enabled_get(ch: Ch) = getMemConv(registers.fpga(_).event_config_reg.ch(_).ext_trig_en)(ch)
     def trigger_extern_enabled_set(chV: ChV[Boolean]) = setMemConv(registers.fpga(_).event_config_reg.ch(_).ext_trig_en)(chV)
@@ -990,7 +1000,7 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
             if ((evtIterator.dataAvail < dataAvailThreshold) && moreDataToRead)
               readMoreData()
           }
-        } ensuring (evtIterator.hasNext || readingMoreData || finished)
+        } ensuring (evtIterator.hasNext || readingMoreData || isFinished)
 
         def useNewData(): Unit = {
           require(newDataAvailable)
@@ -1000,36 +1010,63 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
           nextRawChunk = None
         } ensuring (!readingMoreData && evtIterator.hasNext)
 
-        def finished = !evtIterator.hasNext && !moreDataToRead && !readingMoreData
+        def isFinished = !evtIterator.hasNext && !moreDataToRead && !readingMoreData
       }
 
 
       localExec( async {
-        val availIterator = dataAvail.iterator
-        while (availIterator.hasNext) {
-          val (channel, toRead) = availIterator.next
+        var channelHandlers: Array[ChDataHandler] = dataAvail.filter{! _._2.isEmpty}.map{
+          case (channel, toRead) => new ChDataHandler(channel, toRead)
+        }(breakOut)
 
-          val dataHandler = new ChDataHandler(channel, toRead)
+        log.trace(s"Number of channels to read out: ${channelHandlers.size}")
 
-          while (!dataHandler.finished) {
-            dataHandler.readMoreDataIfNecessary()
+        while (!channelHandlers.isEmpty) {
+          log.trace(s"Number of channels in outer read-out loop: ${channelHandlers.size}")
+          assert(channelHandlers forall { !_.isFinished })
+          channelHandlers foreach { _.readMoreDataIfNecessary() }
 
-            while (dataHandler.evtIterator.hasNext) {
-              val chEvent = dataHandler.evtIterator.next()
+          log.trace(s"Data read status: ${channelHandlers.toSeq map {handler => (handler.channel, handler.readingMoreData)}}")
+          val readingHandlers = channelHandlers.filter(_.readingMoreData)
+          val futureData: List[Future[ByteString]] = readingHandlers.map{_.futureNewData}(breakOut)
+          if (!futureData.isEmpty) {
+            log.trace(s"Waiting for data from ${readingHandlers.size} channels")
+            await(Future.sequence(futureData))
+          }
+          readingHandlers foreach { _.useNewData() }
+          assert(channelHandlers forall { _.evtIterator.hasNext })
+          var someChNeedsMoreData = false
+
+          while (!channelHandlers.isEmpty && !someChNeedsMoreData) {
+            log.trace(s"Number of channels in inner read-out loop: ${channelHandlers.size}")
+            scala.util.Sorting.stableSort[ChDataHandler, Long](channelHandlers, _.evtIterator.head.timestamp)
+
+            val t0 = channelHandlers.head.evtIterator.head.timestamp
+            val lastIdxOfEvent = channelHandlers lastIndexWhere {
+              _.evtIterator.head.timestamp - t0 <= evtBuilderTimeWindow
+            }
+
+            var someChIsFinished = false
+
+            for (i <- 0 to lastIdxOfEvent ) {
+              log.trace(s"Number of channels in event: $lastIdxOfEvent")
+              val handler = channelHandlers(i)
+              assert(handler.evtIterator.hasNext)
+
+              val chEvent = handler.evtIterator.next()
               val rawProps = chEvent.toProps;
               val convProps = rawProps + ('time -> rawProps('time).asDouble / sampleClock)
               propsOutputStream.get.send(convProps.toJSON, stringCodec.enc)
 
-              dataHandler.readMoreDataIfNecessary()
+              handler.readMoreDataIfNecessary()
+              if (handler.isFinished) someChIsFinished = true
+              else if (!handler.evtIterator.hasNext) someChNeedsMoreData = true
             }
 
-            if (dataHandler.readingMoreData) {
-              await(dataHandler.futureNewData)
-              dataHandler.useNewData()
-            }
-
-            assert(dataHandler.evtIterator.hasNext || dataHandler.finished)
+            if (someChIsFinished) channelHandlers = channelHandlers filter { ! _.isFinished }
           }
+
+          assert(channelHandlers.isEmpty || (channelHandlers exists { ! _.evtIterator.hasNext })) //!!
         }
       } (_) )
     }
