@@ -1024,21 +1024,40 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
         while (!channelHandlers.isEmpty) {
           log.trace(s"Number of channels in outer read-out loop: ${channelHandlers.size}")
           assert(channelHandlers forall { !_.isFinished })
-          channelHandlers foreach { _.readMoreDataIfNecessary() }
 
-          log.trace(s"Data read status: ${channelHandlers.toSeq map {handler => (handler.channel, handler.readingMoreData)}}")
+
+          // Sequential read-out of all data per channel, instead of interleaved read-out (see below):
+          var handersToRead = channelHandlers.toList
+          while (!handersToRead.isEmpty) {
+            val handler = handersToRead.head
+            assert(!handler.readingMoreData)
+            if (handler.moreDataToRead) {
+              handler.readMoreData()
+              await(handler.futureNewData)
+              handler.useNewData()
+              assert(!handler.readingMoreData)
+            } else {
+              handersToRead = handersToRead.tail
+            }
+          }
+
+
+          /*
+          // Interleaved, on-demand read-out of channels doesn't work yet, results in corrupt raw data:
+
+          channelHandlers foreach { _.readMoreDataIfNecessary() }
           val readingHandlers = channelHandlers.filter(_.readingMoreData)
           val futureData: List[Future[ByteString]] = readingHandlers.map{_.futureNewData}(breakOut)
           if (!futureData.isEmpty) {
-            log.trace(s"Waiting for data from ${readingHandlers.size} channels")
             await(Future.sequence(futureData))
           }
           readingHandlers foreach { _.useNewData() }
           assert(channelHandlers forall { _.evtIterator.hasNext })
-          var someChNeedsMoreData = false
+          */
 
+
+          var someChNeedsMoreData = false
           while (!channelHandlers.isEmpty && !someChNeedsMoreData) {
-            log.trace(s"Number of channels in inner read-out loop: ${channelHandlers.size}")
             scala.util.Sorting.stableSort[ChDataHandler, Long](channelHandlers, _.evtIterator.head.timestamp)
 
             val t0 = channelHandlers.head.evtIterator.head.timestamp
@@ -1049,7 +1068,6 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
             var someChIsFinished = false
 
             for (i <- 0 to lastIdxOfEvent ) {
-              log.trace(s"Number of channels in event: $lastIdxOfEvent")
               val handler = channelHandlers(i)
               assert(handler.evtIterator.hasNext)
 
@@ -1065,8 +1083,6 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
 
             if (someChIsFinished) channelHandlers = channelHandlers filter { ! _.isFinished }
           }
-
-          assert(channelHandlers.isEmpty || (channelHandlers exists { ! _.evtIterator.hasNext })) //!!
         }
       } (_) )
     }
