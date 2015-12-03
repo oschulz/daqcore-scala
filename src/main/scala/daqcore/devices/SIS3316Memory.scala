@@ -1124,7 +1124,7 @@ object SIS3316Memory extends DeviceCompanion[SIS3316Memory] {
 
       /** Accumulator Gate Configuration Register */
       class AccGateConfigRegister(address: MemAddress) extends RWRegister[Int](address) {
-        val gate_len          = RWBits(16 to 24)  // Gate Length
+        val gate_len          = RWBits(16 to 24) withConv IntMultOffsetConv(offset = 1)  // Gate Length
         val gate_start        = RWBits(0 to 15)  // Gate Start Index (Address)
       }
 
