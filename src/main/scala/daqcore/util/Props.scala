@@ -21,6 +21,7 @@ import scala.language.implicitConversions
 
 import scala.collection.{breakOut, GenTraversableOnce}
 import scala.collection.immutable.SortedMap
+import scala.collection.generic.CanBuildFrom
 
 import play.api.libs.json._
 import org.apache.commons.codec.binary.Base64
@@ -223,6 +224,15 @@ object PropVal {
 
   implicit def from[T](x: T)(implicit conv: From[T]): PropVal = PropVal(x)
 
+  implicit def from[T](x: Seq[T])(implicit elemConv: Converter[T], bf: CanBuildFrom[Nothing, T, Seq[T]]) =
+    seqConverter[T, Seq[T]](elemConv, bf).from(x)
+
+  implicit def from[K, V](x: Map[K, V])(
+    implicit kConv: PropKey.Converter[K], vConv: Converter[V],
+    bfFrom: CanBuildFrom[Nothing, (PropKey, PropVal), SortedMap[PropKey, PropVal]],
+    bfTo: CanBuildFrom[Nothing, (K, V), Map[K, V]]
+  ) = mapConverter[K, V, Map[K, V]](kConv, vConv, bfFrom, bfTo).from(x)
+
 
   trait From[-T] {
     def from(x: T): PropVal
@@ -301,6 +311,35 @@ object PropVal {
     def from(x: Seq[PropVal]) = PropValSeq(x: _*)
     def to(propVal: PropVal) = propVal.asSeq
   }
+
+
+  class GenericSeqConverter[T, S <: Seq[T]](
+    implicit elemConv: Converter[T], bf: CanBuildFrom[Nothing, T, S]
+  ) extends Converter[S] {
+    def from(x: S) = PropValSeq(x.map(elemConv.from): _*)
+    def to(propVal: PropVal) = propVal.asSeq.map(elemConv.to)(breakOut(bf))
+  }
+
+  implicit def seqConverter[T, S <: Seq[T]](
+    implicit elemConv: Converter[T], bf: CanBuildFrom[Nothing, T, S]
+  ): GenericSeqConverter[T, S] = new GenericSeqConverter[T, S]
+
+
+
+  class GenericMapConverter[K, V, M <: Map[K, V]](
+    implicit kConv: PropKey.Converter[K], vConv: Converter[V],
+    bfFrom: CanBuildFrom[Nothing, (PropKey, PropVal), SortedMap[PropKey, PropVal]],
+    bfTo: CanBuildFrom[Nothing, (K, V), M]
+  ) extends Converter[M] {
+    def from(x: M) = Props( x.map{ case (k, v) => (kConv.from(k), vConv.from(v)) }(breakOut(bfFrom)) )
+    def to(propVal: PropVal) = propVal.asMap.map{ case (k, v) => (kConv.to(k), vConv.to(v)) }(breakOut(bfTo))
+  }
+
+  implicit def mapConverter[K, V, M <: Map[K, V]](
+    implicit kConv: PropKey.Converter[K], vConv: Converter[V],
+    bfFrom: CanBuildFrom[Nothing, (PropKey, PropVal), SortedMap[PropKey, PropVal]],
+    bfTo: CanBuildFrom[Nothing, (K, V), M]
+  ): GenericMapConverter[K, V, M] = new GenericMapConverter[K, V, M]
 
 
   implicit object JSValueConverter extends Converter[JsValue] {

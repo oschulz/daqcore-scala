@@ -105,11 +105,11 @@ trait SIS3316 extends Device {
   def nmaw_pretrig_get(ch: Ch = allChannels): Future[ChV[Int]]
   def nmaw_pretrig_set(chV: ChV[Int]): Future[Unit]
 
-  def acc_length_get(acc: Int, ch: Ch = allChannels): Future[ChV[Int]]
-  def acc_length_set(acc: Int, chV: ChV[Int]): Future[Unit]
+  def acc_length_get(acc: Int)(ch: Ch = allChannels): Future[ChV[Int]]
+  def acc_length_set(acc: Int)(chV: ChV[Int]): Future[Unit]
 
-  def acc_start_get(acc: Int, ch: Ch = allChannels): Future[ChV[Int]]
-  def acc_start_set(acc: Int, chV: ChV[Int]): Future[Unit]
+  def acc_start_get(acc: Int)(ch: Ch = allChannels): Future[ChV[Int]]
+  def acc_start_set(acc: Int)(chV: ChV[Int]): Future[Unit]
 
   def bank_fill_threshold_nbytes_get(ch: Ch = allChannels): Future[ChV[Int]]
   def bank_fill_threshold_nbytes_set(chV: ChV[Int]): Future[Unit]
@@ -473,11 +473,11 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
     def nmaw_pretrig_get(ch: Ch) = getMemConvFPGA(registers.fpga(_).maw_test_buffer_config_reg.pretrig_delay)(ch)
     def nmaw_pretrig_set(chV: ChV[Int]) = setMemConvFPGA(registers.fpga(_).maw_test_buffer_config_reg.pretrig_delay)(chV)
 
-    def acc_length_get(acc: Int, ch: Ch) = getMemConvFPGA(registers.fpga(_).accumulator_config_reg(acc).gate_len)(ch)
-    def acc_length_set(acc: Int, chV: ChV[Int]) = setMemConvFPGA(registers.fpga(_).accumulator_config_reg(acc).gate_len)(chV)
+    def acc_length_get(acc: Int)(ch: Ch) = getMemConvFPGA(registers.fpga(_).accumulator_config_reg(acc).gate_len)(ch)
+    def acc_length_set(acc: Int)(chV: ChV[Int]) = setMemConvFPGA(registers.fpga(_).accumulator_config_reg(acc).gate_len)(chV)
 
-    def acc_start_get(acc: Int, ch: Ch) = getMemConvFPGA(registers.fpga(_).accumulator_config_reg(acc).gate_start)(ch)
-    def acc_start_set(acc: Int, chV: ChV[Int]) = setMemConvFPGA(registers.fpga(_).accumulator_config_reg(acc).gate_start)(chV)
+    def acc_start_get(acc: Int)(ch: Ch) = getMemConvFPGA(registers.fpga(_).accumulator_config_reg(acc).gate_start)(ch)
+    def acc_start_set(acc: Int)(chV: ChV[Int]) = setMemConvFPGA(registers.fpga(_).accumulator_config_reg(acc).gate_start)(chV)
 
     def bank_fill_threshold_nbytes_get(ch: Ch) = getMemConvFPGA(registers.fpga(_).address_threshold_reg.addr_thresh_value)(ch)
     def bank_fill_threshold_nbytes_set(chV: ChV[Int]) = setMemConvFPGA(registers.fpga(_).address_threshold_reg.addr_thresh_value)(chV)
