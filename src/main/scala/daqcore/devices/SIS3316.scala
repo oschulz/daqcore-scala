@@ -214,7 +214,11 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
         Props(
           'channel -> (chId + 1),
           'time -> timestamp,
-          'pileup -> pileupFlag
+          'pileup -> pileupFlag,
+          'accSum -> Props (
+            'i -> PropVal.from(accSums.keys.toArrayVec),
+            'v -> PropVal.from(accSums.values.toArrayVec)
+          )
         ) ++ (
           energy map { x => (PropKey('energy), PropVal(x.maximum)) }
         ) ++ (
