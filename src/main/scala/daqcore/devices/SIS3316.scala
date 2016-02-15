@@ -48,6 +48,12 @@ trait SIS3316 extends Device {
   def trigger_extern_enabled_get(ch: Ch = allChannels): Future[ChV[Boolean]]
   def trigger_extern_enabled_set(chV: ChV[Boolean]): Future[Unit]
 
+  def trigger_intern_gen_get(ch: Ch = allChannels): Future[ChV[Boolean]]
+  def trigger_intern_gen_set(chV: ChV[Boolean]): Future[Unit]
+
+  def trigger_intern_use_get(ch: Ch = allChannels): Future[ChV[Boolean]]
+  def trigger_intern_use_set(chV: ChV[Boolean]): Future[Unit]
+
   def trigger_intern_enabled_get(ch: Ch = allChannels): Future[ChV[Boolean]]
   def trigger_intern_enabled_set(chV: ChV[Boolean]): Future[Unit]
 
@@ -174,6 +180,8 @@ trait SIS3316 extends Device {
   def readAllRawEventData(channel: Int): Future[ByteString]
   def readRawEventData(bank: Int, channel: Int, from: Int, nBytes: Int): Future[ByteString]
   def readRawEventData(channel: Int, dataToRead: DataToRead): Future[ByteString]
+
+  def printBankInfo(): Future[Unit]
 }
 
 
@@ -399,18 +407,25 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
       successful({})
     }
 
+
     def trigger_extern_enabled_get(ch: Ch) = getMemConv(registers.fpga(_).event_config_reg.ch(_).ext_trig_en)(ch)
     def trigger_extern_enabled_set(chV: ChV[Boolean]) = setMemConv(registers.fpga(_).event_config_reg.ch(_).ext_trig_en)(chV)
 
+    def trigger_intern_gen_get(ch: Ch) = getMemConv(registers.fpga(_).fir_trigger_threshold_reg(_).trig_en)(ch)
+    def trigger_intern_gen_set(chV: ChV[Boolean]) = setMemConv(registers.fpga(_).fir_trigger_threshold_reg(_).trig_en)(chV)
 
-    def trigger_intern_enabled_get(ch: Ch) = getMemConv(registers.fpga(_).event_config_reg.ch(_).int_trig_en)(ch)
+    def trigger_intern_use_get(ch: Ch) = getMemConv(registers.fpga(_).event_config_reg.ch(_).int_trig_en)(ch)
+    def trigger_intern_use_set(chV: ChV[Boolean]) = setMemConv(registers.fpga(_).event_config_reg.ch(_).int_trig_en)(chV)
+
+
+    def trigger_intern_enabled_get(ch: Ch) = {
+      // Improve:
+      trigger_intern_use_get(ch)
+    }
+
 
     def trigger_intern_enabled_set(chV: ChV[Boolean]) = {
-      // enable/disable trigger use:
-      setMemConv(registers.fpga(_).event_config_reg.ch(_).int_trig_en)(chV)
-
-      // enable/disable trigger generation:
-      setMemConv(registers.fpga(_).fir_trigger_threshold_reg(_).trig_en)(chV)
+      Seq(trigger_intern_gen_set(chV), trigger_intern_use_set(chV))
     }
 
 
@@ -915,6 +930,32 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
       readRawEventData(dataToRead.bank, channel, dataToRead.from, dataToRead.nBytes)
 
 
+    def printBankInfo() = {
+      localExec( async {
+        val chIterator = allChannels.iterator
+        while (chIterator.hasNext) {
+          val ch = chIterator.next
+
+          val (group, grpCh) = fpgaNumCh(ch)
+          val fpgaRegs = registers.fpga(group)
+
+          val eventSize = await(event_format_get(ch to ch)).apply(ch).rawEventDataSize
+
+          val samplingBank = await(mem.readConv(fpgaRegs.actual_sample_address_reg(grpCh).bank))
+          val samplingBankFillNBytes = await(mem.readConv(fpgaRegs.actual_sample_address_reg(grpCh).sample_addr))
+          val readoutBank = await(mem.readConv(fpgaRegs.previous_bank_sample_address_reg(grpCh).bank))
+          val readoutFillNBytes = await(mem.readConv(fpgaRegs.previous_bank_sample_address_reg(grpCh).sample_addr))
+
+          val samplingNEvents = samplingBankFillNBytes.toDouble / eventSize
+          val readOutNEvents = readoutFillNBytes.toDouble / eventSize
+
+          println(s"Channel $ch: Bank $samplingBank armed: bank $samplingBankFillNBytes bytes ($samplingNEvents events), bank $readoutBank readout: $readoutFillNBytes bytes ($readOutNEvents events)")  
+        }
+        {}
+      } (_) )
+    }
+
+
     protected var time_start: Double = 0
     protected var time_stop: Double = 0
     protected var input_readout_enabled: ChV[Boolean] = allChannels --> true
@@ -1374,6 +1415,130 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
       def addData(data: ByteString): Unit = addData(data.iterator)
 
       def dataAvail = rawData.len
+    }
+
+
+    // Testing functions:
+
+    import daqcore.util.fileops._
+    import java.io.File
+
+    def readData(adc: SIS3316, ch: Int): ByteIterator = {
+      import daqcore.defaults._
+      val mem = adc.memory.get
+      val registers = SIS3316Memory.registers
+
+      val (group, grpCh) = fpgaNumCh(ch)
+      val fpgaRegs = registers.fpga(group)
+
+      val readByteOrder = mem.bulkReadEncoding.get.asInstanceOf[ByteOrder].nioByteOrder
+      val nSamples = mem.readConv(fpgaRegs.raw_data_buffer_config_reg.sample_length).get
+      val nMAWSamples = mem.readConv(fpgaRegs.maw_test_buffer_config_reg.buffer_len).get
+
+      val data = adc.readAllRawEventData(ch).get
+      println(s"Data size: ${data.size} bytes")
+      data.iterator
+    }
+
+
+    def readFullChBankData(adc: SIS3316, ch: Int, bank: Int): ByteIterator = {
+      import daqcore.defaults._
+      val mem = adc.memory.get
+      val registers = SIS3316Memory.registers
+      val (group, grpCh) = fpgaNumCh(ch)
+      val fpgaRegs = registers.fpga(group)
+
+      val readSize = 64 * 1024 * 1024
+      adc.resetFIFO(ch)
+      adc.startFIFOReadTransfer(ch, bank)
+      val data = adc.readFIFOData(ch, readSize).get
+      data.iterator
+    }
+
+
+    def nextChEvent(adc: SIS3316, ch: Int, it: ByteIterator, sampleFile: File = currDir / "sample-values.txt", mawFile: File = currDir / "maw-values.txt") = {
+      import daqcore.defaults._
+      val mem = adc.memory.get
+      val registers = SIS3316Memory.registers
+      val (group, grpCh) = fpgaNumCh(ch)
+      val fpgaRegs = registers.fpga(group)
+
+      val readByteOrder = mem.bulkReadEncoding.get.asInstanceOf[ByteOrder].nioByteOrder
+      val nSamples = mem.readConv(fpgaRegs.raw_data_buffer_config_reg.sample_length).get
+      val nMAWSamples = mem.readConv(fpgaRegs.maw_test_buffer_config_reg.buffer_len).get
+
+      val chEvent = getChEvent(it, readByteOrder, nSamples, nMAWSamples)
+      sampleFile write (chEvent.samples map { _ - (1 << 13) } mkString "\n")
+      mawFile write (chEvent.mawValues map { _ - (1 << 27) } mkString "\n")
+      chEvent
+    }
+
+
+    def shortCapture(adc: SIS3316, channel: Int) = {
+      import daqcore.defaults._
+
+      adc.trigger_intern_enabled_set(dataTypes.allChannels --> false)
+      adc.trigger_intern_enabled_set(Ch(channel) --> true)
+
+      adc.getSync().get
+
+      adc.resetTimestamp()
+      adc.clearAndArm.get
+      Thread.sleep(1000)
+
+      adc.swapBanks().get
+      adc.printBankInfo().get
+
+      val data = readData(adc, channel)
+      val chEvent = if (data.hasNext) nextChEvent(adc, channel, data) else dataTypes.RawChEvent()
+      println(chEvent.toProps)
+      chEvent
+    }
+
+
+    def testTriggerMAW(adc: SIS3316, channel: Int, samplesPretrig: Int = -1, mawPretrig: Int = -1, peakTime: Int = -1, gapTime: Int = -1, threshold: Double = -1) {
+      import daqcore.defaults._
+
+      if (samplesPretrig >= 0) adc.nsamples_pretrig_set(channel --> samplesPretrig)
+      if (mawPretrig >= 0) adc.nmaw_pretrig_set(channel --> mawPretrig)
+
+      if (gapTime >= 0) adc.trigger_gapTime_set(channel --> gapTime)
+      if (peakTime >= 0) adc.trigger_peakTime_set(channel --> peakTime)
+
+      adc.getSync.get
+      if (threshold >= 0) {
+        val peakTime = adc.trigger_peakTime_get(Ch(channel)).get.apply(channel)
+        adc.trigger_threshold_set(channel --> (threshold).toInt)
+      }
+
+      adc.disarm.get
+      val newEventFormat = adc.event_format_get(Ch(channel)).get.apply(channel).copy(save_maw_values = Some(false))
+      adc.event_format_set(channel --> newEventFormat)
+
+      shortCapture(adc, channel)
+    }
+
+
+    def testEnergyMAW(adc: SIS3316, channel: Int, samplesPretrig: Int = -1, mawPretrig: Int = -1, tauTable: Int = -1, tauFactor: Int = -1) {
+      import daqcore.defaults._
+
+      if (samplesPretrig >= 0) adc.nsamples_pretrig_set(channel --> samplesPretrig)
+      if (mawPretrig >= 0) adc.nmaw_pretrig_set(channel --> mawPretrig)
+      if (tauTable >= 0) adc.energy_tau_table_set(channel --> tauTable)
+      if (tauFactor >= 0) adc.energy_tau_factor_set(channel --> tauFactor)
+
+      adc.disarm.get
+      val newEventFormat = adc.event_format_get(Ch(channel)).get.apply(channel).copy(save_maw_values = Some(true))
+      adc.event_format_set(channel --> newEventFormat)
+
+      shortCapture(adc, channel)
+    }
+
+
+    def writeRawChDataToFile(adc: SIS3316, data: ByteIterator): Unit = {
+      val array = Array.ofDim[Byte](data.clone.size)
+      data.clone.copyToArray(array)
+      (currDir / "ch-raw-data.bin") writeBytes array
     }
   }
 }
