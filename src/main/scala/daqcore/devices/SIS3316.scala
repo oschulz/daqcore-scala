@@ -612,15 +612,13 @@ object SIS3316 extends DeviceCompanion[SIS3316] {
       if (! raw_output_file_basename.isEmpty) {
         val timeStamp = isoTimeStamp(time_start)
         raw_output_file_name = s"${raw_output_file_basename}-${timeStamp}-raw.dat"
-        val javaOS = new java.io.FileOutputStream(new java.io.File(raw_output_file_name))
-        rawOutputStream = Some(OutputStreamWriter(javaOS, "raw-data-writer"))
+        rawOutputStream = Some(OutputStreamWriter(raw_output_file_name, raw_output_file_name + ".tmp", "raw-data-writer"))
       }
 
       if (! props_output_file_basename.isEmpty) {
         val timeStamp = isoTimeStamp(time_start)
         props_output_file_name = s"${props_output_file_basename}-${timeStamp}-props.json"
-        val javaOS = new java.io.FileOutputStream(new java.io.File(props_output_file_name))
-        propsOutputStream = Some(OutputStreamWriter(javaOS, "props-data-writer"))
+        propsOutputStream = Some(OutputStreamWriter(props_output_file_name, props_output_file_name + ".tmp", "props-data-writer"))
       }
     }
 
