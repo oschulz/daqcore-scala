@@ -33,14 +33,25 @@ object OutputStreamWriter {
   def apply(stream: OutputStream, name: String)(implicit rf: ActorRefFactory): OutputStreamWriter =
     typedActorOf[OutputStreamWriter](new WriterImpl(stream), name)
   
-  def apply(file: File, name: String = "")(implicit rf: ActorRefFactory): OutputStreamWriter =
-    apply(new FileOutputStream(file), name)
+  def apply(file: File, name: String)(implicit rf: ActorRefFactory): OutputStreamWriter = {
+    typedActorOf[OutputStreamWriter](new WriterImpl(new FileOutputStream(file), file.getPath()), name)
+  }
 
+  def apply(finalFileName: String = "", tmpFileName: String, name: String = "")(implicit rf: ActorRefFactory): OutputStreamWriter = {
+    typedActorOf[OutputStreamWriter](new WriterImpl(new FileOutputStream(new File(tmpFileName)), finalFileName, tmpFileName), name)
+  }
 
-  class WriterImpl(protected val stream: OutputStream) extends OutputStreamWriter
+  class WriterImpl(protected val stream: OutputStream, finalFileName: String = "", tmpFileName: String = "") extends OutputStreamWriter
     with ByteStreamOutputImpl
   {
-    atCleanup { stream.close() }
+    atCleanup {
+      stream.close()
+      if (!tmpFileName.isEmpty) {
+        require(!finalFileName.isEmpty)
+        if ((new File(tmpFileName)).renameTo(new File(finalFileName)) != true)
+          throw new RuntimeException(s"Couldn't rename ${tmpFileName} to ${finalFileName}")
+      }
+    }
     
     def flush(): Unit = {
       val bytes = outputQueue.result
