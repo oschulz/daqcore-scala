@@ -43,7 +43,7 @@ declare -r sbt_release_version=0.13.8
 unset sbt_rc_version
 # declare -r sbt_rc_version=
 declare -r sbt_snapshot_version=0.13.8-SNAPSHOT
-declare -r sbt_snapshot_baseurl="http://typesafe.artifactoryonline.com/typesafe/ivy-snapshots/org.scala-sbt/sbt-launch/"
+declare -r sbt_snapshot_baseurl="https://daqcore.github.io/repo/releases/org/scala-sbt/sbt-launch/"
 
 declare -r default_java_opts="-Dfile.encoding=UTF8"
 declare -r default_sbt_opts="-XX:+CMSClassUnloadingEnabled"
@@ -130,7 +130,7 @@ sbtjar_07_url () {
   echo "http://simple-build-tool.googlecode.com/files/sbt-launch-${1}.jar"
 }
 sbtjar_release_url () {
-  echo "http://typesafe.artifactoryonline.com/typesafe/ivy-releases/org.scala-sbt/sbt-launch/$sbt_version/sbt-launch.jar"
+  echo "https://daqcore.github.io/repo/releases/org/scala-sbt/sbt-launch/$sbt_version/sbt-launch.jar"
 }
 sbtjar_snapshot_url () {
   local ver="$sbt_version"
