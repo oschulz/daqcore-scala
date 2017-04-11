@@ -30,22 +30,27 @@ trait OutputStreamWriter extends ByteStreamOutput with CloseableTA {}
 
 
 object OutputStreamWriter {
+  def openOutputStream(file: File): OutputStream = {
+    if (file.getPath() == "-") System.out
+    else new FileOutputStream(file)
+  }
+
   def apply(stream: OutputStream, name: String)(implicit rf: ActorRefFactory): OutputStreamWriter =
     typedActorOf[OutputStreamWriter](new WriterImpl(stream), name)
   
   def apply(file: File, name: String)(implicit rf: ActorRefFactory): OutputStreamWriter = {
-    typedActorOf[OutputStreamWriter](new WriterImpl(new FileOutputStream(file), file.getPath()), name)
+    typedActorOf[OutputStreamWriter](new WriterImpl(openOutputStream(file), file.getPath()), name)
   }
 
   def apply(finalFileName: String = "", tmpFileName: String, name: String = "")(implicit rf: ActorRefFactory): OutputStreamWriter = {
-    typedActorOf[OutputStreamWriter](new WriterImpl(new FileOutputStream(new File(tmpFileName)), finalFileName, tmpFileName), name)
+    typedActorOf[OutputStreamWriter](new WriterImpl(openOutputStream(new File(tmpFileName)), finalFileName, tmpFileName), name)
   }
 
   class WriterImpl(protected val stream: OutputStream, finalFileName: String = "", tmpFileName: String = "") extends OutputStreamWriter
     with ByteStreamOutputImpl
   {
     atCleanup {
-      stream.close()
+      if (!((stream eq System.out) || (stream eq System.err))) stream.close()
       if (!tmpFileName.isEmpty) {
         require(!finalFileName.isEmpty)
         if ((new File(tmpFileName)).renameTo(new File(finalFileName)) != true)
