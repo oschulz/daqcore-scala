@@ -217,7 +217,7 @@ execCommand \
   $OVERRIDE_USEJAVACP \
   "$EMACS_OPT" \
   $WINDOWS_OPT \
-   scala.tools.nsc.MainGenericRunner  "$@"
+   scala.tools.nsc.MainGenericRunner -nc "$@"
 
 # record the exit status lest it be overwritten:
 # then reenable echo and propagate the code.

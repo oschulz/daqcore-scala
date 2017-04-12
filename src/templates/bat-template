@@ -136,8 +136,8 @@ if not "%_LINE_TOOLCP%"=="" call :add_cpath "%_LINE_TOOLCP%"
 
 set _PROPS=-Dscala.home="!_SCALA_HOME!" -Denv.emacs="%EMACS%" %_OVERRIDE_USEJAVACP% 
 
-rem echo "%_JAVACMD%" %_JAVA_OPTS% %_PROPS% -cp "%_TOOL_CLASSPATH%" scala.tools.nsc.MainGenericRunner  %*
-"%_JAVACMD%" %_JAVA_OPTS% %_PROPS% -cp "%_TOOL_CLASSPATH%" scala.tools.nsc.MainGenericRunner  %*
+rem echo "%_JAVACMD%" %_JAVA_OPTS% %_PROPS% -cp "%_TOOL_CLASSPATH%" scala.tools.nsc.MainGenericRunner -nc %*
+"%_JAVACMD%" %_JAVA_OPTS% %_PROPS% -cp "%_TOOL_CLASSPATH%" scala.tools.nsc.MainGenericRunner -nc %*
 goto end
 
 rem ##########################################################################
